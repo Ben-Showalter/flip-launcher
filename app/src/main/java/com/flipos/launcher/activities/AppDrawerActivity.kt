@@ -282,9 +282,10 @@ class AppDrawerActivity : AppCompatActivity() {
     }
 
     /**
-     * Moves focus one row up/down ([rowDelta] = -1/+1) within the current grid
-     * page, landing on the same column. Only flips to the next/previous page
-     * once already on the bottom/top row, instead of every press.
+     * Moves focus up/down by [rowDelta] rows (sign = direction, magnitude grows
+     * while a key is held) within the current grid page, landing on the same
+     * column. Only flips to the next/previous page once the step would carry
+     * focus past the bottom/top row, instead of every press.
      */
     private fun moveFocusByRow(rowDelta: Int) {
         val itemCount = currentPageItems.size
@@ -305,11 +306,11 @@ class AppDrawerActivity : AppCompatActivity() {
     }
 
     /**
-     * Moves focus one cell left/right ([delta] = -1/+1) within the grid,
-     * treating the page as a single sequence so that pressing right off the end
-     * of a row lands on the first cell of the next row (and left off the start
-     * of a row lands on the last cell of the previous one). Pressing past the
-     * page's first/last cell flips to the adjacent page.
+     * Moves focus left/right by [delta] cells (sign = direction, magnitude grows
+     * while a key is held) within the grid, treating the page as a single
+     * sequence so that moving right off the end of a row lands on the next row
+     * (and left off the start lands on the previous one). Moving past the page's
+     * first/last cell flips to the adjacent page.
      */
     private fun moveFocusByColumn(delta: Int) {
         val itemCount = currentPageItems.size
@@ -329,7 +330,8 @@ class AppDrawerActivity : AppCompatActivity() {
         }
     }
 
-    /** Moves focus one row up/down ([delta] = -1/+1) in the (unpaged) list view. */
+    /** Moves focus up/down by [delta] rows (sign = direction, magnitude grows
+     * while a key is held) in the (unpaged) list view, clamped to the ends. */
     private fun moveFocusLinear(delta: Int) {
         val itemCount = currentPageItems.size
         if (itemCount == 0) return
@@ -435,9 +437,11 @@ class AppDrawerActivity : AppCompatActivity() {
     // ----------------------------------------------------------- Key handling
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        // Ignore auto-repeat for the keys we act on, so holding a key can't
-        // launch an app repeatedly or skip across several grid pages in one hold.
+        // Guard auto-repeat only for keys that must act once per press (launching
+        // an app, soft-key actions). Movement keys intentionally honor auto-repeat
+        // so holding the D-pad rolls through the grid/list and picks up speed.
         if (event.repeatCount > 0 && isRepeatGuardedKey(keyCode)) return true
+        val step = repeatStep(event)
         when (keyCode) {
             in KeyEvent.KEYCODE_1..KeyEvent.KEYCODE_9 -> {
                 // Only the grid has a fixed nine-per-page shape for this
@@ -449,12 +453,12 @@ class AppDrawerActivity : AppCompatActivity() {
             }
             // Handled explicitly (rather than left to view focus search) so a
             // page flip only happens once focus is already on the bottom/top row.
-            KeyEvent.KEYCODE_DPAD_DOWN -> { if (listMode) moveFocusLinear(1) else moveFocusByRow(1); return true }
-            KeyEvent.KEYCODE_DPAD_UP -> { if (listMode) moveFocusLinear(-1) else moveFocusByRow(-1); return true }
+            KeyEvent.KEYCODE_DPAD_DOWN -> { if (listMode) moveFocusLinear(step) else moveFocusByRow(step); return true }
+            KeyEvent.KEYCODE_DPAD_UP -> { if (listMode) moveFocusLinear(-step) else moveFocusByRow(-step); return true }
             // In the grid, left/right wrap across rows (and pages) instead of
             // stopping at a row edge; the list has no columns to move between.
-            KeyEvent.KEYCODE_DPAD_RIGHT -> { if (!listMode) { moveFocusByColumn(1); return true } }
-            KeyEvent.KEYCODE_DPAD_LEFT -> { if (!listMode) { moveFocusByColumn(-1); return true } }
+            KeyEvent.KEYCODE_DPAD_RIGHT -> { if (!listMode) { moveFocusByColumn(step); return true } }
+            KeyEvent.KEYCODE_DPAD_LEFT -> { if (!listMode) { moveFocusByColumn(-step); return true } }
             KeyEvent.KEYCODE_SOFT_LEFT -> { finish(); return true }
             KeyEvent.KEYCODE_SOFT_RIGHT, KeyEvent.KEYCODE_MENU -> { optionsForFocused(); return true }
         }
@@ -463,10 +467,22 @@ class AppDrawerActivity : AppCompatActivity() {
 
     private fun isRepeatGuardedKey(keyCode: Int): Boolean = when (keyCode) {
         in KeyEvent.KEYCODE_1..KeyEvent.KEYCODE_9,
-        KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_UP,
         KeyEvent.KEYCODE_SOFT_LEFT, KeyEvent.KEYCODE_SOFT_RIGHT, KeyEvent.KEYCODE_MENU -> true
-        KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_LEFT -> !listMode
         else -> false
+    }
+
+    /**
+     * Grows the per-press movement step the longer a D-pad key is held, so the
+     * grid/list rolls and accelerates instead of creeping one cell per tick.
+     * The first few auto-repeats stay at one step for precise short holds, then
+     * ramp up for long presses. [KeyEvent.repeatCount] is 0 on the initial press
+     * and increments on each auto-repeat.
+     */
+    private fun repeatStep(event: KeyEvent): Int = when {
+        event.repeatCount >= 16 -> 4
+        event.repeatCount >= 9 -> 3
+        event.repeatCount >= 4 -> 2
+        else -> 1
     }
 
     companion object {

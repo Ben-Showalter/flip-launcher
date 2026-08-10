@@ -123,9 +123,10 @@ class AppGridAdapter(
     }
 
     companion object {
-        /** item_app_grid's 4dp margin + 8dp padding + icon_frame's 6dp padding,
-         * each on every side: (4 + 8 + 6) * 2. */
-        const val ITEM_OVERHEAD_DP = 36
+        /** item_app_grid's 4dp margin + 2dp padding + icon_frame's 4dp padding,
+         * each on every side: (4 + 2 + 4) * 2. Kept small so icons stay large
+         * on tiny QVGA screens where cell height is the binding constraint. */
+        const val ITEM_OVERHEAD_DP = 20
 
         /** The grid always guarantees at least this many rows fit with no
          * scrolling - the 100% icon-size baseline is pinned to this, not to
