@@ -9,6 +9,7 @@ import com.flipos.launcher.data.AppInfo
 import com.flipos.launcher.data.AppRepository
 import com.flipos.launcher.ui.ListRowAdapter
 import com.flipos.launcher.ui.Row
+import com.flipos.launcher.util.BackgroundLoader
 
 /**
  * Lists the launchable, exported activities of a single app so the user can pin
@@ -20,6 +21,7 @@ class ActivityPickerActivity : BaseListActivity() {
     private lateinit var adapter: ListRowAdapter
     private var activities: List<AppInfo> = emptyList()
     private lateinit var targetPackage: String
+    private val loader = BackgroundLoader()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,19 +42,23 @@ class ActivityPickerActivity : BaseListActivity() {
         loadActivities()
     }
 
+    override fun onDestroy() {
+        loader.cancel()
+        super.onDestroy()
+    }
+
     private fun loadActivities() {
-        Thread {
-            val loaded = AppRepository.getActivities(this, targetPackage)
-            if (isDestroyed) return@Thread
-            runOnUiThread {
-                if (isDestroyed) return@runOnUiThread
+        loader.load(
+            produce = { AppRepository.getActivities(this, targetPackage) },
+            consume = { loaded ->
+                if (isDestroyed) return@load
                 activities = loaded
                 adapter.submit(
                     loaded.map { Row(title = it.label, trailing = shortClassName(it.activityName), icon = it.icon) },
                 )
                 focusFirst()
-            }
-        }.start()
+            },
+        )
     }
 
     private fun pick(position: Int) {

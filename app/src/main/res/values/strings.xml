@@ -106,6 +106,29 @@
     <string name="title_wallpaper_picker">Choose Wallpaper</string>
     <string name="wallpaper_picker_more">More…</string>
     <string name="wallpaper_set_toast">Wallpaper set</string>
+    <string name="wallpaper_set_failed">Couldn\'t set wallpaper</string>
+
+    <!-- Toasts -->
+    <string name="toast_already_on_home">Already on Home</string>
+    <string name="toast_added_to_home">Added to Home</string>
+    <string name="toast_app_hidden">%1$s hidden</string>
+    <string name="toast_uninstall_failed">Can\'t uninstall app</string>
+    <string name="toast_not_available">Not available on this device</string>
+    <string name="toast_launch_failed">Couldn\'t open %1$s</string>
+    <string name="toast_launch_unavailable">App is no longer available</string>
+    <string name="toast_launch_denied">Can\'t open this app</string>
+    <string name="toast_no_dialer">No dialer available</string>
+    <string name="toast_no_contacts">No contacts app</string>
+
+    <!-- Home rail long-press menu -->
+    <string name="railitem_change_app">Change app</string>
+    <string name="railitem_remove">Remove from Home</string>
+
+    <!-- Notices empty state / confirmations -->
+    <string name="notices_empty">No notices</string>
+    <string name="notices_dismiss_all_title">Dismiss all notices?</string>
+    <string name="notices_dismiss_all_confirm">Dismiss All</string>
+    <string name="notices_dismiss_all_cancel">Cancel</string>
 
     <!-- Icon packs -->
     <string name="title_icon_packs">Icon Packs</string>

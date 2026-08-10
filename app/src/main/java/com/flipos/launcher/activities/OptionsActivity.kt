@@ -67,7 +67,7 @@ class OptionsActivity : BaseListActivity() {
             null,
         )
         softKeys.setOnLeftClick { finish() }
-        softKeys.setOnCenterClick { options[focusedPosition()].action() }
+        softKeys.setOnCenterClick { options.getOrNull(focusedPosition())?.action() }
         focusFirst()
     }
 
@@ -108,7 +108,7 @@ class OptionsActivity : BaseListActivity() {
         try {
             startActivity(intent)
         } catch (e: Exception) {
-            Toast.makeText(this, "Not available on this device", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.toast_not_available, Toast.LENGTH_SHORT).show()
         }
     }
 

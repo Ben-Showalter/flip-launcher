@@ -32,9 +32,7 @@ class HomeRailAdapter(
     private var itemHeightPx = -1
 
     fun submit(list: List<RailItem>) {
-        items.clear()
-        items.addAll(list)
-        notifyDataSetChanged()
+        submitWithDiff(items, list) { a, b -> a.app?.key == b.app?.key }
     }
 
     /** Pins every row to this height; pass -1 to fall back to wrap_content. */
@@ -61,6 +59,9 @@ class HomeRailAdapter(
 
         fun bind(item: RailItem) {
             if (itemHeightPx > 0) itemView.layoutParams = itemView.layoutParams.apply { height = itemHeightPx }
+            // D-pad right off the rail returns to the center "app menu" button
+            // (mirrors that button's left = jump to the rail).
+            itemView.nextFocusRightId = R.id.softkey_center
             val app = item.app
             if (app != null) {
                 // The icon is already shaped (and given a background, if any)
@@ -69,6 +70,7 @@ class HomeRailAdapter(
                 icon.scaleType = ImageView.ScaleType.FIT_CENTER
                 icon.clearColorFilter()
                 icon.setImageDrawable(app.icon)
+                itemView.contentDescription = app.label
                 if (hasNotification(app)) {
                     notifDot.visibility = View.VISIBLE
                     notifDot.backgroundTintList = ColorStateList.valueOf(NotificationDotColor.forIcon(app.key, app.icon))
@@ -80,6 +82,7 @@ class HomeRailAdapter(
                 icon.scaleType = ImageView.ScaleType.FIT_CENTER
                 icon.setImageResource(R.drawable.ic_add)
                 icon.setColorFilter(Color.WHITE)
+                itemView.contentDescription = itemView.context.getString(R.string.add_shortcut)
                 notifDot.visibility = View.GONE
             }
             itemView.setOnClickListener {

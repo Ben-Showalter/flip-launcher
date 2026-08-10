@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Pre-Android-12 backup rules. The launcher's only stored data is its
+  SharedPreferences (hidden apps, home shortcuts, per-app icon overrides), which
+  reference device-specific component names and shouldn't be shipped off-device
+  or restored onto a different one. Excluding it leaves nothing to back up.
+-->
+<full-backup-content>
+    <exclude domain="sharedpref" path="flip_launcher_prefs.xml" />
+</full-backup-content>

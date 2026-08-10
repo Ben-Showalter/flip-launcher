@@ -4,6 +4,7 @@ import com.flipos.launcher.R
 
 import android.app.WallpaperManager
 import android.content.Intent
+import android.content.res.Resources
 import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.view.KeyEvent
@@ -36,10 +37,20 @@ class WallpaperPickerActivity : BaseListActivity() {
     private fun applyWallpaper(name: String) {
         val resId = BuiltInWallpapers.resId(this, name)
         if (resId == 0) return
+        // Use the application context off the UI thread and hold no reference to
+        // the Activity's resources beyond decode.
+        val appContext = applicationContext
         Thread {
             try {
-                val bitmap = BitmapFactory.decodeResource(resources, resId)
-                WallpaperManager.getInstance(this).setBitmap(bitmap)
+                val wm = WallpaperManager.getInstance(appContext)
+                val bitmap = decodeSampled(
+                    appContext.resources,
+                    resId,
+                    wm.desiredMinimumWidth.coerceAtLeast(1),
+                    wm.desiredMinimumHeight.coerceAtLeast(1),
+                )
+                wm.setBitmap(bitmap)
+                bitmap.recycle()
                 runOnUiThread {
                     if (!isDestroyed) {
                         Toast.makeText(this, R.string.wallpaper_set_toast, Toast.LENGTH_SHORT).show()
@@ -48,17 +59,37 @@ class WallpaperPickerActivity : BaseListActivity() {
                 }
             } catch (e: Exception) {
                 runOnUiThread {
-                    if (!isDestroyed) Toast.makeText(this, "Couldn't set wallpaper", Toast.LENGTH_SHORT).show()
+                    if (!isDestroyed) Toast.makeText(this, R.string.wallpaper_set_failed, Toast.LENGTH_SHORT).show()
                 }
             }
         }.start()
+    }
+
+    /**
+     * Decodes [resId] downsampled to roughly [reqWidth]x[reqHeight], so setting a
+     * large bundled wallpaper doesn't allocate a full-resolution bitmap (which can
+     * OOM on low-end devices).
+     */
+    private fun decodeSampled(res: Resources, resId: Int, reqWidth: Int, reqHeight: Int): android.graphics.Bitmap {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeResource(res, resId, bounds)
+        var sample = 1
+        var halfW = bounds.outWidth / 2
+        var halfH = bounds.outHeight / 2
+        while (halfW >= reqWidth && halfH >= reqHeight) {
+            sample *= 2
+            halfW /= 2
+            halfH /= 2
+        }
+        val opts = BitmapFactory.Options().apply { inSampleSize = sample }
+        return BitmapFactory.decodeResource(res, resId, opts)
     }
 
     private fun openSystemChooser() {
         try {
             startActivity(Intent.createChooser(Intent(Intent.ACTION_SET_WALLPAPER), getString(R.string.opt_set_wallpaper)))
         } catch (e: Exception) {
-            Toast.makeText(this, "Not available on this device", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.toast_not_available, Toast.LENGTH_SHORT).show()
         }
     }
 

@@ -16,9 +16,7 @@ class WallpaperGridAdapter(
     private val names = ArrayList<String>()
 
     fun submit(list: List<String>) {
-        names.clear()
-        names.addAll(list)
-        notifyDataSetChanged()
+        submitWithDiff(names, list) { a, b -> a == b }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {

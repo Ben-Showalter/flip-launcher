@@ -9,6 +9,7 @@ import com.flipos.launcher.data.AppRepository
 import com.flipos.launcher.data.LauncherPrefs
 import com.flipos.launcher.ui.ListRowAdapter
 import com.flipos.launcher.ui.Row
+import com.flipos.launcher.util.BackgroundLoader
 
 /**
  * Lists every installed app with a "Hidden" badge. Center / OK toggles whether
@@ -19,6 +20,7 @@ class HideAppsActivity : BaseListActivity() {
     private lateinit var prefs: LauncherPrefs
     private lateinit var adapter: ListRowAdapter
     private var apps: List<AppInfo> = emptyList()
+    private val loader = BackgroundLoader()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,20 +41,25 @@ class HideAppsActivity : BaseListActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (isRecreatingForAccent) return
         loadApps()
     }
 
+    override fun onDestroy() {
+        loader.cancel()
+        super.onDestroy()
+    }
+
     private fun loadApps() {
-        Thread {
-            val loaded = AppRepository.getAllApps(this)
-            if (isDestroyed) return@Thread
-            runOnUiThread {
-                if (isDestroyed) return@runOnUiThread
+        loader.load(
+            produce = { AppRepository.getAllApps(this) },
+            consume = { loaded ->
+                if (isDestroyed) return@load
                 apps = loaded
                 adapter.submit(loaded.map { rowFor(it) })
                 focusFirst()
-            }
-        }.start()
+            },
+        )
     }
 
     private fun rowFor(app: AppInfo) = Row(

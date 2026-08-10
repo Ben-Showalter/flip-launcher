@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.drawable.Drawable
 import androidx.palette.graphics.Palette
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Picks the notification dot color for an app icon from its own artwork
@@ -16,7 +17,7 @@ import androidx.palette.graphics.Palette
 object NotificationDotColor {
 
     private const val SAMPLE_SIZE = 48
-    private val cache = HashMap<String, Int>()
+    private val cache = ConcurrentHashMap<String, Int>()
 
     fun forIcon(appKey: String, icon: Drawable): Int = cache.getOrPut(appKey) {
         val sample = Bitmap.createBitmap(SAMPLE_SIZE, SAMPLE_SIZE, Bitmap.Config.ARGB_8888)
@@ -24,6 +25,11 @@ object NotificationDotColor {
         icon.setBounds(0, 0, SAMPLE_SIZE, SAMPLE_SIZE)
         icon.draw(canvas)
         val palette = Palette.from(sample).generate()
-        palette.vibrantSwatch?.rgb ?: palette.dominantSwatch?.rgb ?: Color.RED
+        val color = palette.vibrantSwatch?.rgb ?: palette.dominantSwatch?.rgb ?: Color.RED
+        sample.recycle()
+        color
     }
+
+    /** Drops memoized colors so icon/pack/shape changes recompute against new artwork. */
+    fun clear() = cache.clear()
 }

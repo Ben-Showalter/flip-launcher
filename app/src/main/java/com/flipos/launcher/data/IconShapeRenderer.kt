@@ -1,6 +1,7 @@
 package com.flipos.launcher.data
 
 import android.content.Context
+import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -55,13 +56,24 @@ object IconShapeRenderer {
     ): Drawable {
         if (!wrapEnabled || shape == LauncherPrefs.IconShape.NONE) return source
         val size = (CANVAS_DP * context.resources.displayMetrics.density).toInt().coerceAtLeast(1)
+        val res = context.resources
+        // Work on an isolated copy: we mutate the source's bounds while drawing,
+        // and the source may be a shared/cached icon-pack or PM drawable instance.
         val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && source is AdaptiveIconDrawable) {
-            renderAdaptive(source, size, shape)
+            renderAdaptive(source.freshCopy(res) as? AdaptiveIconDrawable ?: source, size, shape)
         } else {
-            renderLegacy(source, size, shape, legacyBackgroundEnabled)
+            renderLegacy(source.freshCopy(res), size, shape, legacyBackgroundEnabled)
         }
-        return BitmapDrawable(context.resources, bitmap)
+        return BitmapDrawable(res, bitmap)
     }
+
+    /**
+     * A copy that owns its own bounds/state, so mutating it while drawing can't
+     * corrupt a drawable instance cached and reused elsewhere. Falls back to the
+     * original for drawables that expose no constant state.
+     */
+    private fun Drawable.freshCopy(resources: Resources): Drawable =
+        constantState?.newDrawable(resources)?.mutate() ?: this
 
     private fun renderAdaptive(drawable: AdaptiveIconDrawable, size: Int, shape: LauncherPrefs.IconShape): Bitmap {
         val content = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
@@ -100,6 +112,8 @@ object IconShapeRenderer {
         canvas.drawPath(pathFor(shape, size), paint)
         paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_IN)
         canvas.drawBitmap(content, 0f, 0f, paint)
+        // The composited result lives in `output` now; the intermediate is dead.
+        content.recycle()
         return output
     }
 
@@ -110,6 +124,7 @@ object IconShapeRenderer {
         drawable.setBounds(0, 0, sampleSize, sampleSize)
         drawable.draw(canvas)
         val dominant = Palette.from(sample).generate().getDominantColor(Color.LTGRAY)
+        sample.recycle()
         return lighten(dominant, LEGACY_TINT_LIGHTEN)
     }
 

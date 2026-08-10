@@ -49,4 +49,6 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
     implementation(libs.google.material)
     implementation(libs.androidx.palette.ktx)
+
+    testImplementation(libs.junit)
 }

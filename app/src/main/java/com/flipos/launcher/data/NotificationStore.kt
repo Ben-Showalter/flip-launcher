@@ -1,6 +1,9 @@
 package com.flipos.launcher.data
 
 import android.graphics.drawable.Drawable
+import android.os.Handler
+import android.os.Looper
+import java.util.concurrent.CopyOnWriteArraySet
 
 /** One active notification, as shown in the custom Notices screen. */
 data class NoticeItem(
@@ -16,13 +19,19 @@ data class NoticeItem(
  * Live list of active notifications, fed by
  * [com.flipos.launcher.service.NotificationCountService], backing the custom
  * Notices screen (we don't use the system shade - see NoticesActivity).
+ *
+ * [update] runs on the listener's binder thread while the UI reads on the main
+ * thread, so state is [Volatile], the listener set is copy-on-write, and
+ * callbacks are marshalled to the main thread.
  */
 object NotificationStore {
 
+    @Volatile
     var items: List<NoticeItem> = emptyList()
         private set
 
-    private val listeners = mutableSetOf<() -> Unit>()
+    private val listeners = CopyOnWriteArraySet<() -> Unit>()
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     fun addListener(listener: () -> Unit) {
         listeners.add(listener)
@@ -34,6 +43,14 @@ object NotificationStore {
 
     fun update(items: List<NoticeItem>) {
         this.items = items
-        listeners.toList().forEach { it() }
+        notifyListeners()
+    }
+
+    private fun notifyListeners() {
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            listeners.forEach { it() }
+        } else {
+            mainHandler.post { listeners.forEach { it() } }
+        }
     }
 }

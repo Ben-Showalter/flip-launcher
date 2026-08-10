@@ -16,6 +16,7 @@ import com.flipos.launcher.data.IconPackRepository
 import com.flipos.launcher.data.LauncherPrefs
 import com.flipos.launcher.ui.IconGridAdapter
 import com.flipos.launcher.ui.SoftKeyBar
+import com.flipos.launcher.util.BackgroundLoader
 
 /**
  * Lets the user replace one app's icon with any icon from an installed icon
@@ -30,6 +31,7 @@ class IconPickerActivity : AppCompatActivity() {
     private lateinit var grid: RecyclerView
     private lateinit var adapter: IconGridAdapter
     private var currentPack: String? = null
+    private val loader = BackgroundLoader()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -70,12 +72,16 @@ class IconPickerActivity : AppCompatActivity() {
         choosePack()
     }
 
+    override fun onDestroy() {
+        loader.cancel()
+        super.onDestroy()
+    }
+
     private fun choosePack() {
-        Thread {
-            val packs = IconPackRepository.getInstalledIconPacks(this)
-            if (isDestroyed) return@Thread
-            runOnUiThread {
-                if (isDestroyed) return@runOnUiThread
+        loader.load(
+            produce = { IconPackRepository.getInstalledIconPacks(this) },
+            consume = { packs ->
+                if (isDestroyed) return@load
                 // The bundled set is always offered first, so there's something
                 // to pick from even with no icon pack installed.
                 val labels = listOf(getString(R.string.icon_picker_built_in)) + packs.map { it.label }
@@ -89,8 +95,8 @@ class IconPickerActivity : AppCompatActivity() {
                         .setOnCancelListener { finish() }
                         .show()
                 }
-            }
-        }.start()
+            },
+        )
     }
 
     private fun openSource(packageName: String, label: String) {
@@ -98,16 +104,24 @@ class IconPickerActivity : AppCompatActivity() {
         titleView.text = label
         if (packageName == BuiltInIcons.PACK_ID) {
             adapter.submit(BuiltInIcons.names())
+            focusFirstIcon()
             return
         }
-        Thread {
-            val names = IconPackRepository.getDrawableNames(this, packageName)
-            if (isDestroyed) return@Thread
-            runOnUiThread {
-                if (isDestroyed) return@runOnUiThread
+        loader.load(
+            produce = { IconPackRepository.getDrawableNames(this, packageName) },
+            consume = { names ->
+                if (isDestroyed) return@load
                 adapter.submit(names)
-            }
-        }.start()
+                focusFirstIcon()
+            },
+        )
+    }
+
+    /** Parks focus on the first icon so the grid is immediately D-pad navigable. */
+    private fun focusFirstIcon() {
+        grid.post {
+            if (grid.focusedChild == null) grid.layoutManager?.findViewByPosition(0)?.requestFocus()
+        }
     }
 
     private fun applyIcon(name: String) {

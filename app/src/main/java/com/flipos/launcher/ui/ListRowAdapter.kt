@@ -41,9 +41,7 @@ class ListRowAdapter(
     private val rows = ArrayList<Row>()
 
     fun submit(list: List<Row>) {
-        rows.clear()
-        rows.addAll(list)
-        notifyDataSetChanged()
+        submitWithDiff(rows, list) { a, b -> a.title == b.title }
     }
 
     fun updateRow(position: Int, row: Row) {

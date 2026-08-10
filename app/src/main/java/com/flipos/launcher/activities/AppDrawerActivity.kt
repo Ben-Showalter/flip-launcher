@@ -25,6 +25,7 @@ import com.flipos.launcher.ui.ListRowAdapter
 import com.flipos.launcher.ui.PageIndicatorView
 import com.flipos.launcher.ui.Row
 import com.flipos.launcher.ui.SoftKeyBar
+import com.flipos.launcher.util.BackgroundLoader
 import com.flipos.launcher.util.launchAppByKey
 import kotlin.math.ceil
 import kotlin.math.min
@@ -64,6 +65,8 @@ class AppDrawerActivity : AppCompatActivity() {
 
     /** The accent color applied this onCreate, so [onResume] can detect a change and [recreate]. */
     private var appliedAccentColor: LauncherPrefs.AccentColor? = null
+
+    private val loader = BackgroundLoader()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -125,8 +128,17 @@ class AppDrawerActivity : AppCompatActivity() {
             recreate()
             return
         }
+        // Icon size may have changed in Settings while backgrounded; push it to
+        // the grid adapter and recompute page metrics before rebinding.
+        gridAdapter.setIconSizePercent(prefs.getIconSizePercent())
         applyViewMode()
+        updatePageSize()
         refresh()
+    }
+
+    override fun onDestroy() {
+        loader.cancel()
+        super.onDestroy()
     }
 
     /** Swap layout manager/adapter to match the current Launcher Settings choice. */
@@ -134,6 +146,9 @@ class AppDrawerActivity : AppCompatActivity() {
         val wantList = prefs.isDrawerListViewEnabled()
         if (wantList == listMode && grid.adapter != null) return
         listMode = wantList
+        // Page metrics differ between grid and list; start from the top so focus
+        // and the dot indicator don't land on a now-nonexistent page.
+        currentPage = 0
         updatePageSize()
         grid.layoutManager = if (listMode) LinearLayoutManager(this) else GridLayoutManager(this, gridColumns)
         grid.adapter = if (listMode) listAdapter else gridAdapter
@@ -164,11 +179,10 @@ class AppDrawerActivity : AppCompatActivity() {
     }
 
     private fun refresh() {
-        Thread {
-            val apps = AppRepository.getVisibleApps(this, prefs)
-            if (isDestroyed) return@Thread
-            runOnUiThread {
-                if (isDestroyed) return@runOnUiThread
+        loader.load(
+            produce = { AppRepository.getVisibleApps(this, prefs) },
+            consume = { apps ->
+                if (isDestroyed) return@load
                 allApps = apps
                 if (listMode) {
                     bindList()
@@ -176,8 +190,8 @@ class AppDrawerActivity : AppCompatActivity() {
                     val maxPage = (totalPages() - 1).coerceAtLeast(0)
                     bindPage(currentPage.coerceIn(0, maxPage))
                 }
-            }
-        }.start()
+            },
+        )
     }
 
     private fun hasNotification(app: AppInfo): Boolean =
@@ -281,7 +295,7 @@ class AppDrawerActivity : AppCompatActivity() {
             targetRow > lastRow -> goToPage(currentPage + 1, landOnLastRow = false)
             else -> {
                 val target = (targetRow * gridColumns + column).coerceAtMost(itemCount - 1)
-                grid.layoutManager?.findViewByPosition(target)?.requestFocus()
+                focusItemAt(target)
             }
         }
     }
@@ -307,7 +321,7 @@ class AppDrawerActivity : AppCompatActivity() {
             target >= itemCount -> {
                 if (currentPage + 1 < totalPages()) bindPage(currentPage + 1, focusPosition = 0)
             }
-            else -> grid.layoutManager?.findViewByPosition(target)?.requestFocus()
+            else -> focusItemAt(target)
         }
     }
 
@@ -338,6 +352,7 @@ class AppDrawerActivity : AppCompatActivity() {
     private data class ContextItem(val label: String, val action: () -> Unit)
 
     private fun showContextMenu(app: AppInfo) {
+        if (isFinishing || isDestroyed) return
         val items = mutableListOf(
             ContextItem(getString(R.string.ctx_open)) { launchAppByKey(app.key) },
             ContextItem(getString(R.string.ctx_add_home)) { addToHome(app) },
@@ -384,19 +399,19 @@ class AppDrawerActivity : AppCompatActivity() {
         val current = prefs.getShortcuts()
         when {
             current.contains(app.key) ->
-                Toast.makeText(this, "Already on Home", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.toast_already_on_home, Toast.LENGTH_SHORT).show()
             current.size >= LauncherPrefs.MAX_SHORTCUTS ->
                 Toast.makeText(this, R.string.home_full, Toast.LENGTH_SHORT).show()
             else -> {
                 prefs.addShortcut(app.key)
-                Toast.makeText(this, "Added to Home", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.toast_added_to_home, Toast.LENGTH_SHORT).show()
             }
         }
     }
 
     private fun hideApp(app: AppInfo) {
         prefs.setHidden(app.key, true)
-        Toast.makeText(this, "${app.label} hidden", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, getString(R.string.toast_app_hidden, app.label), Toast.LENGTH_SHORT).show()
         refresh()
     }
 
@@ -409,13 +424,16 @@ class AppDrawerActivity : AppCompatActivity() {
                 ),
             )
         } catch (e: Exception) {
-            Toast.makeText(this, "Can't uninstall app", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.toast_uninstall_failed, Toast.LENGTH_SHORT).show()
         }
     }
 
     // ----------------------------------------------------------- Key handling
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        // Ignore auto-repeat for the keys we act on, so holding a key can't
+        // launch an app repeatedly or skip across several grid pages in one hold.
+        if (event.repeatCount > 0 && isRepeatGuardedKey(keyCode)) return true
         when (keyCode) {
             in KeyEvent.KEYCODE_1..KeyEvent.KEYCODE_9 -> {
                 // Only the grid has a fixed nine-per-page shape for this
@@ -437,6 +455,14 @@ class AppDrawerActivity : AppCompatActivity() {
             KeyEvent.KEYCODE_SOFT_RIGHT, KeyEvent.KEYCODE_MENU -> { optionsForFocused(); return true }
         }
         return super.onKeyDown(keyCode, event)
+    }
+
+    private fun isRepeatGuardedKey(keyCode: Int): Boolean = when (keyCode) {
+        in KeyEvent.KEYCODE_1..KeyEvent.KEYCODE_9,
+        KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_UP,
+        KeyEvent.KEYCODE_SOFT_LEFT, KeyEvent.KEYCODE_SOFT_RIGHT, KeyEvent.KEYCODE_MENU -> true
+        KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_LEFT -> !listMode
+        else -> false
     }
 
     companion object {

@@ -24,6 +24,14 @@ abstract class BaseListActivity : AppCompatActivity() {
     /** The accent color applied this onCreate, so [onResume] can detect a change and [recreate]. */
     private var appliedAccentColor: LauncherPrefs.AccentColor? = null
 
+    /**
+     * True once [onResume] has triggered a [recreate] for an accent change.
+     * Subclasses overriding [onResume] should `return` early when this is set so
+     * they don't do resume work (reloads, focus) on the dying instance.
+     */
+    protected var isRecreatingForAccent = false
+        private set
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val accent = LauncherPrefs(this).getAccentColor()
@@ -41,14 +49,20 @@ abstract class BaseListActivity : AppCompatActivity() {
         super.onResume()
         // The accent color may have changed in Settings while this activity was
         // backgrounded; theme overlays only apply at onCreate, so recreate to pick it up.
-        if (LauncherPrefs(this).getAccentColor() != appliedAccentColor) recreate()
+        if (LauncherPrefs(this).getAccentColor() != appliedAccentColor) {
+            isRecreatingForAccent = true
+            recreate()
+        }
     }
 
-    /** Adapter position of the focused row, or 0 when nothing is focused. */
+    /**
+     * Adapter position of the focused row, or [RecyclerView.NO_POSITION] (-1)
+     * when nothing is focused. Callers must guard against -1 so a soft-key
+     * action after focus loss doesn't fall back to row 0.
+     */
     protected fun focusedPosition(): Int {
-        val child = listView.focusedChild ?: return 0
-        val pos = listView.getChildAdapterPosition(child)
-        return if (pos == RecyclerView.NO_POSITION) 0 else pos
+        val child = listView.focusedChild ?: return RecyclerView.NO_POSITION
+        return listView.getChildAdapterPosition(child)
     }
 
     protected fun focusFirst() {

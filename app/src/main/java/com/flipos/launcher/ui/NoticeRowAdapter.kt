@@ -19,9 +19,7 @@ class NoticeRowAdapter(
     private val items = ArrayList<NoticeItem>()
 
     fun submit(list: List<NoticeItem>) {
-        items.clear()
-        items.addAll(list)
-        notifyDataSetChanged()
+        submitWithDiff(items, list) { a, b -> a.key == b.key }
     }
 
     fun itemAt(position: Int): NoticeItem? = items.getOrNull(position)
@@ -52,6 +50,9 @@ class NoticeRowAdapter(
                 System.currentTimeMillis(),
                 DateUtils.MINUTE_IN_MILLIS,
             )
+            itemView.contentDescription = listOf(item.title, item.text)
+                .filter { it.isNotEmpty() }
+                .joinToString(". ")
 
             itemView.setOnClickListener { onClick(item) }
             itemView.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) onFocusChanged(item) }

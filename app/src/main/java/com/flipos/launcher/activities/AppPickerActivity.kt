@@ -10,6 +10,7 @@ import com.flipos.launcher.data.AppInfo
 import com.flipos.launcher.data.AppRepository
 import com.flipos.launcher.ui.ListRowAdapter
 import com.flipos.launcher.ui.Row
+import com.flipos.launcher.util.BackgroundLoader
 
 /**
  * Pick-an-app dialog used when assigning a Home shortcut. Returns the chosen
@@ -23,6 +24,7 @@ class AppPickerActivity : BaseListActivity() {
 
     private lateinit var adapter: ListRowAdapter
     private var apps: List<AppInfo> = emptyList()
+    private val loader = BackgroundLoader()
 
     private val activityPicker = registerForActivityResult(StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
@@ -53,17 +55,21 @@ class AppPickerActivity : BaseListActivity() {
         loadApps()
     }
 
+    override fun onDestroy() {
+        loader.cancel()
+        super.onDestroy()
+    }
+
     private fun loadApps() {
-        Thread {
-            val loaded = AppRepository.getAllApps(this)
-            if (isDestroyed) return@Thread
-            runOnUiThread {
-                if (isDestroyed) return@runOnUiThread
+        loader.load(
+            produce = { AppRepository.getAllApps(this) },
+            consume = { loaded ->
+                if (isDestroyed) return@load
                 apps = loaded
                 adapter.submit(loaded.map { Row(title = it.label, icon = it.icon) })
                 focusFirst()
-            }
-        }.start()
+            },
+        )
     }
 
     private fun pick(position: Int) {

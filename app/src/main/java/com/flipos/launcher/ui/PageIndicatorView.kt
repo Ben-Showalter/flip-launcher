@@ -26,8 +26,11 @@ class PageIndicatorView @JvmOverloads constructor(
     }
 
     fun setPageCount(count: Int) {
-        if (count == pageCount) return
-        pageCount = count
+        val clamped = count.coerceAtLeast(0)
+        if (clamped == pageCount) return
+        pageCount = clamped
+        // Keep the active page inside the new range.
+        currentPage = currentPage.coerceIn(0, (pageCount - 1).coerceAtLeast(0))
         removeAllViews()
         val size = resources.getDimensionPixelSize(R.dimen.page_dot_size)
         val margin = resources.getDimensionPixelSize(R.dimen.page_dot_margin)
@@ -43,8 +46,9 @@ class PageIndicatorView @JvmOverloads constructor(
     }
 
     fun setCurrentPage(page: Int) {
-        if (page == currentPage) return
-        currentPage = page
+        val clamped = page.coerceIn(0, (pageCount - 1).coerceAtLeast(0))
+        if (clamped == currentPage) return
+        currentPage = clamped
         updateDots()
     }
 

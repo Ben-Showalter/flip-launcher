@@ -10,6 +10,7 @@ import com.flipos.launcher.data.IconPackRepository
 import com.flipos.launcher.data.LauncherPrefs
 import com.flipos.launcher.ui.ListRowAdapter
 import com.flipos.launcher.ui.Row
+import com.flipos.launcher.util.BackgroundLoader
 
 /**
  * Lists icon pack apps detected on the device (anything declaring the standard
@@ -24,6 +25,7 @@ class IconPackActivity : BaseListActivity() {
     private lateinit var prefs: LauncherPrefs
     private lateinit var adapter: ListRowAdapter
     private var entries: List<Entry> = emptyList()
+    private val loader = BackgroundLoader()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,15 +44,20 @@ class IconPackActivity : BaseListActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (isRecreatingForAccent) return
         load()
     }
 
+    override fun onDestroy() {
+        loader.cancel()
+        super.onDestroy()
+    }
+
     private fun load() {
-        Thread {
-            val packs = IconPackRepository.getInstalledIconPacks(this)
-            if (isDestroyed) return@Thread
-            runOnUiThread {
-                if (isDestroyed) return@runOnUiThread
+        loader.load(
+            produce = { IconPackRepository.getInstalledIconPacks(this) },
+            consume = { packs ->
+                if (isDestroyed) return@load
                 val active = prefs.getActiveIconPack()
                 entries = listOf(Entry(getString(R.string.icon_pack_default), null, null)) +
                     packs.map { Entry(it.label, it.packageName, it.icon) }
@@ -64,8 +71,8 @@ class IconPackActivity : BaseListActivity() {
                     },
                 )
                 focusFirst()
-            }
-        }.start()
+            },
+        )
     }
 
     private fun pick(position: Int) {

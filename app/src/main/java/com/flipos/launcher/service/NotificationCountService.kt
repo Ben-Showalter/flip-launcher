@@ -1,14 +1,16 @@
 package com.flipos.launcher.service
 
 import android.app.Notification
-import android.app.PendingIntent
+import android.content.ComponentName
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
 import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import com.flipos.launcher.data.NoticeItem
+import com.flipos.launcher.data.NotificationCategorizer
 import com.flipos.launcher.data.NotificationCounts
+import com.flipos.launcher.data.NotificationKind
 import com.flipos.launcher.data.NotificationStore
 
 /**
@@ -29,6 +31,19 @@ class NotificationCountService : NotificationListenerService() {
 
     override fun onListenerDisconnected() {
         if (instance === this) instance = null
+        // The listener can drop out from under us (access revoked, low-memory
+        // kill, framework restart). Clear the cached counts/list so Home badges
+        // and Notices don't keep showing data we can no longer refresh, then ask
+        // the framework to rebind so we recover automatically once possible.
+        NotificationCounts.update(0, 0, 0, emptySet())
+        NotificationStore.update(emptyList())
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            try {
+                requestRebind(ComponentName(this, NotificationCountService::class.java))
+            } catch (e: Exception) {
+                // Best-effort; the framework rebinds on its own schedule anyway.
+            }
+        }
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) = recompute()
@@ -51,10 +66,10 @@ class NotificationCountService : NotificationListenerService() {
             // Group summaries and our own posted-by-system rows aren't real, user-facing
             // notifications, so they're skipped to avoid inflating the "other" count.
             if (sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0) continue
-            when (sbn.notification.category) {
-                Notification.CATEGORY_CALL -> calls++
-                Notification.CATEGORY_MESSAGE -> messages++
-                else -> other++
+            when (NotificationCategorizer.kindOf(sbn.notification.category)) {
+                NotificationKind.CALL -> calls++
+                NotificationKind.MESSAGE -> messages++
+                NotificationKind.OTHER -> other++
             }
             packages.add(sbn.packageName)
             notices.add(toNoticeItem(sbn))
@@ -92,19 +107,29 @@ class NotificationCountService : NotificationListenerService() {
         null
     }
 
-    /** Opens [key]'s tap action, mirroring what tapping it in the system shade would do. */
+    /**
+     * Opens [key]'s tap action, mirroring what tapping it in the system shade
+     * would do. Returns `false` when the notification has no tap action (so the
+     * caller doesn't wrongly treat it as opened and dismiss it).
+     */
     fun openNotice(key: String): Boolean {
-        val sbn = try {
-            activeNotifications.firstOrNull { it.key == key }
-        } catch (e: SecurityException) {
-            null
-        } ?: return false
+        val sbn = activeOrNull(key) ?: return false
+        val contentIntent = sbn.notification.contentIntent ?: return false
         return try {
-            sbn.notification.contentIntent?.send()
+            contentIntent.send()
             true
-        } catch (e: PendingIntent.CanceledException) {
+        } catch (e: Exception) {
             false
         }
+    }
+
+    /** Whether [key] is user-dismissable (ongoing/foreground notices aren't). */
+    fun isClearable(key: String): Boolean = activeOrNull(key)?.isClearable == true
+
+    private fun activeOrNull(key: String): StatusBarNotification? = try {
+        activeNotifications.firstOrNull { it.key == key }
+    } catch (e: SecurityException) {
+        null
     }
 
     fun dismiss(key: String) = cancelNotification(key)

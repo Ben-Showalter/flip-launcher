@@ -18,15 +18,34 @@
         android:textSize="@dimen/screen_title"
         android:textStyle="bold" />
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/list"
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:clipToPadding="false"
-        android:descendantFocusability="afterDescendants"
-        android:paddingTop="4dp"
-        android:paddingBottom="4dp" />
+        android:layout_weight="1">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/list"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:descendantFocusability="afterDescendants"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp" />
+
+        <!-- Centered placeholder shown by screens (e.g. Notices) when the list is
+             empty; every other screen simply leaves it GONE. -->
+        <TextView
+            android:id="@+id/empty_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:textColor="@color/kai_text_secondary"
+            android:textSize="@dimen/softkey_text"
+            android:visibility="gone" />
+    </FrameLayout>
 
     <com.flipos.launcher.ui.SoftKeyBar
         android:id="@+id/soft_keys"

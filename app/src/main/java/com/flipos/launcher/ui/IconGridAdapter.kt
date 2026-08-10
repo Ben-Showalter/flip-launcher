@@ -1,6 +1,9 @@
 package com.flipos.launcher.ui
 
+import android.content.Context
+import android.graphics.Color
 import android.graphics.drawable.Drawable
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -14,12 +17,15 @@ class IconGridAdapter(
     private val iconLoader: (String) -> Drawable?,
 ) : RecyclerView.Adapter<IconGridAdapter.VH>() {
 
+    private fun highlightColor(context: Context): Int {
+        val tv = TypedValue()
+        return if (context.theme.resolveAttribute(android.R.attr.colorAccent, tv, true)) tv.data else Color.WHITE
+    }
+
     private val names = ArrayList<String>()
 
     fun submit(list: List<String>) {
-        names.clear()
-        names.addAll(list)
-        notifyDataSetChanged()
+        submitWithDiff(names, list) { a, b -> a == b }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
@@ -35,8 +41,16 @@ class IconGridAdapter(
     inner class VH(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val icon: ImageView = itemView.findViewById(R.id.icon)
 
+        // Same focus/press squircle the app drawer uses, so the picker is
+        // navigable by D-pad with a visible highlight on the focused icon.
+        init {
+            itemView.findViewById<View>(R.id.icon_frame).background =
+                SquircleDrawable(highlightColor(itemView.context))
+        }
+
         fun bind(name: String) {
             icon.setImageDrawable(iconLoader(name))
+            icon.contentDescription = name
             itemView.setOnClickListener { onClick(name) }
         }
     }

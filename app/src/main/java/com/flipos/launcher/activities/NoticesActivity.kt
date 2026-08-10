@@ -2,10 +2,14 @@ package com.flipos.launcher.activities
 
 import com.flipos.launcher.R
 
+import android.content.ComponentName
+import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
 import android.view.KeyEvent
+import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import com.flipos.launcher.data.NoticeItem
 import com.flipos.launcher.data.NotificationStore
 import com.flipos.launcher.service.NotificationCountService
@@ -19,14 +23,16 @@ import com.flipos.launcher.ui.NoticeRowAdapter
 class NoticesActivity : BaseListActivity() {
 
     private lateinit var adapter: NoticeRowAdapter
+    private lateinit var emptyView: TextView
 
-    private val storeListener: () -> Unit = { runOnUiThread { refresh() } }
+    private val storeListener: () -> Unit = { runOnUiThread { if (!isDestroyed) refresh() } }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         adapter = NoticeRowAdapter(onClick = { openNotice(it) })
         listView.adapter = adapter
+        emptyView = findViewById(R.id.empty_view)
 
         softKeys.setLabels(
             getString(R.string.softkey_dismiss),
@@ -40,6 +46,7 @@ class NoticesActivity : BaseListActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (isRecreatingForAccent) return
         NotificationStore.addListener(storeListener)
         if (!isNotificationAccessGranted()) {
             Toast.makeText(this, R.string.notices_access_required, Toast.LENGTH_LONG).show()
@@ -56,25 +63,55 @@ class NoticesActivity : BaseListActivity() {
         val items = NotificationStore.items
         titleView.text = getString(R.string.title_notices, items.size)
         adapter.submit(items)
-        focusFirst()
+        if (items.isEmpty()) {
+            emptyView.text = getString(
+                if (isNotificationAccessGranted()) R.string.notices_empty else R.string.notices_access_required,
+            )
+            emptyView.visibility = TextView.VISIBLE
+        } else {
+            emptyView.visibility = TextView.GONE
+            focusFirst()
+        }
     }
 
     private fun isNotificationAccessGranted(): Boolean {
-        val flat = Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
-        return flat?.contains(packageName) == true
+        // Match on the flattened ComponentName's package rather than a raw
+        // substring, so an unrelated app whose name merely contains ours can't
+        // read as "granted".
+        val flat = Settings.Secure.getString(contentResolver, "enabled_notification_listeners") ?: return false
+        return flat.split(':').any {
+            ComponentName.unflattenFromString(it)?.packageName == packageName
+        }
     }
 
     private fun openFocused() {
+        // With no access there are no notices to open; make Select a shortcut to
+        // the system screen where the user grants it.
+        if (!isNotificationAccessGranted()) {
+            openNotificationAccessSettings()
+            return
+        }
         adapter.itemAt(focusedPosition())?.let { openNotice(it) }
     }
 
+    private fun openNotificationAccessSettings() {
+        try {
+            startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+        } catch (e: Exception) {
+            Toast.makeText(this, R.string.toast_not_available, Toast.LENGTH_SHORT).show()
+        }
+    }
+
     private fun openNotice(item: NoticeItem) {
-        val opened = NotificationCountService.instance?.openNotice(item.key) == true
+        val service = NotificationCountService.instance
+        val opened = service?.openNotice(item.key) == true
         if (!opened) {
             Toast.makeText(this, R.string.notices_open_failed, Toast.LENGTH_SHORT).show()
             return
         }
-        NotificationCountService.instance?.dismiss(item.key)
+        // Only auto-dismiss notices the user could swipe away themselves; leave
+        // ongoing/foreground ones (music, calls, downloads) in place.
+        if (service?.isClearable(item.key) == true) service.dismiss(item.key)
         finish()
     }
 
@@ -85,7 +122,13 @@ class NoticesActivity : BaseListActivity() {
 
     private fun dismissAll() {
         if (NotificationStore.items.isEmpty()) return
-        NotificationCountService.instance?.dismissAll()
+        AlertDialog.Builder(this)
+            .setTitle(R.string.notices_dismiss_all_title)
+            .setPositiveButton(R.string.notices_dismiss_all_confirm) { _, _ ->
+                NotificationCountService.instance?.dismissAll()
+            }
+            .setNegativeButton(R.string.notices_dismiss_all_cancel, null)
+            .show()
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {

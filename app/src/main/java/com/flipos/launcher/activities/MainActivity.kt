@@ -19,6 +19,7 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.doOnLayout
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -27,6 +28,7 @@ import com.flipos.launcher.data.LauncherPrefs
 import com.flipos.launcher.data.NotificationCounts
 import com.flipos.launcher.ui.HomeRailAdapter
 import com.flipos.launcher.ui.RailItem
+import com.flipos.launcher.util.BackgroundLoader
 import com.flipos.launcher.util.launchAppByKey
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -34,12 +36,15 @@ import java.util.Locale
 
 /**
  * The KaiOS-style home screen:
- *  - a vertical rail of shortcut icons on the left (keys 1-9, top to bottom),
+ *  - a vertical rail of shortcut icons on the left,
  *  - a large clock + date on the right, and
  *  - "Notifications · apps · Contacts" soft keys along the bottom.
  *
- * Tap an icon (or press its number key, or D-pad to it and press OK) to launch.
- * The center dots open All Apps; long-pressing them opens launcher Options.
+ * Tap a rail icon (or D-pad to it and press OK) to launch it. Typing a digit -
+ * or `*` / `#` - anywhere on Home opens the phone dialer prefilled with it: on
+ * Home the number keys are a dialer shortcut, not a rail launcher (the rail is
+ * driven by focus + OK). The center button opens All Apps; long-pressing it
+ * opens launcher Options.
  */
 class MainActivity : AppCompatActivity() {
 
@@ -83,8 +88,25 @@ class MainActivity : AppCompatActivity() {
         refreshShortcuts()
     }
 
+    private val loader = BackgroundLoader()
+
     private val timeReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) = updateClock()
+    }
+
+    /** Keeps the rail and cached icons fresh when apps are installed/removed/updated. */
+    private val packageReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            // On a genuine uninstall (not an update's remove-then-add), drop any
+            // per-app icon overrides for the departed package so they don't leak.
+            if (intent?.action == Intent.ACTION_PACKAGE_REMOVED &&
+                intent.getBooleanExtra(Intent.EXTRA_REPLACING, false).not()
+            ) {
+                intent.data?.schemeSpecificPart?.let { prefs.pruneIconOverridesForPackage(it) }
+            }
+            AppRepository.invalidateIconCaches()
+            refreshShortcuts()
+        }
     }
 
     private val notifListener: () -> Unit = {
@@ -97,6 +119,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = LauncherPrefs(this)
+        pendingIndex = savedInstanceState?.getInt(STATE_PENDING_INDEX, -1) ?: -1
         val accent = prefs.getAccentColor()
         appliedAccentColor = accent
         if (accent.themeOverlayRes != 0) theme.applyStyle(accent.themeOverlayRes, true)
@@ -167,13 +190,27 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        registerReceiver(
+        ContextCompat.registerReceiver(
+            this,
             timeReceiver,
             IntentFilter().apply {
                 addAction(Intent.ACTION_TIME_TICK)
                 addAction(Intent.ACTION_TIME_CHANGED)
                 addAction(Intent.ACTION_TIMEZONE_CHANGED)
             },
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
+        ContextCompat.registerReceiver(
+            this,
+            packageReceiver,
+            IntentFilter().apply {
+                addAction(Intent.ACTION_PACKAGE_ADDED)
+                addAction(Intent.ACTION_PACKAGE_REMOVED)
+                addAction(Intent.ACTION_PACKAGE_CHANGED)
+                addAction(Intent.ACTION_PACKAGE_REPLACED)
+                addDataScheme("package")
+            },
+            ContextCompat.RECEIVER_NOT_EXPORTED,
         )
         updateClock()
         refreshShortcuts()
@@ -193,7 +230,20 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         unregisterReceiver(timeReceiver)
+        unregisterReceiver(packageReceiver)
         NotificationCounts.removeListener(notifListener)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        // Persist the rail slot awaiting a pick so an in-progress shortcut
+        // assignment survives a process death while the picker is foregrounded.
+        outState.putInt(STATE_PENDING_INDEX, pendingIndex)
+    }
+
+    override fun onDestroy() {
+        loader.cancel()
+        super.onDestroy()
     }
 
     // ----------------------------------------------------------- Data / clock
@@ -213,24 +263,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun refreshShortcuts() {
-        Thread {
-            // Resolve each shortcut (any activity component), dropping ones whose
-            // app was uninstalled so the rail stays gap-free.
-            val keys = prefs.getShortcuts()
-            val resolved = keys.mapNotNull { key ->
-                AppRepository.resolveComponent(this, key)?.let { key to it }
-            }
-            if (resolved.size != keys.size) prefs.setShortcuts(resolved.map { it.first })
+        loader.load(
+            produce = {
+                // Resolve each shortcut (any activity component), dropping ones whose
+                // app was uninstalled so the rail stays gap-free.
+                val keys = prefs.getShortcuts()
+                val resolved = keys.mapNotNull { key ->
+                    AppRepository.resolveComponent(this, key)?.let { key to it }
+                }
+                if (resolved.size != keys.size) prefs.setShortcuts(resolved.map { it.first })
 
-            val entries = resolved.mapTo(ArrayList()) { RailItem(it.second) }
-            if (resolved.size < LauncherPrefs.MAX_SHORTCUTS) entries.add(RailItem(null))
-
-            if (isDestroyed) return@Thread
-            runOnUiThread {
-                if (isDestroyed) return@runOnUiThread
-                adapter.submit(entries)
-            }
-        }.start()
+                val entries = resolved.mapTo(ArrayList()) { RailItem(it.second) }
+                if (resolved.size < LauncherPrefs.MAX_SHORTCUTS) entries.add(RailItem(null))
+                entries
+            },
+            consume = { entries -> if (!isDestroyed) adapter.submit(entries) },
+        )
     }
 
     // --------------------------------------------------------------- Actions
@@ -247,7 +295,12 @@ class MainActivity : AppCompatActivity() {
         }
         AlertDialog.Builder(this)
             .setTitle(item.app.label)
-            .setItems(arrayOf("Change app", "Remove from Home")) { _, which ->
+            .setItems(
+                arrayOf(
+                    getString(R.string.railitem_change_app),
+                    getString(R.string.railitem_remove),
+                ),
+            ) { _, which ->
                 when (which) {
                     0 -> pickForIndex(position)
                     1 -> {
@@ -264,7 +317,7 @@ class MainActivity : AppCompatActivity() {
         try {
             startActivity(Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", digit, null)))
         } catch (e: Exception) {
-            Toast.makeText(this, "No dialer available", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.toast_no_dialer, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -297,21 +350,23 @@ class MainActivity : AppCompatActivity() {
             try {
                 startActivity(Intent(Intent.ACTION_DIAL))
             } catch (ignored: Exception) {
-                Toast.makeText(this, "No contacts app", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.toast_no_contacts, Toast.LENGTH_SHORT).show()
             }
         }
     }
 
     private fun updateNotifSummary() {
-        bindNotifBadge(notifCallsGroup, notifCallsCount, prefs.isCallBadgeEnabled(), NotificationCounts.calls)
-        bindNotifBadge(notifMessagesGroup, notifMessagesCount, prefs.isMessageBadgeEnabled(), NotificationCounts.messages)
-        bindNotifBadge(notifOtherGroup, notifOtherCount, prefs.isOtherBadgeEnabled(), NotificationCounts.other)
+        bindNotifBadge(notifCallsGroup, notifCallsCount, prefs.isCallBadgeEnabled(), NotificationCounts.calls, R.string.cd_notif_calls)
+        bindNotifBadge(notifMessagesGroup, notifMessagesCount, prefs.isMessageBadgeEnabled(), NotificationCounts.messages, R.string.cd_notif_messages)
+        bindNotifBadge(notifOtherGroup, notifOtherCount, prefs.isOtherBadgeEnabled(), NotificationCounts.other, R.string.cd_notif_other)
     }
 
-    private fun bindNotifBadge(group: View, countView: TextView, enabled: Boolean, count: Int) {
+    private fun bindNotifBadge(group: View, countView: TextView, enabled: Boolean, count: Int, cdRes: Int) {
         if (enabled && count > 0) {
             countView.text = if (count > 99) "99+" else count.toString()
             group.visibility = View.VISIBLE
+            // Digits alone aren't meaningful to a screen reader; announce the category.
+            group.contentDescription = "$count ${getString(cdRes)}"
         } else {
             group.visibility = View.GONE
         }
@@ -335,7 +390,7 @@ class MainActivity : AppCompatActivity() {
         try {
             startActivity(Intent(Intent.ACTION_DIAL))
         } catch (e: Exception) {
-            Toast.makeText(this, "No dialer available", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.toast_no_dialer, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -360,6 +415,10 @@ class MainActivity : AppCompatActivity() {
             KeyEvent.KEYCODE_MENU -> { openAppDrawer(); return true }
             KeyEvent.KEYCODE_CALL -> { openDialer(); return true }
             KeyEvent.KEYCODE_BACK -> {
+                // Track the initial press so the framework marks the follow-up
+                // repeat as a long-press; without this, isLongPress never fires
+                // reliably on some devices.
+                if (event.repeatCount == 0) event.startTracking()
                 if (event.isLongPress) {
                     backLongPressHandled = true
                     launchBackLongPressApp()
@@ -419,5 +478,7 @@ class MainActivity : AppCompatActivity() {
     companion object {
         // Shown at most once per process so we don't nag on every resume.
         private var defaultPromptShown = false
+
+        private const val STATE_PENDING_INDEX = "pending_index"
     }
 }

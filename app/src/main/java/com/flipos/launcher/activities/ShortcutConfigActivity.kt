@@ -11,6 +11,7 @@ import com.flipos.launcher.data.AppRepository
 import com.flipos.launcher.data.LauncherPrefs
 import com.flipos.launcher.ui.ListRowAdapter
 import com.flipos.launcher.ui.Row
+import com.flipos.launcher.util.BackgroundLoader
 
 /**
  * Customizes the ordered list of home shortcuts. Selecting a shortcut row (or
@@ -24,6 +25,7 @@ class ShortcutConfigActivity : BaseListActivity() {
     private var appMap: Map<String, AppInfo> = emptyMap()
     private var shortcuts: List<String> = emptyList()
     private var pendingIndex = -1
+    private val loader = BackgroundLoader()
 
     private val pickLauncher = registerForActivityResult(StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK && pendingIndex >= 0) {
@@ -38,6 +40,7 @@ class ShortcutConfigActivity : BaseListActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = LauncherPrefs(this)
+        pendingIndex = savedInstanceState?.getInt(STATE_PENDING_INDEX, -1) ?: -1
         titleView.text = getString(R.string.title_shortcuts)
 
         adapter = ListRowAdapter(onClick = { onRowClick(it) })
@@ -55,25 +58,38 @@ class ShortcutConfigActivity : BaseListActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (isRecreatingForAccent) return
         reload()
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putInt(STATE_PENDING_INDEX, pendingIndex)
+    }
+
+    override fun onDestroy() {
+        loader.cancel()
+        super.onDestroy()
+    }
+
     private fun reload() {
-        Thread {
-            val keys = prefs.getShortcuts()
-            val resolved = LinkedHashMap<String, AppInfo>()
-            for (key in keys) AppRepository.resolveComponent(this, key)?.let { resolved[key] = it }
-            val present = keys.filter { resolved.containsKey(it) }
-            if (present.size != keys.size) prefs.setShortcuts(present)
-            if (isDestroyed) return@Thread
-            runOnUiThread {
-                if (isDestroyed) return@runOnUiThread
+        loader.load(
+            produce = {
+                val keys = prefs.getShortcuts()
+                val resolved = LinkedHashMap<String, AppInfo>()
+                for (key in keys) AppRepository.resolveComponent(this, key)?.let { resolved[key] = it }
+                val present = keys.filter { resolved.containsKey(it) }
+                if (present.size != keys.size) prefs.setShortcuts(present)
+                resolved to present
+            },
+            consume = { (resolved, present) ->
+                if (isDestroyed) return@load
                 appMap = resolved
                 shortcuts = present
                 adapter.submit(buildRows())
                 focusFirst()
-            }
-        }.start()
+            },
+        )
     }
 
     private fun buildRows(): List<Row> {
@@ -115,5 +131,9 @@ class ShortcutConfigActivity : BaseListActivity() {
             KeyEvent.KEYCODE_SOFT_RIGHT -> { clearAt(focusedPosition()); return true }
         }
         return super.onKeyDown(keyCode, event)
+    }
+
+    companion object {
+        private const val STATE_PENDING_INDEX = "pending_index"
     }
 }

@@ -89,7 +89,8 @@ class LauncherPrefs(context: Context) {
     fun getIconSizePercent(): Int = prefs.getInt(KEY_ICON_SIZE_PERCENT, DEFAULT_ICON_SIZE_PERCENT)
 
     fun setIconSizePercent(percent: Int) {
-        prefs.edit().putInt(KEY_ICON_SIZE_PERCENT, percent).apply()
+        val clamped = percent.coerceIn(MIN_ICON_SIZE_PERCENT, MAX_ICON_SIZE_PERCENT)
+        prefs.edit().putInt(KEY_ICON_SIZE_PERCENT, clamped).apply()
     }
 
     // ----------------------------------------------------- Home right key
@@ -140,6 +141,7 @@ class LauncherPrefs(context: Context) {
 
     fun setActiveIconPack(packageName: String?) {
         prefs.edit().putString(KEY_ACTIVE_ICON_PACK, packageName).apply()
+        AppRepository.invalidateIconCaches()
     }
 
     /** Per-app icon override as (icon pack package, drawable name), or null if unset. */
@@ -153,10 +155,26 @@ class LauncherPrefs(context: Context) {
         prefs.edit()
             .putString(iconOverrideKey(appKey), "$packageName$ICON_OVERRIDE_SEPARATOR$drawableName")
             .apply()
+        AppRepository.invalidateIconCaches()
     }
 
     fun clearIconOverride(appKey: String) {
         prefs.edit().remove(iconOverrideKey(appKey)).apply()
+        AppRepository.invalidateIconCaches()
+    }
+
+    /**
+     * Removes any `icon_override_*` entries whose component belongs to
+     * [packageName], so overrides don't accumulate for uninstalled apps. Called
+     * when a package is removed.
+     */
+    fun pruneIconOverridesForPackage(packageName: String) {
+        // Override keys are "icon_override_<pkg>/<class>"; match the package prefix.
+        val prefix = "$KEY_ICON_OVERRIDE_PREFIX$packageName/"
+        val stale = prefs.all.keys.filter { it.startsWith(prefix) }
+        if (stale.isEmpty()) return
+        prefs.edit().apply { stale.forEach { remove(it) } }.apply()
+        AppRepository.invalidateIconCaches()
     }
 
     private fun iconOverrideKey(appKey: String) = "$KEY_ICON_OVERRIDE_PREFIX$appKey"
@@ -183,13 +201,16 @@ class LauncherPrefs(context: Context) {
 
     fun setIconShape(shape: IconShape) {
         prefs.edit().putString(KEY_ICON_SHAPE, shape.key).apply()
+        AppRepository.invalidateIconCaches()
     }
 
     /** Whether non-adaptive icons get a pale color-matched background, or sit on a transparent one. */
     fun isLegacyIconBackgroundEnabled(): Boolean = prefs.getBoolean(KEY_LEGACY_ICON_BG, true)
 
-    fun setLegacyIconBackgroundEnabled(enabled: Boolean) =
+    fun setLegacyIconBackgroundEnabled(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_LEGACY_ICON_BG, enabled).apply()
+        AppRepository.invalidateIconCaches()
+    }
 
     /** Per-app opt-out: whether [appKey]'s icon gets shape-masked at all. Defaults to on. */
     fun isIconWrapEnabled(appKey: String): Boolean = !getWrapDisabledKeys().contains(appKey)
@@ -198,6 +219,7 @@ class LauncherPrefs(context: Context) {
         val set = getWrapDisabledKeys()
         if (enabled) set.remove(appKey) else set.add(appKey)
         prefs.edit().putStringSet(KEY_WRAP_DISABLED, set).apply()
+        AppRepository.invalidateIconCaches()
     }
 
     private fun getWrapDisabledKeys(): MutableSet<String> =
@@ -231,6 +253,10 @@ class LauncherPrefs(context: Context) {
 
         /** Default icon size: exactly fills a 3x3 grid with no scrolling. */
         const val DEFAULT_ICON_SIZE_PERCENT = 100
+
+        /** Bounds for [setIconSizePercent], guarding against out-of-range values. */
+        const val MIN_ICON_SIZE_PERCENT = 50
+        const val MAX_ICON_SIZE_PERCENT = 200
 
         private const val PREFS_NAME = "flip_launcher_prefs"
         private const val KEY_HIDDEN = "hidden_apps"

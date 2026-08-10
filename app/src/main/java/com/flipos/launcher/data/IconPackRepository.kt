@@ -1,6 +1,5 @@
 package com.flipos.launcher.data
 
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -21,8 +20,11 @@ object IconPackRepository {
 
     private const val ACTION_ICON_PACK = "org.adw.launcher.THEMES"
 
+    // Guarded by [cacheLock]: loads can run on background threads for several
+    // screens at once, and HashMap isn't safe under concurrent structural writes.
     private val appFilterCache = HashMap<String, Map<String, String>>()
     private val drawableCache = HashMap<String, Drawable?>()
+    private val cacheLock = Any()
 
     /** Every installed app that declares itself as an icon pack, sorted by label. */
     fun getInstalledIconPacks(context: Context): List<IconPack> {
@@ -44,14 +46,22 @@ object IconPackRepository {
     fun getDrawableNames(context: Context, packPackage: String): List<String> =
         appFilterFor(context, packPackage).values.distinct().sorted()
 
-    /** The drawable name [packPackage] maps [componentKey] to, or null if unmapped. */
-    fun iconNameFor(context: Context, packPackage: String, componentKey: String): String? =
-        appFilterFor(context, packPackage)[componentKey]
+    /**
+     * The drawable name [packPackage] maps [componentKey] to, or null if
+     * unmapped. Falls back to a package-level mapping (`<item package="pkg" .../>`)
+     * when the exact component isn't listed.
+     */
+    fun iconNameFor(context: Context, packPackage: String, componentKey: String): String? {
+        val map = appFilterFor(context, packPackage)
+        return map[componentKey] ?: map[componentKey.substringBefore('/')]
+    }
 
     /** Loads a named drawable out of [packPackage]'s resources, or null if missing. */
     fun loadIcon(context: Context, packPackage: String, drawableName: String): Drawable? {
         val cacheKey = "$packPackage::$drawableName"
-        if (drawableCache.containsKey(cacheKey)) return drawableCache[cacheKey]
+        synchronized(cacheLock) {
+            if (drawableCache.containsKey(cacheKey)) return drawableCache[cacheKey]
+        }
         val drawable = try {
             val res = context.packageManager.getResourcesForApplication(packPackage)
             val id = res.getIdentifier(drawableName, "drawable", packPackage)
@@ -59,12 +69,22 @@ object IconPackRepository {
         } catch (e: Exception) {
             null
         }
-        drawableCache[cacheKey] = drawable
+        synchronized(cacheLock) { drawableCache[cacheKey] = drawable }
         return drawable
     }
 
-    private fun appFilterFor(context: Context, packPackage: String): Map<String, String> =
-        appFilterCache.getOrPut(packPackage) { loadAppFilter(context, packPackage) }
+    /** Drops parsed appfilter maps and decoded drawables (e.g. after a pack is installed/updated). */
+    fun clearCaches() = synchronized(cacheLock) {
+        appFilterCache.clear()
+        drawableCache.clear()
+    }
+
+    private fun appFilterFor(context: Context, packPackage: String): Map<String, String> {
+        synchronized(cacheLock) { appFilterCache[packPackage]?.let { return it } }
+        val loaded = loadAppFilter(context, packPackage)
+        synchronized(cacheLock) { appFilterCache[packPackage] = loaded }
+        return loaded
+    }
 
     private fun loadAppFilter(context: Context, packPackage: String): Map<String, String> {
         val res = try {
@@ -100,9 +120,16 @@ object IconPackRepository {
         while (eventType != XmlPullParser.END_DOCUMENT) {
             if (eventType == XmlPullParser.START_TAG && parser.name == "item") {
                 val component = parser.getAttributeValue(null, "component")
+                val pkg = parser.getAttributeValue(null, "package")
                 val drawable = parser.getAttributeValue(null, "drawable")
-                if (component != null && drawable != null) {
-                    componentKeyOf(component)?.let { map[it] = drawable }
+                if (drawable != null) {
+                    when {
+                        // Exact-component mapping (the common case).
+                        component != null -> componentKeyOf(component)?.let { map[it] = drawable }
+                        // Whole-package mapping: stored under the bare package name
+                        // (never contains '/'), looked up as a fallback in iconNameFor.
+                        pkg != null -> map[pkg] = drawable
+                    }
                 }
             }
             eventType = parser.next()
@@ -110,12 +137,26 @@ object IconPackRepository {
         return map
     }
 
-    /** Extracts a flattened component string from appfilter's `ComponentInfo{pkg/cls}` format. */
-    private fun componentKeyOf(component: String): String? {
-        val start = component.indexOf('{')
-        val end = component.indexOf('}')
-        if (start == -1 || end == -1 || end <= start) return null
-        val cn = ComponentName.unflattenFromString(component.substring(start + 1, end)) ?: return null
-        return cn.flattenToString()
+    /**
+     * Normalizes an appfilter `component` attribute to a flattened `pkg/cls` key.
+     * Accepts the standard `ComponentInfo{pkg/cls}` wrapper, a bare `pkg/cls`,
+     * and the `.Class` shorthand (expanded against the package). Pure string
+     * parsing (no [ComponentName]) so it's unit-testable off-device.
+     */
+    internal fun componentKeyOf(component: String): String? {
+        val inner = if (component.startsWith("ComponentInfo{")) {
+            val start = component.indexOf('{')
+            val end = component.indexOf('}')
+            if (start == -1 || end <= start) return null
+            component.substring(start + 1, end)
+        } else {
+            component
+        }
+        val slash = inner.indexOf('/')
+        if (slash <= 0 || slash == inner.length - 1) return null
+        val pkg = inner.substring(0, slash)
+        val rawClass = inner.substring(slash + 1)
+        val cls = if (rawClass.startsWith(".")) pkg + rawClass else rawClass
+        return "$pkg/$cls"
     }
 }

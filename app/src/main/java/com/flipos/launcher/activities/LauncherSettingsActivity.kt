@@ -123,13 +123,14 @@ class LauncherSettingsActivity : BaseListActivity() {
             null,
         )
         softKeys.setOnLeftClick { finish() }
-        softKeys.setOnCenterClick { settings[focusedPosition()].action() }
+        softKeys.setOnCenterClick { settings.getOrNull(focusedPosition())?.action() }
         refreshRows()
         focusFirst()
     }
 
     override fun onResume() {
         super.onResume()
+        if (isRecreatingForAccent) return
         // Notification access is granted from a separate system screen, so
         // re-check it whenever we come back into view.
         refreshRows()
@@ -194,8 +195,11 @@ class LauncherSettingsActivity : BaseListActivity() {
     private fun open(cls: Class<*>) = startActivity(Intent(this, cls))
 
     private fun isNotificationAccessGranted(): Boolean {
-        val flat = Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
-        return flat?.contains(packageName) == true
+        // Match the flattened ComponentName's package rather than a raw substring.
+        val flat = Settings.Secure.getString(contentResolver, "enabled_notification_listeners") ?: return false
+        return flat.split(':').any {
+            android.content.ComponentName.unflattenFromString(it)?.packageName == packageName
+        }
     }
 
     private fun openNotificationAccessSettings() =

@@ -17,11 +17,13 @@ class AppGridAdapter(
     private val onClick: (AppInfo) -> Unit,
     private val onLongClick: (AppInfo) -> Unit,
     private val onFocusChanged: (AppInfo) -> Unit = {},
-    private val iconSizePercent: Int = 100,
+    iconSizePercent: Int = 100,
     private val hasNotification: (AppInfo) -> Boolean = { false },
 ) : RecyclerView.Adapter<AppGridAdapter.VH>() {
 
     private val items = ArrayList<AppInfo>()
+
+    private var iconSizePercent = iconSizePercent
 
     // The RecyclerView's own width/height aren't readable from a ViewHolder at
     // bind time - RecyclerView binds a child's content before attaching it to
@@ -34,9 +36,7 @@ class AppGridAdapter(
     private var rows = 1
 
     fun submit(list: List<AppInfo>) {
-        items.clear()
-        items.addAll(list)
-        notifyDataSetChanged()
+        submitWithDiff(items, list) { a, b -> a.key == b.key }
     }
 
     /** Tells the icon-size clamp the grid's current content area and shape,
@@ -50,6 +50,13 @@ class AppGridAdapter(
         gridHeightPx = heightPx
         this.columns = coercedColumns
         this.rows = coercedRows
+        notifyDataSetChanged()
+    }
+
+    /** Updates the icon-size preference (e.g. changed in Settings) and rebinds. */
+    fun setIconSizePercent(percent: Int) {
+        if (percent == iconSizePercent) return
+        iconSizePercent = percent
         notifyDataSetChanged()
     }
 
