@@ -1,4 +1,6 @@
-package com.flipos.launcher
+package com.flipos.launcher.activities
+
+import com.flipos.launcher.R
 
 import android.app.WallpaperManager
 import android.content.Intent

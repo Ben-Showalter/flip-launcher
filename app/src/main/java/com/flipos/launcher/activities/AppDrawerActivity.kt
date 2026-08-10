@@ -1,4 +1,6 @@
-package com.flipos.launcher
+package com.flipos.launcher.activities
+
+import com.flipos.launcher.R
 
 import android.content.Intent
 import android.graphics.Color

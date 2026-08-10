@@ -1,11 +1,12 @@
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
+    // AGP 9 provides built-in Kotlin support (KGP 2.2.10+), so the
+    // org.jetbrains.kotlin.android plugin is intentionally not applied.
+    alias(libs.plugins.android.application)
 }
 
 android {
     namespace = "com.flipos.launcher"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.flipos.launcher"
@@ -33,17 +34,19 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+}
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
+kotlin {
+    // Pins the compile JDK to 17 and lets Gradle auto-provision it via the
+    // Foojay resolver, so the build works regardless of the machine's default JDK.
+    jvmToolchain(17)
 }
 
 dependencies {
-    implementation("androidx.core:core-ktx:1.13.1")
-    implementation("androidx.appcompat:appcompat:1.7.0")
-    implementation("androidx.recyclerview:recyclerview:1.3.2")
-    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
-    implementation("com.google.android.material:material:1.12.0")
-    implementation("androidx.palette:palette-ktx:1.0.0")
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.recyclerview)
+    implementation(libs.androidx.constraintlayout)
+    implementation(libs.google.material)
+    implementation(libs.androidx.palette.ktx)
 }

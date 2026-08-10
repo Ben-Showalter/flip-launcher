@@ -6,7 +6,7 @@ flagships. Navigation leans on the physical soft keys and D-pad: number keys
 1-9 double as shortcuts everywhere they make sense, and every screen mirrors
 the three-soft-key layout (left / center / right) KaiOS users already know.
 
-![Home Screen](docs/home.png)
+![Home Screen](reference/home.png)
 
 ## Features
 
@@ -20,8 +20,6 @@ the three-soft-key layout (left / center / right) KaiOS users already know.
   each independently toggleable.
 - Typing a digit anywhere on Home jumps straight into the dialer, prefilled.
 - Long-pressing Back launches a configurable app (Claude, etc.).
-
-![Home Screen](docs/home.png)
 
 ### App Drawer ("All Apps")
 
@@ -39,8 +37,8 @@ the three-soft-key layout (left / center / right) KaiOS users already know.
   - Reset a per-app icon override
   - Uninstall it
 
-![App Drawer Grid](docs/apps.png)
-![App Drawer List](docs/list.png)
+![App Drawer Grid](reference/apps.png)
+![App Drawer List](reference/list.png)
 
 ### Notices
 
@@ -54,7 +52,7 @@ timestamp ("2 minutes ago", "8:30 AM", …) per notification.
 
 Requires Notification Access, granted from Launcher Settings.
 
-![Notices](docs/notices.png)
+![Notices](reference/notices.png)
 
 ### Options menu
 
@@ -90,8 +88,8 @@ key:
 - **Background for Plain Icons** — toggle the synthesized tint disc for
   non-adaptive icons
 
-![Settings](docs/iconpack.png)
-![Icon Shape](docs/iconshape.png)
+![Settings](reference/iconpack.png)
+![Icon Shape](reference/iconshape.png)
 ### Home Shortcuts
 
 Customize the ordered list of up to 9 Home rail shortcuts. Pick a shortcut
@@ -115,8 +113,14 @@ the focused app is hidden from Home and the App Drawer.
 
 ## Requirements
 
-- Android 5.0 (API 21) or newer
-- Kotlin / AGP toolchain — see `build.gradle.kts`
+- Android 5.0 (API 21) or newer on the device.
+- An Android SDK with `platforms;android-36` and `build-tools;36.0.0`
+  (point the build at it via `local.properties` or `ANDROID_HOME`).
+- A JDK is **not** something you need to install or configure — the Gradle
+  toolchain auto-provisions JDK 17 for the build. Gradle itself runs on any
+  JDK 17-26.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for a from-scratch environment setup.
 
 ## Building
 

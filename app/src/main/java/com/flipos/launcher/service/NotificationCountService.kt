@@ -114,7 +114,7 @@ class NotificationCountService : NotificationListenerService() {
     companion object {
         /**
          * The system only ever runs one instance of a given listener service, so
-         * a static reference is a simple way for [com.flipos.launcher.NoticesActivity]
+         * a static reference is a simple way for [com.flipos.launcher.activities.NoticesActivity]
          * to reach it for dismiss/open actions without a bound-service round trip.
          */
         var instance: NotificationCountService? = null

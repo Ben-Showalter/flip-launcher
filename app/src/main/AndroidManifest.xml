@@ -31,7 +31,7 @@
         <!-- Home screen. Registering for CATEGORY_HOME makes this selectable
              as the default launcher. -->
         <activity
-            android:name=".MainActivity"
+            android:name=".activities.MainActivity"
             android:exported="true"
             android:theme="@style/Theme.FlipLauncher.Home"
             android:launchMode="singleTask"
@@ -49,7 +49,7 @@
         </activity>
 
         <activity
-            android:name=".LauncherSettingsActivity"
+            android:name=".activities.LauncherSettingsActivity"
             android:exported="true"
             android:icon="@drawable/settings_112"
             android:label="@string/title_launcher_settings"
@@ -62,62 +62,62 @@
         </activity>
 
         <activity
-            android:name=".AppDrawerActivity"
+            android:name=".activities.AppDrawerActivity"
             android:exported="false"
             android:theme="@style/Theme.FlipLauncher.Drawer"
             android:screenOrientation="portrait"
             android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize" />
 
         <activity
-            android:name=".OptionsActivity"
+            android:name=".activities.OptionsActivity"
             android:exported="false"
             android:screenOrientation="portrait"
             android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize" />
 
         <activity
-            android:name=".HideAppsActivity"
+            android:name=".activities.HideAppsActivity"
             android:exported="false"
             android:screenOrientation="portrait"
             android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize" />
 
         <activity
-            android:name=".ShortcutConfigActivity"
+            android:name=".activities.ShortcutConfigActivity"
             android:exported="false"
             android:screenOrientation="portrait"
             android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize" />
 
         <activity
-            android:name=".AppPickerActivity"
+            android:name=".activities.AppPickerActivity"
             android:exported="false"
             android:screenOrientation="portrait"
             android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize" />
 
         <activity
-            android:name=".ActivityPickerActivity"
+            android:name=".activities.ActivityPickerActivity"
             android:exported="false"
             android:screenOrientation="portrait"
             android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize" />
 
         <activity
-            android:name=".IconPackActivity"
+            android:name=".activities.IconPackActivity"
             android:exported="false"
             android:screenOrientation="portrait"
             android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize" />
 
         <activity
-            android:name=".IconPickerActivity"
+            android:name=".activities.IconPickerActivity"
             android:exported="false"
             android:screenOrientation="portrait"
             android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize" />
 
         <activity
-            android:name=".WallpaperPickerActivity"
+            android:name=".activities.WallpaperPickerActivity"
             android:exported="false"
             android:screenOrientation="portrait"
             android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize" />
 
         <activity
-            android:name=".NoticesActivity"
+            android:name=".activities.NoticesActivity"
             android:exported="false"
             android:screenOrientation="portrait"
             android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize" />

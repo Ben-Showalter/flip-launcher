@@ -13,7 +13,7 @@ import android.graphics.drawable.Drawable
  */
 object AppRepository {
 
-    private const val SETTINGS_ACTIVITY = "com.flipos.launcher.LauncherSettingsActivity"
+    private const val SETTINGS_ACTIVITY = "com.flipos.launcher.activities.LauncherSettingsActivity"
 
     /** Every launchable app except this launcher itself, sorted by label. */
     @Suppress("DEPRECATION") // int-flags overload kept for minSdk 21 compatibility
