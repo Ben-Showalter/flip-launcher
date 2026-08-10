@@ -212,6 +212,18 @@ class LauncherPrefs(context: Context) {
         AppRepository.invalidateIconCaches()
     }
 
+    // ------------------------------------------------------------- Animations
+
+    /**
+     * Whether UI animations (fast activity fades, list item animations, page
+     * indicator crossfades) are enabled. On by default; users on the slowest
+     * hardware can turn it off for snappier, animation-free navigation.
+     */
+    fun isAnimationsEnabled(): Boolean = prefs.getBoolean(KEY_ANIMATIONS, true)
+
+    fun setAnimationsEnabled(enabled: Boolean) =
+        prefs.edit().putBoolean(KEY_ANIMATIONS, enabled).apply()
+
     /** Per-app opt-out: whether [appKey]'s icon gets shape-masked at all. Defaults to on. */
     fun isIconWrapEnabled(appKey: String): Boolean = !getWrapDisabledKeys().contains(appKey)
 
@@ -277,5 +289,6 @@ class LauncherPrefs(context: Context) {
         private const val KEY_ICON_SHAPE = "icon_shape"
         private const val KEY_LEGACY_ICON_BG = "legacy_icon_background"
         private const val KEY_WRAP_DISABLED = "wrap_disabled_apps"
+        private const val KEY_ANIMATIONS = "animations_enabled"
     }
 }

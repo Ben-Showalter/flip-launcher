@@ -9,6 +9,21 @@
         <item name="colorAccent">@color/kai_accent</item>
         <item name="android:textColorPrimary">@color/kai_text</item>
         <item name="android:textColorSecondary">@color/kai_text_secondary</item>
+        <item name="android:windowAnimationStyle">@style/Animation.Flip.Activity</item>
+    </style>
+
+    <!-- Fast cross-fade for activity open/close. Alpha-only and short so it stays
+         smooth on low-end feature-phone chipsets. -->
+    <style name="Animation.Flip.Activity" parent="@android:style/Animation.Activity">
+        <item name="android:activityOpenEnterAnimation">@anim/fade_in</item>
+        <item name="android:activityOpenExitAnimation">@anim/fade_out</item>
+        <item name="android:activityCloseEnterAnimation">@anim/fade_in</item>
+        <item name="android:activityCloseExitAnimation">@anim/fade_out</item>
+    </style>
+
+    <!-- Applied at onCreate when the user disables animations, so navigation is
+         instant and free of any transition cost. -->
+    <style name="ThemeOverlay.FlipLauncher.NoAnimations" parent="">
         <item name="android:windowAnimationStyle">@null</item>
     </style>
 

@@ -15,7 +15,7 @@ import android.util.LruCache
  */
 object AppRepository {
 
-    private const val SETTINGS_ACTIVITY = "com.flipos.launcher.activities.LauncherSettingsActivity"
+    private const val SETTINGS_ACTIVITY = "com.flipos.launcher.activities.SettingsActivity"
 
     /**
      * Memoizes the shaped/wrapped icon bitmap per (component + override + pack +
@@ -50,7 +50,7 @@ object AppRepository {
             .asSequence()
             .mapNotNull { ri ->
                 val ai = ri.activityInfo ?: return@mapNotNull null
-                // Exclude our own activities except Launcher Settings, which is
+                // Exclude our own activities except Settings, which is
                 // deliberately exported with a LAUNCHER category so it shows up
                 // here like a regular app.
                 if (ai.packageName == self && ai.name != SETTINGS_ACTIVITY) return@mapNotNull null

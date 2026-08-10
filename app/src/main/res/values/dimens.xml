@@ -1,12 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Soft keys / chrome -->
     <dimen name="softkey_height">48dp</dimen>
     <dimen name="softkey_text">15sp</dimen>
+
+    <!-- Home clock block -->
     <dimen name="clock_text">64sp</dimen>
     <dimen name="date_text">18sp</dimen>
+
+    <!-- Icons -->
     <dimen name="app_icon">61dp</dimen>
     <dimen name="list_icon">40dp</dimen>
-    <dimen name="screen_title">25sp</dimen>
+    <!-- Upper bound for the home rail's app disc; the actual size shrinks to fit
+         the computed per-slot height on very short screens. -->
+    <dimen name="rail_circle_max">54dp</dimen>
+
+    <!-- Page indicator -->
     <dimen name="page_dot_size">8dp</dimen>
     <dimen name="page_dot_margin">5dp</dimen>
+
+    <!-- Type scale (sp). Tuned for readability on ~240x320 QVGA screens. -->
+    <dimen name="text_title">25sp</dimen>
+    <dimen name="screen_title">25sp</dimen>
+    <dimen name="text_row_title">16sp</dimen>
+    <dimen name="text_row_subtitle">12sp</dimen>
+    <dimen name="text_row_trailing">13sp</dimen>
+    <dimen name="text_section">12sp</dimen>
+    <dimen name="text_caption">11sp</dimen>
+
+    <!-- Spacing scale (dp). Use these instead of inline paddings. -->
+    <dimen name="space_xs">4dp</dimen>
+    <dimen name="space_s">8dp</dimen>
+    <dimen name="space_m">12dp</dimen>
+    <dimen name="space_l">16dp</dimen>
+    <dimen name="space_xl">20dp</dimen>
+
+    <!-- Corner radii. Rows/cards share one radius; pills use a smaller one. -->
+    <dimen name="radius_row">12dp</dimen>
+    <dimen name="radius_pill">8dp</dimen>
+    <dimen name="radius_tile">14dp</dimen>
+
+    <!-- Row geometry -->
+    <dimen name="row_margin_horizontal">6dp</dimen>
+    <dimen name="row_margin_vertical">2dp</dimen>
+    <dimen name="row_padding_horizontal">14dp</dimen>
+    <dimen name="row_padding_vertical">10dp</dimen>
 </resources>

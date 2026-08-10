@@ -43,12 +43,16 @@ class IconPickerActivity : AppCompatActivity() {
         appKey = key
         prefs = LauncherPrefs(this)
         prefs.getAccentColor().let { if (it.themeOverlayRes != 0) theme.applyStyle(it.themeOverlayRes, true) }
+        if (!prefs.isAnimationsEnabled()) {
+            theme.applyStyle(R.style.ThemeOverlay_FlipLauncher_NoAnimations, true)
+        }
 
         // Reuses the App Drawer's title/grid/soft-key layout; its page indicator
         // isn't relevant here so it's hidden.
         setContentView(R.layout.activity_app_drawer)
         titleView = findViewById(R.id.title)
         grid = findViewById(R.id.apps_grid)
+        grid.itemAnimator = null
         findViewById<View>(R.id.page_indicator).visibility = View.GONE
         val softKeys = findViewById<SoftKeyBar>(R.id.soft_keys)
 

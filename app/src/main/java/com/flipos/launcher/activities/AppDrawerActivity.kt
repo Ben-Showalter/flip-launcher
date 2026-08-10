@@ -32,7 +32,7 @@ import kotlin.math.min
 
 /**
  * The "Menu": every non-hidden app, shown as either a 3x3 icon grid or a
- * single-column list (toggled in Launcher Settings).
+ * single-column list (toggled in Settings).
  *
  * The grid pages nine apps at a time: D-pad navigates within a page, row by
  * row, and pressing down off the bottom row (or up off the top row) flips to
@@ -74,12 +74,16 @@ class AppDrawerActivity : AppCompatActivity() {
         val accent = prefs.getAccentColor()
         appliedAccentColor = accent
         if (accent.themeOverlayRes != 0) theme.applyStyle(accent.themeOverlayRes, true)
+        if (!prefs.isAnimationsEnabled()) {
+            theme.applyStyle(R.style.ThemeOverlay_FlipLauncher_NoAnimations, true)
+        }
         setContentView(R.layout.activity_app_drawer)
 
         grid = findViewById(R.id.apps_grid)
         titleView = findViewById(R.id.title)
         softKeys = findViewById(R.id.soft_keys)
         pageIndicator = findViewById(R.id.page_indicator)
+        pageIndicator.animateChanges = prefs.isAnimationsEnabled()
 
         // The window shows the wallpaper through a translucent overlay (see
         // Theme.FlipLauncher.Drawer); these two would otherwise paint over it

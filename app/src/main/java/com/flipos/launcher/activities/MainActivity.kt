@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Bundle
 import android.provider.ContactsContract
@@ -29,6 +30,7 @@ import com.flipos.launcher.data.NotificationCounts
 import com.flipos.launcher.ui.HomeRailAdapter
 import com.flipos.launcher.ui.RailItem
 import com.flipos.launcher.util.BackgroundLoader
+import com.flipos.launcher.util.accentColorAlpha
 import com.flipos.launcher.util.launchAppByKey
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -44,7 +46,7 @@ import java.util.Locale
  * or `*` / `#` - anywhere on Home opens the phone dialer prefilled with it: on
  * Home the number keys are a dialer shortcut, not a rail launcher (the rail is
  * driven by focus + OK). The center button opens All Apps; long-pressing it
- * opens launcher Options.
+ * opens Settings.
  */
 class MainActivity : AppCompatActivity() {
 
@@ -123,6 +125,9 @@ class MainActivity : AppCompatActivity() {
         val accent = prefs.getAccentColor()
         appliedAccentColor = accent
         if (accent.themeOverlayRes != 0) theme.applyStyle(accent.themeOverlayRes, true)
+        if (!prefs.isAnimationsEnabled()) {
+            theme.applyStyle(R.style.ThemeOverlay_FlipLauncher_NoAnimations, true)
+        }
         setContentView(R.layout.activity_main)
 
         clock = findViewById(R.id.clock)
@@ -157,6 +162,8 @@ class MainActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.softkey_left).setOnClickListener { openLeftKeyApp() }
         findViewById<TextView>(R.id.softkey_right).setOnClickListener { openRightKeyApp() }
         appMenuButton = findViewById<ImageView>(R.id.softkey_center).apply {
+            // bg_rail_focus is white so it can be tinted to the user's accent.
+            backgroundTintList = ColorStateList.valueOf(accentColorAlpha(0x4D))
             setOnClickListener { openAppDrawer() }
             setOnLongClickListener { openOptions(); true }
             // Left jumps straight to the first pinned shortcut. The soft keys
@@ -336,7 +343,7 @@ class MainActivity : AppCompatActivity() {
         if (key != null) launchAppByKey(key) else openNotifications()
     }
 
-    private fun openOptions() = startActivity(Intent(this, OptionsActivity::class.java))
+    private fun openOptions() = startActivity(Intent(this, SettingsActivity::class.java))
 
     private fun openRightKeyApp() {
         val key = prefs.getRightKeyApp()

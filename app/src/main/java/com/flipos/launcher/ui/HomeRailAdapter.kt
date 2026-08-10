@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.flipos.launcher.R
 import com.flipos.launcher.data.AppInfo
 import com.flipos.launcher.data.NotificationDotColor
+import com.flipos.launcher.util.accentColorAlpha
 
 /** A rail entry: an app shortcut, or the trailing "add" tile when [app] is null. */
 data class RailItem(val app: AppInfo?)
@@ -58,7 +59,21 @@ class HomeRailAdapter(
         private val notifDot: View = itemView.findViewById(R.id.notif_dot)
 
         fun bind(item: RailItem) {
-            if (itemHeightPx > 0) itemView.layoutParams = itemView.layoutParams.apply { height = itemHeightPx }
+            if (itemHeightPx > 0) {
+                itemView.layoutParams = itemView.layoutParams.apply { height = itemHeightPx }
+                // Size the disc from the slot height so it never overflows a short
+                // rail (e.g. QVGA), capped at the design maximum on tall screens.
+                val maxPx = itemView.resources.getDimensionPixelSize(R.dimen.rail_circle_max)
+                val discPx = (itemHeightPx * 0.82f).toInt().coerceIn(1, maxPx)
+                circle.layoutParams = circle.layoutParams.apply { width = discPx; height = discPx }
+                val dotPx = (discPx * 0.42f).toInt().coerceAtLeast(
+                    (14 * itemView.resources.displayMetrics.density).toInt(),
+                )
+                notifDot.layoutParams = notifDot.layoutParams.apply { width = dotPx; height = dotPx }
+            }
+            // The focus tile (bg_rail_focus) is white so we can tint it to the
+            // user's accent at ~30% alpha, keeping it subtle over the wallpaper.
+            itemView.backgroundTintList = ColorStateList.valueOf(itemView.context.accentColorAlpha(0x4D))
             // D-pad right off the rail returns to the center "app menu" button
             // (mirrors that button's left = jump to the rail).
             itemView.nextFocusRightId = R.id.softkey_center

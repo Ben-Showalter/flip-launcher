@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Non-focusable group header separating related rows in a list. -->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/section_title"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingStart="@dimen/row_padding_horizontal"
+    android:paddingEnd="@dimen/row_padding_horizontal"
+    android:paddingTop="@dimen/space_m"
+    android:paddingBottom="@dimen/space_xs"
+    android:focusable="false"
+    android:textAppearance="@style/TextAppearance.Flip.SectionHeader" />

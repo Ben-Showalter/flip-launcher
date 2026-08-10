@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fast, cheap activity enter fade (alpha only) tuned for weak chipsets. -->
+<alpha xmlns:android="http://schemas.android.com/apk/res/android"
+    android:duration="150"
+    android:fromAlpha="0.0"
+    android:interpolator="@android:interpolator/decelerate_cubic"
+    android:toAlpha="1.0" />

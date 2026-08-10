@@ -44,7 +44,7 @@
     <string name="title_notices">%1$d Notices</string>
 
     <!-- Notices screen -->
-    <string name="notices_access_required">Turn on Notification Access in Launcher Settings to see notices here</string>
+    <string name="notices_access_required">Turn on Notification Access in Settings to see notices here</string>
     <string name="notices_open_failed">Can\'t open this notice</string>
 
     <!-- Misc -->
@@ -60,7 +60,41 @@
     <string name="back_longpress_clear">Clear</string>
     <string name="back_longpress_app_set">Long-press Back will open %1$s</string>
     <string name="back_longpress_app_cleared">Long-press Back is now unassigned</string>
-    <string name="back_longpress_unset_toast">No app set for long-press Back. Configure it in Options.</string>
+    <string name="back_longpress_unset_toast">No app set for long-press Back. Configure it in Settings.</string>
+
+    <!-- Settings hub (unified Options + Launcher Settings) -->
+    <string name="title_settings">Settings</string>
+    <string name="cat_appearance">Appearance</string>
+    <string name="cat_appearance_sub">Wallpaper, colors, icons</string>
+    <string name="cat_notifications">Notifications</string>
+    <string name="cat_notifications_sub">Badges and access</string>
+    <string name="cat_home_keys">Home Screen &amp; Keys</string>
+    <string name="cat_home_keys_sub">Soft keys and shortcuts</string>
+    <string name="cat_apps_drawer">Apps &amp; Drawer</string>
+    <string name="cat_apps_drawer_sub">Drawer layout, hidden apps</string>
+
+    <!-- Settings section headers -->
+    <string name="sec_personalize">Personalize</string>
+    <string name="sec_home_apps">Home &amp; Apps</string>
+    <string name="sec_system">System</string>
+    <string name="sec_wallpaper_color">Wallpaper &amp; Color</string>
+    <string name="sec_icons">Icons</string>
+    <string name="sec_notif_access">Access</string>
+    <string name="sec_notif_home">Show on Home</string>
+    <string name="sec_soft_keys">Soft Keys</string>
+    <string name="sec_buttons">Buttons</string>
+    <string name="sec_shortcuts">Shortcuts</string>
+    <string name="sec_app_drawer">App Drawer</string>
+    <string name="sec_motion">Motion</string>
+
+    <!-- Animations -->
+    <string name="settings_animations">Animations</string>
+    <string name="settings_animations_sub">Turn off to speed up older phones</string>
+
+    <!-- Settings row subtitles -->
+    <string name="settings_wallpaper_sub">Choose a background image</string>
+    <string name="settings_notif_access_sub">Let Flip Launcher read notifications</string>
+    <string name="settings_drawer_view_sub">Grid or list layout</string>
 
     <!-- Launcher Settings -->
     <string name="title_launcher_settings">Launcher Settings</string>

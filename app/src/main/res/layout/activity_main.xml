@@ -208,7 +208,7 @@
     <LinearLayout
         android:id="@+id/home_softkeys"
         android:layout_width="0dp"
-        android:layout_height="50dp"
+        android:layout_height="@dimen/softkey_height"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -230,7 +230,7 @@
             android:shadowRadius="5"
             android:text="@string/softkey_notifications"
             android:textColor="@color/kai_text"
-            android:textSize="15sp"
+            android:textSize="@dimen/softkey_text"
             tools:ignore="RtlSymmetry"
             xmlns:tools="http://schemas.android.com/tools" />
 
@@ -262,7 +262,7 @@
             android:shadowRadius="5"
             android:text="@string/softkey_contacts"
             android:textColor="@color/kai_text"
-            android:textSize="15sp" />
+            android:textSize="@dimen/softkey_text" />
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -9,6 +9,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.flipos.launcher.data.LauncherPrefs
 import com.flipos.launcher.ui.SoftKeyBar
+import com.flipos.launcher.ui.listItemAnimator
 
 /**
  * Shared scaffolding for the vertical list screens (Options, Hide Apps,
@@ -34,15 +35,21 @@ abstract class BaseListActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val accent = LauncherPrefs(this).getAccentColor()
+        val prefs = LauncherPrefs(this)
+        val accent = prefs.getAccentColor()
         appliedAccentColor = accent
         if (accent.themeOverlayRes != 0) theme.applyStyle(accent.themeOverlayRes, true)
+        if (!prefs.isAnimationsEnabled()) {
+            theme.applyStyle(R.style.ThemeOverlay_FlipLauncher_NoAnimations, true)
+        }
         setContentView(R.layout.activity_list)
         titleView = findViewById(R.id.title)
         listView = findViewById(R.id.list)
         softKeys = findViewById(R.id.soft_keys)
         listView.layoutManager = LinearLayoutManager(this)
-        listView.itemAnimator = null
+        // Short insert/remove/move animations when enabled; no change cross-fade
+        // (rows rebind often on refresh and it would flicker). Null = instant.
+        listView.itemAnimator = if (prefs.isAnimationsEnabled()) listItemAnimator() else null
     }
 
     override fun onResume() {
@@ -68,7 +75,14 @@ abstract class BaseListActivity : AppCompatActivity() {
     protected fun focusFirst() {
         listView.post {
             if (listView.focusedChild == null) {
-                listView.layoutManager?.findViewByPosition(0)?.requestFocus()
+                val lm = listView.layoutManager ?: return@post
+                // Skip non-focusable rows (e.g. section headers) so focus lands on
+                // the first real item rather than silently failing on a header.
+                for (i in 0 until lm.itemCount) {
+                    val view = lm.findViewByPosition(i)
+                    if (view != null && view.isFocusable && view.requestFocus()) return@post
+                }
+                listView.requestFocus()
             }
         }
     }

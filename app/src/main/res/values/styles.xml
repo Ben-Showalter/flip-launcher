@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Reusable text and widget styles. Centralizing typography here keeps sizes
+     consistent across screens and makes the whole UI easy to retune for the
+     small QVGA displays this launcher targets. -->
+<resources>
+
+    <!-- Screen title shown in the top bar of list/drawer screens. -->
+    <style name="TextAppearance.Flip.ScreenTitle" parent="TextAppearance.AppCompat">
+        <item name="android:textSize">@dimen/text_title</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">?attr/colorAccent</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:ellipsize">end</item>
+    </style>
+
+    <!-- Primary line of a list row. Color follows focus state. -->
+    <style name="TextAppearance.Flip.RowTitle" parent="TextAppearance.AppCompat">
+        <item name="android:textSize">@dimen/text_row_title</item>
+        <item name="android:textColor">@color/text_on_item</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:ellipsize">end</item>
+    </style>
+
+    <!-- Secondary description line under a row title. -->
+    <style name="TextAppearance.Flip.RowSubtitle" parent="TextAppearance.AppCompat">
+        <item name="android:textSize">@dimen/text_row_subtitle</item>
+        <item name="android:textColor">@color/text_secondary_on_item</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:ellipsize">end</item>
+    </style>
+
+    <!-- Trailing value/state text on the right of a row. -->
+    <style name="TextAppearance.Flip.RowTrailing" parent="TextAppearance.AppCompat">
+        <item name="android:textSize">@dimen/text_row_trailing</item>
+        <item name="android:textColor">@color/text_secondary_on_item</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:ellipsize">end</item>
+    </style>
+
+    <!-- Non-focusable section header separating groups of rows. -->
+    <style name="TextAppearance.Flip.SectionHeader" parent="TextAppearance.AppCompat">
+        <item name="android:textSize">@dimen/text_section</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">?attr/colorAccent</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.06</item>
+        <item name="android:singleLine">true</item>
+    </style>
+
+    <!-- Soft key labels. -->
+    <style name="TextAppearance.Flip.SoftKey" parent="TextAppearance.AppCompat">
+        <item name="android:textSize">@dimen/softkey_text</item>
+    </style>
+
+</resources>

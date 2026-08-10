@@ -20,6 +20,9 @@ class PageIndicatorView @JvmOverloads constructor(
     private var pageCount = 0
     private var currentPage = 0
 
+    /** When true, the newly active dot does a quick, cheap pop on page change. */
+    var animateChanges = true
+
     init {
         orientation = VERTICAL
         gravity = Gravity.CENTER
@@ -50,6 +53,13 @@ class PageIndicatorView @JvmOverloads constructor(
         if (clamped == currentPage) return
         currentPage = clamped
         updateDots()
+        if (animateChanges) {
+            getChildAt(currentPage)?.apply {
+                scaleX = 0.5f
+                scaleY = 0.5f
+                animate().scaleX(1f).scaleY(1f).setDuration(140).start()
+            }
+        }
     }
 
     private fun updateDots() {
