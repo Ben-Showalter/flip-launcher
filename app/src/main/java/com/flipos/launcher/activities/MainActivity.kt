@@ -2,6 +2,7 @@ package com.flipos.launcher.activities
 
 import com.flipos.launcher.R
 
+import android.Manifest
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -10,6 +11,8 @@ import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.ContactsContract
 import android.view.KeyEvent
 import android.view.View
@@ -30,8 +33,11 @@ import com.flipos.launcher.data.NotificationCounts
 import com.flipos.launcher.ui.HomeRailAdapter
 import com.flipos.launcher.ui.RailItem
 import com.flipos.launcher.util.BackgroundLoader
+import com.flipos.launcher.util.NumberAssigner
+import com.flipos.launcher.util.PermissionGate
 import com.flipos.launcher.util.accentColorAlpha
 import com.flipos.launcher.util.launchAppByKey
+import com.flipos.launcher.util.placeCall
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -46,7 +52,11 @@ import java.util.Locale
  * or `*` / `#` - anywhere on Home opens the phone dialer prefilled with it: on
  * Home the number keys are a dialer shortcut, not a rail launcher (the rail is
  * driven by focus + OK). The center button opens All Apps; long-pressing it
- * opens Settings.
+ * (via touch) opens Settings.
+ *
+ * Most physical keys (digits 0/2-9, MENU, BACK, the soft keys) also carry a
+ * long-press action and a 5-second-hold "assign" menu - see the Key handling
+ * section below.
  */
 class MainActivity : AppCompatActivity() {
 
@@ -74,11 +84,66 @@ class MainActivity : AppCompatActivity() {
     /** Rail index awaiting an app from the picker (-1 = none). */
     private var pendingIndex = -1
 
-    /** Set once a Back long-press has fired, so the matching key-up doesn't also open the drawer. */
-    private var backLongPressHandled = false
+    /** Digit awaiting a number from [speedDialAssigner] (-1 = none). */
+    private var pendingSpeedDialDigit = -1
+
+    /** Physical key awaiting an app from [assignAppLauncher] (0 = none). */
+    private var pendingAssignAppKey = 0
 
     /** The accent color applied this onCreate, so [onResume] can detect a change and [recreate]. */
     private var appliedAccentColor: LauncherPrefs.AccentColor? = null
+
+    // ---------------------------------------------------- Key hold tracking
+    //
+    // Every assignable physical key (digits 0/2-9, MENU, BACK, the soft keys)
+    // shares one small state machine: a short tap performs the key's default
+    // action, holding past the framework's long-press threshold (~500ms)
+    // performs its bound action instead (dial a speed-dial number / launch a
+    // bound app), and holding for a full 5 seconds opens that key's assign
+    // menu. See onKeyDown/onKeyUp below.
+
+    private val assignHandler = Handler(Looper.getMainLooper())
+
+    /** Scheduled 5-second assign runnables, keyed by keyCode, so a release can cancel them. */
+    private val assignRunnables = HashMap<Int, Runnable>()
+
+    /** Keycodes whose 5-second assign menu already fired for the current press. */
+    private val assignFired = HashSet<Int>()
+
+    /** Keycodes that have crossed the framework long-press threshold for the current press. */
+    private val longPressFired = HashSet<Int>()
+
+    private val callPermission = PermissionGate(this, Manifest.permission.CALL_PHONE)
+
+    /** Contact-or-manual-number chooser for speed dial, shared with [pendingSpeedDialDigit]. */
+    private val speedDialAssigner = NumberAssigner(this) { number, label ->
+        if (pendingSpeedDialDigit >= 0) {
+            val digit = pendingSpeedDialDigit
+            pendingSpeedDialDigit = -1
+            prefs.setSpeedDial(digit, number, label)
+            Toast.makeText(this, getString(R.string.speed_dial_set, label), Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /** App picker for MENU/BACK/soft-key assignment, writing back based on [pendingAssignAppKey]. */
+    private val assignAppLauncher = registerForActivityResult(StartActivityForResult()) { result ->
+        val key = result.data?.getStringExtra(AppPickerActivity.EXTRA_APP_KEY)
+        val target = pendingAssignAppKey
+        pendingAssignAppKey = 0
+        if (result.resultCode == RESULT_OK && key != null) {
+            when (target) {
+                KeyEvent.KEYCODE_MENU -> prefs.setMenuKeyApp(key)
+                KeyEvent.KEYCODE_BACK -> prefs.setBackLongPressApp(key)
+                KeyEvent.KEYCODE_SOFT_LEFT -> prefs.setLeftKeyApp(key)
+                KeyEvent.KEYCODE_SOFT_RIGHT -> prefs.setRightKeyApp(key)
+            }
+            AppRepository.resolveComponent(this, key)?.label?.let {
+                Toast.makeText(this, getString(R.string.key_assigned_toast, it), Toast.LENGTH_SHORT).show()
+            }
+            refreshLeftKeyLabel()
+            refreshRightKeyLabel()
+        }
+    }
 
     private val pickLauncher = registerForActivityResult(StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK && pendingIndex >= 0) {
@@ -239,6 +304,11 @@ class MainActivity : AppCompatActivity() {
         unregisterReceiver(timeReceiver)
         unregisterReceiver(packageReceiver)
         NotificationCounts.removeListener(notifListener)
+        // A key hold that's interrupted mid-press (screen off, app switch) may
+        // never deliver a matching key-up; drop any scheduled assign timers so
+        // they don't fire into the background.
+        assignHandler.removeCallbacksAndMessages(null)
+        assignRunnables.clear()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -393,44 +463,48 @@ class MainActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.softkey_left).text = label
     }
 
-    private fun openDialer() {
-        try {
-            startActivity(Intent(Intent.ACTION_DIAL))
-        } catch (e: Exception) {
-            Toast.makeText(this, R.string.toast_no_dialer, Toast.LENGTH_SHORT).show()
-        }
-    }
-
     /** The KaiOS "Notices" action: our own list screen, not the system shade. */
     private fun openNotifications() = startActivity(Intent(this, NoticesActivity::class.java))
 
+    private fun openCallLog() = startActivity(Intent(this, CallLogActivity::class.java))
+
     // ----------------------------------------------------------- Key handling
+    //
+    // Every assignable key (digits 0/2-9, MENU, BACK, the soft keys) is
+    // swallowed on key-down and resolved on key-up, exactly like the digit
+    // dial-prefill below always has been: launching anything on key-down
+    // leaves the matching key-up to be delivered to whatever gets focused as
+    // a result, which on some devices re-enters the same input. Key-down only
+    // starts long-press tracking and the 5-second assign timer; key-up
+    // decides between a tap, a long-press action, or (if the timer already
+    // fired) nothing further.
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         when (keyCode) {
-            // Start typing a number anywhere on Home -> jump into the dialer.
-            // The dialer is actually launched on key-up (see onKeyUp): launching
-            // it here on key-down leaves the matching key-up to be delivered to
-            // the now-focused dialer, which on some devices re-enters the same
-            // digit, so the first digit appears twice. Consuming the key-down
-            // here keeps the gesture entirely within Home until it completes.
-            in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9,
-            KeyEvent.KEYCODE_STAR,
-            KeyEvent.KEYCODE_POUND -> return true
-            KeyEvent.KEYCODE_SOFT_LEFT -> { openLeftKeyApp(); return true }
-            KeyEvent.KEYCODE_SOFT_RIGHT -> { openRightKeyApp(); return true }
-            KeyEvent.KEYCODE_MENU -> { openAppDrawer(); return true }
-            KeyEvent.KEYCODE_CALL -> { openDialer(); return true }
+            in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> {
+                beginPressTracking(keyCode, event)
+                // Key 1 is hard-coded to voicemail - never assignable.
+                if (event.repeatCount == 0 && keyCode != KeyEvent.KEYCODE_1) scheduleAssign(keyCode)
+                trackLongPress(keyCode, event)
+                return true
+            }
+            KeyEvent.KEYCODE_STAR, KeyEvent.KEYCODE_POUND -> return true
+            KeyEvent.KEYCODE_SOFT_LEFT, KeyEvent.KEYCODE_SOFT_RIGHT -> {
+                beginPressTracking(keyCode, event)
+                if (event.repeatCount == 0) scheduleAssign(keyCode)
+                return true
+            }
+            KeyEvent.KEYCODE_MENU -> {
+                beginPressTracking(keyCode, event)
+                if (event.repeatCount == 0) scheduleAssign(keyCode)
+                trackLongPress(keyCode, event)
+                return true
+            }
+            KeyEvent.KEYCODE_CALL -> { openCallLog(); return true }
             KeyEvent.KEYCODE_BACK -> {
-                // Track the initial press so the framework marks the follow-up
-                // repeat as a long-press; without this, isLongPress never fires
-                // reliably on some devices.
-                if (event.repeatCount == 0) event.startTracking()
-                if (event.isLongPress) {
-                    backLongPressHandled = true
-                    launchBackLongPressApp()
-                    return true
-                }
+                beginPressTracking(keyCode, event)
+                if (event.repeatCount == 0) scheduleAssign(keyCode)
+                trackLongPress(keyCode, event)
             }
         }
         return super.onKeyDown(keyCode, event)
@@ -438,23 +512,120 @@ class MainActivity : AppCompatActivity() {
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
         when (keyCode) {
-            // Launch the dialer on key-up (not key-down) so the physical key
-            // event is fully consumed by Home before the dialer is focused,
-            // preventing the leading digit from being entered twice.
             in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> {
-                startDial(('0' + (keyCode - KeyEvent.KEYCODE_0)).toString())
+                cancelAssign(keyCode)
+                if (assignFired.remove(keyCode)) return true
+                val digit = keyCode - KeyEvent.KEYCODE_0
+                val longPress = longPressFired.remove(keyCode)
+                when {
+                    keyCode == KeyEvent.KEYCODE_1 && longPress -> callVoicemail()
+                    longPress -> dialSpeedDial(digit)
+                    else -> startDial(digit.toString())
+                }
                 return true
             }
             KeyEvent.KEYCODE_STAR -> { startDial("*"); return true }
             KeyEvent.KEYCODE_POUND -> { startDial("#"); return true }
-        }
-        // Swallow the key-up that follows a handled long-press so the
-        // OnBackPressedCallback above doesn't also open the app drawer.
-        if (keyCode == KeyEvent.KEYCODE_BACK && backLongPressHandled) {
-            backLongPressHandled = false
-            return true
+            KeyEvent.KEYCODE_SOFT_LEFT -> {
+                cancelAssign(keyCode)
+                if (assignFired.remove(keyCode)) return true
+                openLeftKeyApp()
+                return true
+            }
+            KeyEvent.KEYCODE_SOFT_RIGHT -> {
+                cancelAssign(keyCode)
+                if (assignFired.remove(keyCode)) return true
+                openRightKeyApp()
+                return true
+            }
+            KeyEvent.KEYCODE_MENU -> {
+                cancelAssign(keyCode)
+                if (assignFired.remove(keyCode)) return true
+                if (longPressFired.remove(keyCode)) launchMenuKeyApp() else openAppDrawer()
+                return true
+            }
+            KeyEvent.KEYCODE_BACK -> {
+                cancelAssign(keyCode)
+                if (assignFired.remove(keyCode)) return true
+                if (longPressFired.remove(keyCode)) {
+                    launchBackLongPressApp()
+                    return true
+                }
+                // Short tap: fall through to super, whose default BACK handling
+                // fires onBackPressedDispatcher (the OnBackPressedCallback above
+                // opens the app drawer), exactly as before.
+            }
         }
         return super.onKeyUp(keyCode, event)
+    }
+
+    /** Starts long-press tracking on the initial down and clears any stale hold state from a prior, interrupted press. */
+    private fun beginPressTracking(keyCode: Int, event: KeyEvent) {
+        if (event.repeatCount != 0) return
+        event.startTracking()
+        assignFired.remove(keyCode)
+        longPressFired.remove(keyCode)
+    }
+
+    /** Records that [keyCode] has crossed the framework long-press threshold, unless its 5-second assign already fired. */
+    private fun trackLongPress(keyCode: Int, event: KeyEvent) {
+        if (event.isLongPress && keyCode !in assignFired) longPressFired.add(keyCode)
+    }
+
+    /** Schedules [keyCode]'s assign menu to open after a 5-second hold; cancelled by [cancelAssign] on release. */
+    private fun scheduleAssign(keyCode: Int) {
+        cancelAssign(keyCode)
+        val runnable = Runnable {
+            assignFired.add(keyCode)
+            openAssignMenu(keyCode)
+        }
+        assignRunnables[keyCode] = runnable
+        assignHandler.postDelayed(runnable, ASSIGN_HOLD_MS)
+    }
+
+    private fun cancelAssign(keyCode: Int) {
+        assignRunnables.remove(keyCode)?.let { assignHandler.removeCallbacks(it) }
+    }
+
+    /** Opens the assign menu for [keyCode]: a contact/manual-number chooser for digits, an app picker otherwise. */
+    private fun openAssignMenu(keyCode: Int) {
+        if (keyCode in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9) {
+            pendingSpeedDialDigit = keyCode - KeyEvent.KEYCODE_0
+            speedDialAssigner.start()
+        } else {
+            pendingAssignAppKey = keyCode
+            assignAppLauncher.launch(Intent(this, AppPickerActivity::class.java))
+        }
+    }
+
+    private fun dialSpeedDial(digit: Int) {
+        val entry = prefs.getSpeedDial(digit)
+        if (entry == null) {
+            Toast.makeText(this, R.string.speed_dial_unset_toast, Toast.LENGTH_SHORT).show()
+        } else {
+            placeCall(callPermission, entry.number)
+        }
+    }
+
+    private fun callVoicemail() {
+        callPermission.run(onDenied = {
+            Toast.makeText(this, R.string.toast_no_dialer, Toast.LENGTH_SHORT).show()
+        }) {
+            try {
+                startActivity(Intent(Intent.ACTION_CALL, Uri.parse("voicemail:")))
+            } catch (e: Exception) {
+                Toast.makeText(this, R.string.toast_no_dialer, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun launchMenuKeyApp() {
+        val key = prefs.getMenuKeyApp()
+        if (key == null) {
+            Toast.makeText(this, R.string.menu_key_unset_toast, Toast.LENGTH_SHORT).show()
+        } else {
+            launchAppByKey(key)
+        }
     }
 
     private fun launchBackLongPressApp() {
@@ -487,5 +658,8 @@ class MainActivity : AppCompatActivity() {
         private var defaultPromptShown = false
 
         private const val STATE_PENDING_INDEX = "pending_index"
+
+        /** How long an assignable key must be held to open its assign menu. */
+        private const val ASSIGN_HOLD_MS = 5000L
     }
 }

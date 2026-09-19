@@ -14,6 +14,7 @@
     <string name="softkey_activities">Activities</string>
     <string name="softkey_dismiss">Dismiss</string>
     <string name="softkey_dismiss_all">Dismiss All</string>
+    <string name="softkey_call">Call</string>
 
     <!-- Options menu -->
     <string name="opt_all_apps">All Apps</string>
@@ -23,6 +24,8 @@
     <string name="opt_default_launcher">Set as Default Launcher</string>
     <string name="opt_system_settings">System Settings</string>
     <string name="opt_back_longpress">Back Button (Long-Press)</string>
+    <string name="opt_menu_key">Menu Key (Long-Press)</string>
+    <string name="opt_speed_dial">Speed Dial</string>
 
     <!-- App drawer context options -->
     <string name="ctx_open">Open</string>
@@ -42,6 +45,8 @@
     <string name="title_pick_app">Choose an App</string>
     <string name="title_pick_activity">Pick Activity</string>
     <string name="title_notices">%1$d Notices</string>
+    <string name="title_speed_dial">Speed Dial</string>
+    <string name="title_call_log">Recent Calls</string>
 
     <!-- Notices screen -->
     <string name="notices_access_required">Turn on Notification Access in Settings to see notices here</string>
@@ -61,6 +66,30 @@
     <string name="back_longpress_app_set">Long-press Back will open %1$s</string>
     <string name="back_longpress_app_cleared">Long-press Back is now unassigned</string>
     <string name="back_longpress_unset_toast">No app set for long-press Back. Configure it in Settings.</string>
+    <string name="menu_key_unset_toast">No app set for long-press Menu. Configure it in Settings.</string>
+    <string name="key_assigned_toast">%1$s will open on long-press</string>
+
+    <!-- Speed dial (long-press digit keys 0, 2-9) -->
+    <string name="speed_dial_not_set">Not set</string>
+    <string name="speed_dial_voicemail">Voicemail</string>
+    <string name="speed_dial_locked">Locked</string>
+    <string name="speed_dial_voicemail_locked_toast">Key 1 is reserved for voicemail</string>
+    <string name="speed_dial_change">Change Number</string>
+    <string name="speed_dial_pick_contact">Pick Contact</string>
+    <string name="speed_dial_enter_number">Enter Number Manually</string>
+    <string name="speed_dial_save">Save</string>
+    <string name="speed_dial_set">Speed dial set to %1$s</string>
+    <string name="speed_dial_unset_toast">No speed dial set for this key</string>
+
+    <!-- Recent Calls (Send key) -->
+    <string name="calllog_access_required">Turn on Call Log access to see recent calls here — press Select</string>
+    <string name="calllog_empty">No recent calls</string>
+    <string name="calllog_add_to_speed_dial">Add to Speed Dial</string>
+    <string name="calllog_incoming">Incoming</string>
+    <string name="calllog_outgoing">Outgoing</string>
+    <string name="calllog_missed">Missed</string>
+    <string name="calllog_other">Call</string>
+    <string name="calllog_duration_format">%1$s · %2$s</string>
 
     <!-- Settings hub (unified Options + Launcher Settings) -->
     <string name="title_settings">Settings</string>

@@ -5,6 +5,15 @@
     <!-- Needed for WallpaperManager.setBitmap() in the bundled Wallpaper Picker. -->
     <uses-permission android:name="android.permission.SET_WALLPAPER" />
 
+    <!-- Places calls directly (speed dial, voicemail key, Recent Calls) via
+         Intent.ACTION_CALL. Requested at runtime the first time it's needed,
+         never at launch; falls back to ACTION_DIAL if denied. -->
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+
+    <!-- Reads CallLog.Calls to power the custom Recent Calls screen (Send key).
+         Requested at runtime the first time that screen is opened. -->
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
+
     <!--
       A launcher only needs to see launchable activities and the dialer.
       Using a <queries> block keeps us off the sensitive QUERY_ALL_PACKAGES
@@ -18,6 +27,10 @@
         </intent>
         <intent>
             <action android:name="android.intent.action.DIAL" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.PICK" />
+            <data android:mimeType="vnd.android.cursor.dir/phone_v2" />
         </intent>
     </queries>
 
@@ -104,6 +117,18 @@
 
         <activity
             android:name=".activities.ShortcutConfigActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize" />
+
+        <activity
+            android:name=".activities.SpeedDialSettingsActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize" />
+
+        <activity
+            android:name=".activities.CallLogActivity"
             android:exported="false"
             android:screenOrientation="portrait"
             android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize" />

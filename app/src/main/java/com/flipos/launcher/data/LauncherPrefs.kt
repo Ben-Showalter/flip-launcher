@@ -80,6 +80,37 @@ class LauncherPrefs(context: Context) {
         prefs.edit().putString(KEY_BACK_LONGPRESS_APP, key).apply()
     }
 
+    // -------------------------------------------------------- Menu long-press
+
+    /** App key launched on long-pressing MENU, or null if unconfigured. */
+    fun getMenuKeyApp(): String? = prefs.getString(KEY_MENU_KEY_APP, null)
+
+    fun setMenuKeyApp(key: String?) {
+        prefs.edit().putString(KEY_MENU_KEY_APP, key).apply()
+    }
+
+    // ------------------------------------------------------------ Speed dial
+
+    /** The phone number + display label long-press-dialed by a digit key, or null if unset. */
+    data class SpeedDialEntry(val number: String, val label: String)
+
+    /** Speed dial entry bound to [digit] (one of [SPEED_DIAL_DIGITS]), or null if unset. */
+    fun getSpeedDial(digit: Int): SpeedDialEntry? {
+        val raw = prefs.getString(speedDialKey(digit), null) ?: return null
+        val parts = raw.split(SPEED_DIAL_SEPARATOR, limit = 2)
+        return if (parts.size == 2) SpeedDialEntry(parts[0], parts[1]) else null
+    }
+
+    fun setSpeedDial(digit: Int, number: String, label: String) {
+        prefs.edit().putString(speedDialKey(digit), "$number$SPEED_DIAL_SEPARATOR$label").apply()
+    }
+
+    fun clearSpeedDial(digit: Int) {
+        prefs.edit().remove(speedDialKey(digit)).apply()
+    }
+
+    private fun speedDialKey(digit: Int) = "$KEY_SPEED_DIAL_PREFIX$digit"
+
     // ---------------------------------------------------------- Icon size
 
     /** App drawer icon size as a percentage of the size that exactly fills a
@@ -263,6 +294,9 @@ class LauncherPrefs(context: Context) {
         /** Maximum number of home shortcuts (mapped to keys 1..9). */
         const val MAX_SHORTCUTS = 9
 
+        /** Digits that can carry a speed dial assignment. 1 is reserved for voicemail. */
+        val SPEED_DIAL_DIGITS = listOf(0, 2, 3, 4, 5, 6, 7, 8, 9)
+
         /** Default icon size: exactly fills a 3x3 grid with no scrolling. */
         const val DEFAULT_ICON_SIZE_PERCENT = 100
 
@@ -274,6 +308,9 @@ class LauncherPrefs(context: Context) {
         private const val KEY_HIDDEN = "hidden_apps"
         private const val KEY_SHORTCUTS = "home_shortcuts"
         private const val KEY_BACK_LONGPRESS_APP = "back_longpress_app"
+        private const val KEY_MENU_KEY_APP = "menu_key_app"
+        private const val KEY_SPEED_DIAL_PREFIX = "speed_dial_"
+        private const val SPEED_DIAL_SEPARATOR = "::"
         private const val KEY_ICON_SIZE_PERCENT = "icon_size_percent"
         private const val KEY_RIGHT_KEY_APP = "right_key_app"
         private const val KEY_LEFT_KEY_APP = "left_key_app"
