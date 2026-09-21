@@ -4,12 +4,9 @@ import android.content.Context
 import com.flipos.launcher.R
 
 /**
- * Persists the two pieces of user customization this launcher supports:
- *  - the set of hidden app keys, and
- *  - an ordered list of home-screen shortcut app keys (max 9, mapped to keys 1-9).
- *
- * Shortcuts are stored as a compact ordered list (newline-joined keys) so the
- * left rail shows them gap-free, top to bottom.
+ * Persists the launcher's user customization: hidden app keys, per-physical-key
+ * app bindings (soft keys, MENU, BACK, D-pad, Camera, the extra buttons), speed
+ * dial numbers, and appearance/notification preferences.
  */
 class LauncherPrefs(context: Context) {
 
@@ -28,47 +25,6 @@ class LauncherPrefs(context: Context) {
         val set = getHiddenKeys()
         if (hidden) set.add(key) else set.remove(key)
         prefs.edit().putStringSet(KEY_HIDDEN, set).apply()
-    }
-
-    // ------------------------------------------------------------- Shortcuts
-
-    /** Ordered list of shortcut app keys (never longer than [MAX_SHORTCUTS]). */
-    fun getShortcuts(): MutableList<String> {
-        val raw = prefs.getString(KEY_SHORTCUTS, "").orEmpty()
-        if (raw.isEmpty()) return mutableListOf()
-        return raw.split('\n').filter { it.isNotEmpty() }.toMutableList()
-    }
-
-    fun setShortcuts(list: List<String>) {
-        prefs.edit().putString(KEY_SHORTCUTS, list.joinToString("\n")).apply()
-    }
-
-    /** Append a shortcut. Returns false if Home is full or the app is already pinned. */
-    fun addShortcut(key: String): Boolean {
-        val list = getShortcuts()
-        if (list.size >= MAX_SHORTCUTS || list.contains(key)) return false
-        list.add(key)
-        setShortcuts(list)
-        return true
-    }
-
-    /** Replace the shortcut at [index], or append when [index] == size. */
-    fun setShortcutAt(index: Int, key: String) {
-        val list = getShortcuts()
-        when {
-            index in list.indices -> list[index] = key
-            index == list.size && list.size < MAX_SHORTCUTS -> list.add(key)
-            else -> return
-        }
-        setShortcuts(list)
-    }
-
-    fun removeShortcutAt(index: Int) {
-        val list = getShortcuts()
-        if (index in list.indices) {
-            list.removeAt(index)
-            setShortcuts(list)
-        }
     }
 
     // ------------------------------------------------------- Back long-press
@@ -110,6 +66,24 @@ class LauncherPrefs(context: Context) {
     /** App key launched by pressing the Camera button on Home, or null if unconfigured. */
     fun getCameraKeyApp(): String? = prefs.getString(KEY_CAMERA_KEY_APP, null)
     fun setCameraKeyApp(key: String?) = prefs.edit().putString(KEY_CAMERA_KEY_APP, key).apply()
+
+    // ------------------------------------------------------------ Extra keys
+
+    /** App key launched by pressing Extra Key 1 (scan code 763) on Home, or null if unconfigured. */
+    fun getExtraKey1App(): String? = prefs.getString(KEY_EXTRA_KEY_1_APP, null)
+    fun setExtraKey1App(key: String?) = prefs.edit().putString(KEY_EXTRA_KEY_1_APP, key).apply()
+
+    /** App key launched by pressing Extra Key 2 (scan code 764) on Home, or null if unconfigured. */
+    fun getExtraKey2App(): String? = prefs.getString(KEY_EXTRA_KEY_2_APP, null)
+    fun setExtraKey2App(key: String?) = prefs.edit().putString(KEY_EXTRA_KEY_2_APP, key).apply()
+
+    /** App key launched by pressing Extra Key 3 (scan code 765) on Home, or null if unconfigured. */
+    fun getExtraKey3App(): String? = prefs.getString(KEY_EXTRA_KEY_3_APP, null)
+    fun setExtraKey3App(key: String?) = prefs.edit().putString(KEY_EXTRA_KEY_3_APP, key).apply()
+
+    /** App key launched by pressing Extra Key 4 (scan code 766) on Home, or null if unconfigured. */
+    fun getExtraKey4App(): String? = prefs.getString(KEY_EXTRA_KEY_4_APP, null)
+    fun setExtraKey4App(key: String?) = prefs.edit().putString(KEY_EXTRA_KEY_4_APP, key).apply()
 
     // ------------------------------------------------------------ Speed dial
 
@@ -313,11 +287,26 @@ class LauncherPrefs(context: Context) {
     }
 
     companion object {
-        /** Maximum number of home shortcuts (mapped to keys 1..9). */
-        const val MAX_SHORTCUTS = 9
-
         /** Digits that can carry a speed dial assignment. 1 is reserved for voicemail. */
         val SPEED_DIAL_DIGITS = listOf(0, 2, 3, 4, 5, 6, 7, 8, 9)
+
+        /**
+         * This device's actual Camera button reports this keyCode instead of the
+         * standard [android.view.KeyEvent.KEYCODE_CAMERA] (27) - treated as the
+         * same logical key everywhere Camera is handled.
+         */
+        const val KEYCODE_CAMERA_ALT = 133
+
+        /**
+         * Four physical buttons with no real [android.view.KeyEvent.KEYCODE_*]
+         * mapping, identified only by raw scan code (763-766) - see
+         * [MainActivity.dispatchKeyEvent]'s scan-code detection path. Negative so
+         * they can never collide with a real Android keycode (all real ones are >= 0).
+         */
+        const val KEYCODE_EXTRA_1 = -101
+        const val KEYCODE_EXTRA_2 = -102
+        const val KEYCODE_EXTRA_3 = -103
+        const val KEYCODE_EXTRA_4 = -104
 
         /** Default icon size: exactly fills a 3x3 grid with no scrolling. */
         const val DEFAULT_ICON_SIZE_PERCENT = 100
@@ -328,7 +317,6 @@ class LauncherPrefs(context: Context) {
 
         private const val PREFS_NAME = "flip_launcher_prefs"
         private const val KEY_HIDDEN = "hidden_apps"
-        private const val KEY_SHORTCUTS = "home_shortcuts"
         private const val KEY_BACK_LONGPRESS_APP = "back_longpress_app"
         private const val KEY_MENU_KEY_APP = "menu_key_app"
         private const val KEY_DPAD_UP_APP = "dpad_up_app"
@@ -336,6 +324,10 @@ class LauncherPrefs(context: Context) {
         private const val KEY_DPAD_LEFT_APP = "dpad_left_app"
         private const val KEY_DPAD_RIGHT_APP = "dpad_right_app"
         private const val KEY_CAMERA_KEY_APP = "camera_key_app"
+        private const val KEY_EXTRA_KEY_1_APP = "extra_key_1_app"
+        private const val KEY_EXTRA_KEY_2_APP = "extra_key_2_app"
+        private const val KEY_EXTRA_KEY_3_APP = "extra_key_3_app"
+        private const val KEY_EXTRA_KEY_4_APP = "extra_key_4_app"
         private const val KEY_SPEED_DIAL_PREFIX = "speed_dial_"
         private const val SPEED_DIAL_SEPARATOR = "::"
         private const val KEY_ICON_SIZE_PERCENT = "icon_size_percent"

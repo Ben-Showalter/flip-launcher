@@ -44,7 +44,7 @@ import kotlin.math.min
  * grid page does and only made scrolling feel choppy.
  *
  * Center/OK opens the focused app. The Options soft key (or long-press) lets
- * the user pin an app to Home, hide it, or uninstall it.
+ * the user hide it, change its icon, or uninstall it.
  */
 class AppDrawerActivity : AppCompatActivity() {
 
@@ -361,7 +361,6 @@ class AppDrawerActivity : AppCompatActivity() {
         if (isFinishing || isDestroyed) return
         val items = mutableListOf(
             ContextItem(getString(R.string.ctx_open)) { launchAppByKey(app.key) },
-            ContextItem(getString(R.string.ctx_add_home)) { addToHome(app) },
             ContextItem(getString(R.string.ctx_hide)) { hideApp(app) },
             ContextItem(getString(R.string.ctx_change_icon)) { changeIcon(app) },
         )
@@ -399,20 +398,6 @@ class AppDrawerActivity : AppCompatActivity() {
     private fun toggleIconWrap(app: AppInfo, enabled: Boolean) {
         prefs.setIconWrapEnabled(app.key, enabled)
         refresh()
-    }
-
-    private fun addToHome(app: AppInfo) {
-        val current = prefs.getShortcuts()
-        when {
-            current.contains(app.key) ->
-                Toast.makeText(this, R.string.toast_already_on_home, Toast.LENGTH_SHORT).show()
-            current.size >= LauncherPrefs.MAX_SHORTCUTS ->
-                Toast.makeText(this, R.string.home_full, Toast.LENGTH_SHORT).show()
-            else -> {
-                prefs.addShortcut(app.key)
-                Toast.makeText(this, R.string.toast_added_to_home, Toast.LENGTH_SHORT).show()
-            }
-        }
     }
 
     private fun hideApp(app: AppInfo) {

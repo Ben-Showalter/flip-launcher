@@ -178,9 +178,12 @@ class CallLogActivity : BaseListActivity() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_SOFT_LEFT) {
-            finish()
-            return true
+        when (keyCode) {
+            KeyEvent.KEYCODE_SOFT_LEFT -> { finish(); return true }
+            KeyEvent.KEYCODE_SOFT_RIGHT -> {
+                adapter.itemAt(focusedPosition())?.let { showOptions(it) }
+                return true
+            }
         }
         return super.onKeyDown(keyCode, event)
     }

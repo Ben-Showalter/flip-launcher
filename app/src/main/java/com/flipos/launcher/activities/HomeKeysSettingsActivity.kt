@@ -99,7 +99,10 @@ class HomeKeysSettingsActivity : BaseListActivity() {
         actions[ID_DPAD_LEFT] = { configureDirectionalKey(KeyEvent.KEYCODE_DPAD_LEFT) }
         actions[ID_DPAD_RIGHT] = { configureDirectionalKey(KeyEvent.KEYCODE_DPAD_RIGHT) }
         actions[ID_CAMERA_KEY] = { configureDirectionalKey(KeyEvent.KEYCODE_CAMERA) }
-        actions[ID_SHORTCUTS] = { startActivity(Intent(this, ShortcutConfigActivity::class.java)) }
+        actions[ID_EXTRA_1] = { configureDirectionalKey(LauncherPrefs.KEYCODE_EXTRA_1) }
+        actions[ID_EXTRA_2] = { configureDirectionalKey(LauncherPrefs.KEYCODE_EXTRA_2) }
+        actions[ID_EXTRA_3] = { configureDirectionalKey(LauncherPrefs.KEYCODE_EXTRA_3) }
+        actions[ID_EXTRA_4] = { configureDirectionalKey(LauncherPrefs.KEYCODE_EXTRA_4) }
         actions[ID_SPEED_DIAL] = { startActivity(Intent(this, SpeedDialSettingsActivity::class.java)) }
 
         adapter = ListRowAdapter(onClick = { dispatch(it) })
@@ -133,6 +136,8 @@ class HomeKeysSettingsActivity : BaseListActivity() {
             ?: getString(R.string.back_longpress_not_set)
         fun directionalLabel(keyCode: Int) = getDirectionalKeyApp(keyCode)?.let { AppRepository.resolveComponent(this, it)?.label }
             ?: getString(R.string.back_longpress_not_set)
+        val cameraLabel = prefs.getCameraKeyApp()?.let { AppRepository.resolveComponent(this, it)?.label }
+            ?: getString(R.string.opt_camera_key_default)
 
         adapter.submit(
             listOf(
@@ -147,9 +152,13 @@ class HomeKeysSettingsActivity : BaseListActivity() {
                 Row(id = ID_DPAD_DOWN, title = getString(R.string.opt_dpad_down), trailing = directionalLabel(KeyEvent.KEYCODE_DPAD_DOWN), chevron = true),
                 Row(id = ID_DPAD_LEFT, title = getString(R.string.opt_dpad_left), trailing = directionalLabel(KeyEvent.KEYCODE_DPAD_LEFT), chevron = true),
                 Row(id = ID_DPAD_RIGHT, title = getString(R.string.opt_dpad_right), trailing = directionalLabel(KeyEvent.KEYCODE_DPAD_RIGHT), chevron = true),
-                Row(id = ID_CAMERA_KEY, title = getString(R.string.opt_camera_key), trailing = directionalLabel(KeyEvent.KEYCODE_CAMERA), chevron = true),
+                Row(id = ID_CAMERA_KEY, title = getString(R.string.opt_camera_key), trailing = cameraLabel, chevron = true),
+                Row.section(getString(R.string.sec_extra_keys)),
+                Row(id = ID_EXTRA_1, title = getString(R.string.opt_extra_key_1), trailing = directionalLabel(LauncherPrefs.KEYCODE_EXTRA_1), chevron = true),
+                Row(id = ID_EXTRA_2, title = getString(R.string.opt_extra_key_2), trailing = directionalLabel(LauncherPrefs.KEYCODE_EXTRA_2), chevron = true),
+                Row(id = ID_EXTRA_3, title = getString(R.string.opt_extra_key_3), trailing = directionalLabel(LauncherPrefs.KEYCODE_EXTRA_3), chevron = true),
+                Row(id = ID_EXTRA_4, title = getString(R.string.opt_extra_key_4), trailing = directionalLabel(LauncherPrefs.KEYCODE_EXTRA_4), chevron = true),
                 Row.section(getString(R.string.sec_shortcuts)),
-                Row(id = ID_SHORTCUTS, title = getString(R.string.opt_customize_shortcuts), chevron = true),
                 Row(id = ID_SPEED_DIAL, title = getString(R.string.opt_speed_dial), chevron = true),
             ),
         )
@@ -242,6 +251,10 @@ class HomeKeysSettingsActivity : BaseListActivity() {
         KeyEvent.KEYCODE_DPAD_LEFT -> prefs.getDpadLeftApp()
         KeyEvent.KEYCODE_DPAD_RIGHT -> prefs.getDpadRightApp()
         KeyEvent.KEYCODE_CAMERA -> prefs.getCameraKeyApp()
+        LauncherPrefs.KEYCODE_EXTRA_1 -> prefs.getExtraKey1App()
+        LauncherPrefs.KEYCODE_EXTRA_2 -> prefs.getExtraKey2App()
+        LauncherPrefs.KEYCODE_EXTRA_3 -> prefs.getExtraKey3App()
+        LauncherPrefs.KEYCODE_EXTRA_4 -> prefs.getExtraKey4App()
         else -> null
     }
 
@@ -252,6 +265,10 @@ class HomeKeysSettingsActivity : BaseListActivity() {
             KeyEvent.KEYCODE_DPAD_LEFT -> prefs.setDpadLeftApp(key)
             KeyEvent.KEYCODE_DPAD_RIGHT -> prefs.setDpadRightApp(key)
             KeyEvent.KEYCODE_CAMERA -> prefs.setCameraKeyApp(key)
+            LauncherPrefs.KEYCODE_EXTRA_1 -> prefs.setExtraKey1App(key)
+            LauncherPrefs.KEYCODE_EXTRA_2 -> prefs.setExtraKey2App(key)
+            LauncherPrefs.KEYCODE_EXTRA_3 -> prefs.setExtraKey3App(key)
+            LauncherPrefs.KEYCODE_EXTRA_4 -> prefs.setExtraKey4App(key)
         }
     }
 
@@ -297,7 +314,10 @@ class HomeKeysSettingsActivity : BaseListActivity() {
         private const val ID_DPAD_LEFT = "dpad_left"
         private const val ID_DPAD_RIGHT = "dpad_right"
         private const val ID_CAMERA_KEY = "camera_key"
-        private const val ID_SHORTCUTS = "shortcuts"
+        private const val ID_EXTRA_1 = "extra_key_1"
+        private const val ID_EXTRA_2 = "extra_key_2"
+        private const val ID_EXTRA_3 = "extra_key_3"
+        private const val ID_EXTRA_4 = "extra_key_4"
         private const val ID_SPEED_DIAL = "speed_dial"
     }
 }

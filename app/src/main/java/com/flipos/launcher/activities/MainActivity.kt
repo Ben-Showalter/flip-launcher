@@ -14,6 +14,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.ContactsContract
+import android.provider.MediaStore
 import android.view.KeyEvent
 import android.view.View
 import android.widget.ImageView
@@ -21,18 +22,12 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.core.view.doOnLayout
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.flipos.launcher.data.AppRepository
 import com.flipos.launcher.data.IconShapeRenderer
 import com.flipos.launcher.data.LauncherPrefs
 import com.flipos.launcher.data.NotificationCounts
-import com.flipos.launcher.ui.HomeRailAdapter
-import com.flipos.launcher.ui.RailItem
 import com.flipos.launcher.util.BackgroundLoader
 import com.flipos.launcher.util.PermissionGate
 import com.flipos.launcher.util.accentColorAlpha
@@ -44,18 +39,18 @@ import java.util.Locale
 
 /**
  * The KaiOS-style home screen:
- *  - a vertical rail of shortcut icons on the left,
- *  - a large clock + date on the right,
- *  - a D-pad/Camera shortcut icon pod bottom-center, and
- *  - "Notifications · apps · Contacts" soft keys along the bottom.
+ *  - a large clock + date, and
+ *  - "Notifications · apps · Contacts" soft keys along the bottom, with a
+ *    D-pad/Camera shortcut icon pod nested between the two labels and the
+ *    App-Drawer/OK button sitting in its center.
  *
- * Tap a rail icon to launch it (the rail is touch-only - D-pad no longer
- * navigates focus into it, see below). Typing a digit - or `*` / `#` -
- * anywhere on Home opens the phone dialer prefilled with it. The center
- * button opens All Apps; long-pressing it (via touch) opens Settings.
+ * Typing a digit - or `*` / `#` - anywhere on Home opens the phone dialer
+ * prefilled with it. The center button opens All Apps; long-pressing it (via
+ * touch) opens Settings.
  *
- * Most physical keys (digits 0/2-9, MENU, BACK, the soft keys, D-pad
- * Up/Down/Left/Right, Camera) also carry a long-press action and a
+ * Every physical key (digits 0/2-9, MENU, BACK, the soft keys, D-pad
+ * Up/Down/Left/Right, Camera, and four vendor-specific extra buttons
+ * identified by scan code) also carries a long-press action and a
  * 5-second-hold "assign" menu - see the Key handling section below. Digits
  * are the exception: their long-press (speed dial / voicemail) fires the
  * instant it's detected, and assignment for them is Settings-only.
@@ -63,9 +58,7 @@ import java.util.Locale
 class MainActivity : AppCompatActivity() {
 
     private lateinit var prefs: LauncherPrefs
-    private lateinit var rail: RecyclerView
     private lateinit var appMenuButton: ImageView
-    private lateinit var adapter: HomeRailAdapter
     private lateinit var clock: TextView
     private lateinit var ampm: TextView
     private lateinit var weekday: TextView
@@ -76,7 +69,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var notifMessagesCount: TextView
     private lateinit var notifOtherGroup: View
     private lateinit var notifOtherCount: TextView
-    private lateinit var dpadPod: View
     private lateinit var dpadIconUp: ImageView
     private lateinit var dpadIconDown: ImageView
     private lateinit var dpadIconLeft: ImageView
@@ -87,9 +79,6 @@ class MainActivity : AppCompatActivity() {
     private val time24 = SimpleDateFormat("HH:mm", Locale.getDefault())
     private val weekdayFmt = SimpleDateFormat("EEEE", Locale.getDefault())
     private val dateFmt = SimpleDateFormat("MMM d", Locale.getDefault())
-
-    /** Rail index awaiting an app from the picker (-1 = none). */
-    private var pendingIndex = -1
 
     /** Physical key awaiting an app from [assignAppLauncher] (0 = none). */
     private var pendingAssignAppKey = 0
@@ -119,7 +108,7 @@ class MainActivity : AppCompatActivity() {
 
     private val callPermission = PermissionGate(this, Manifest.permission.CALL_PHONE)
 
-    /** App picker for MENU/BACK/soft-key/D-pad/Camera assignment, writing back based on [pendingAssignAppKey]. */
+    /** App picker for MENU/BACK/soft-key/D-pad/Camera/extra-key assignment, writing back based on [pendingAssignAppKey]. */
     private val assignAppLauncher = registerForActivityResult(StartActivityForResult()) { result ->
         val key = result.data?.getStringExtra(AppPickerActivity.EXTRA_APP_KEY)
         val target = pendingAssignAppKey
@@ -134,7 +123,11 @@ class MainActivity : AppCompatActivity() {
                 KeyEvent.KEYCODE_DPAD_DOWN -> prefs.setDpadDownApp(key)
                 KeyEvent.KEYCODE_DPAD_LEFT -> prefs.setDpadLeftApp(key)
                 KeyEvent.KEYCODE_DPAD_RIGHT -> prefs.setDpadRightApp(key)
-                KeyEvent.KEYCODE_CAMERA -> prefs.setCameraKeyApp(key)
+                KeyEvent.KEYCODE_CAMERA, LauncherPrefs.KEYCODE_CAMERA_ALT -> prefs.setCameraKeyApp(key)
+                LauncherPrefs.KEYCODE_EXTRA_1 -> prefs.setExtraKey1App(key)
+                LauncherPrefs.KEYCODE_EXTRA_2 -> prefs.setExtraKey2App(key)
+                LauncherPrefs.KEYCODE_EXTRA_3 -> prefs.setExtraKey3App(key)
+                LauncherPrefs.KEYCODE_EXTRA_4 -> prefs.setExtraKey4App(key)
             }
             AppRepository.resolveComponent(this, key)?.label?.let {
                 Toast.makeText(this, getString(R.string.key_assigned_toast, it), Toast.LENGTH_SHORT).show()
@@ -145,23 +138,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private val pickLauncher = registerForActivityResult(StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK && pendingIndex >= 0) {
-            result.data?.getStringExtra(AppPickerActivity.EXTRA_APP_KEY)?.let { key ->
-                prefs.setShortcutAt(pendingIndex, key)
-            }
-        }
-        pendingIndex = -1
-        refreshShortcuts()
-    }
-
     private val loader = BackgroundLoader()
 
     private val timeReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) = updateClock()
     }
 
-    /** Keeps the rail and cached icons fresh when apps are installed/removed/updated. */
+    /** Keeps cached icons and the D-pad pod fresh when apps are installed/removed/updated. */
     private val packageReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             // On a genuine uninstall (not an update's remove-then-add), drop any
@@ -172,21 +155,17 @@ class MainActivity : AppCompatActivity() {
                 intent.data?.schemeSpecificPart?.let { prefs.pruneIconOverridesForPackage(it) }
             }
             AppRepository.invalidateIconCaches()
-            refreshShortcuts()
+            refreshDirectionalPod()
         }
     }
 
     private val notifListener: () -> Unit = {
-        runOnUiThread {
-            updateNotifSummary()
-            adapter.notifyItemRangeChanged(0, adapter.itemCount)
-        }
+        runOnUiThread { updateNotifSummary() }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = LauncherPrefs(this)
-        pendingIndex = savedInstanceState?.getInt(STATE_PENDING_INDEX, -1) ?: -1
         val accent = prefs.getAccentColor()
         appliedAccentColor = accent
         if (accent.themeOverlayRes != 0) theme.applyStyle(accent.themeOverlayRes, true)
@@ -205,29 +184,10 @@ class MainActivity : AppCompatActivity() {
         notifMessagesCount = findViewById(R.id.notif_messages_count)
         notifOtherGroup = findViewById(R.id.notif_other_group)
         notifOtherCount = findViewById(R.id.notif_other_count)
-        dpadPod = findViewById(R.id.dpad_pod)
         dpadIconUp = findViewById(R.id.dpad_icon_up)
         dpadIconDown = findViewById(R.id.dpad_icon_down)
         dpadIconLeft = findViewById(R.id.dpad_icon_left)
         dpadIconRight = findViewById(R.id.dpad_icon_right)
-        rail = findViewById(R.id.shortcuts_rail)
-
-        adapter = HomeRailAdapter(
-            onClick = { _, item -> onRailClick(item) },
-            onLongClick = { position, item -> onRailLongClick(position, item) },
-            hasNotification = { app ->
-                prefs.isIconNotificationDotEnabled() && NotificationCounts.packagesWithNotifications.contains(app.packageName)
-            },
-        )
-        rail.layoutManager = LinearLayoutManager(this)
-        rail.adapter = adapter
-        rail.itemAnimator = null
-        // Slot height is computed from the rail's actual height so 5 shortcuts are
-        // always visible without scrolling, regardless of screen size/aspect ratio.
-        rail.doOnLayout {
-            val available = it.height - it.paddingTop - it.paddingBottom
-            adapter.setItemHeightPx(available / HomeRailAdapter.SLOTS_VISIBLE)
-        }
 
         findViewById<TextView>(R.id.softkey_left).setOnClickListener { openLeftKeyApp() }
         findViewById<TextView>(R.id.softkey_right).setOnClickListener { openRightKeyApp() }
@@ -272,7 +232,6 @@ class MainActivity : AppCompatActivity() {
             ContextCompat.RECEIVER_NOT_EXPORTED,
         )
         updateClock()
-        refreshShortcuts()
         refreshLeftKeyLabel()
         refreshRightKeyLabel()
         refreshDirectionalPod()
@@ -299,13 +258,6 @@ class MainActivity : AppCompatActivity() {
         assignRunnables.clear()
     }
 
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-        // Persist the rail slot awaiting a pick so an in-progress shortcut
-        // assignment survives a process death while the picker is foregrounded.
-        outState.putInt(STATE_PENDING_INDEX, pendingIndex)
-    }
-
     override fun onDestroy() {
         loader.cancel()
         super.onDestroy()
@@ -327,55 +279,7 @@ class MainActivity : AppCompatActivity() {
         dateLine.text = dateFmt.format(now)
     }
 
-    private fun refreshShortcuts() {
-        loader.load(
-            produce = {
-                // Resolve each shortcut (any activity component), dropping ones whose
-                // app was uninstalled so the rail stays gap-free.
-                val keys = prefs.getShortcuts()
-                val resolved = keys.mapNotNull { key ->
-                    AppRepository.resolveComponent(this, key)?.let { key to it }
-                }
-                if (resolved.size != keys.size) prefs.setShortcuts(resolved.map { it.first })
-
-                val entries = resolved.mapTo(ArrayList()) { RailItem(it.second) }
-                if (resolved.size < LauncherPrefs.MAX_SHORTCUTS) entries.add(RailItem(null))
-                entries
-            },
-            consume = { entries -> if (!isDestroyed) adapter.submit(entries) },
-        )
-    }
-
     // --------------------------------------------------------------- Actions
-
-    private fun onRailClick(item: RailItem) {
-        val app = item.app
-        if (app != null) launchAppByKey(app.key) else pickForIndex(prefs.getShortcuts().size)
-    }
-
-    private fun onRailLongClick(position: Int, item: RailItem) {
-        if (item.app == null) {
-            pickForIndex(prefs.getShortcuts().size)
-            return
-        }
-        AlertDialog.Builder(this)
-            .setTitle(item.app.label)
-            .setItems(
-                arrayOf(
-                    getString(R.string.railitem_change_app),
-                    getString(R.string.railitem_remove),
-                ),
-            ) { _, which ->
-                when (which) {
-                    0 -> pickForIndex(position)
-                    1 -> {
-                        prefs.removeShortcutAt(position)
-                        refreshShortcuts()
-                    }
-                }
-            }
-            .show()
-    }
 
     /** Open the phone dialer, prefilled with the pressed digit (or * / #). */
     private fun startDial(digit: String) {
@@ -384,11 +288,6 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             Toast.makeText(this, R.string.toast_no_dialer, Toast.LENGTH_SHORT).show()
         }
-    }
-
-    private fun pickForIndex(index: Int) {
-        pendingIndex = index
-        pickLauncher.launch(Intent(this, AppPickerActivity::class.java))
     }
 
     private fun openAppDrawer() = startActivity(Intent(this, AppDrawerActivity::class.java))
@@ -464,8 +363,8 @@ class MainActivity : AppCompatActivity() {
     // Assignment for digits is Settings-only now (SpeedDialSettingsActivity);
     // there's no in-place hold for them.
     //
-    // Every other assignable key (MENU, BACK, the soft keys, D-pad, Camera)
-    // keeps the original model: swallowed on key-down, resolved on key-up -
+    // Every other assignable key (MENU, BACK, the soft keys, D-pad, Camera,
+    // the four extra buttons) keeps the original model: swallowed on key-down, resolved on key-up -
     // launching anything on key-down leaves the matching key-up to be
     // delivered to whatever gets focused as a result, which on some devices
     // re-enters the same input. Key-down starts long-press tracking and the
@@ -477,8 +376,23 @@ class MainActivity : AppCompatActivity() {
     // an unconsumed event would ever reach onKeyDown/onKeyUp below - so they
     // (and Camera, for uniformity) are captured a level higher, in
     // dispatchKeyEvent, before the view hierarchy gets a look at them.
+    //
+    // The four "extra" buttons (see EXTRA_KEY_SCAN_CODES) have no reliable
+    // KeyEvent.KEYCODE_* of their own, so they're identified by raw scan code
+    // and remapped to an app-defined synthetic keycode before being dispatched
+    // to onKeyDown/onKeyUp - which otherwise only ever operate on the keyCode
+    // *parameter*, never event.keyCode directly, so a synthetic value flows
+    // through the existing hold-tracking machinery unchanged.
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val synthetic = EXTRA_KEY_SCAN_CODES[event.scanCode]
+        if (synthetic != null) {
+            return when (event.action) {
+                KeyEvent.ACTION_DOWN -> onKeyDown(synthetic, event)
+                KeyEvent.ACTION_UP -> onKeyUp(synthetic, event)
+                else -> super.dispatchKeyEvent(event)
+            }
+        }
         if (event.keyCode in DIRECTIONAL_KEYS) {
             return when (event.action) {
                 KeyEvent.ACTION_DOWN -> onKeyDown(event.keyCode, event)
@@ -503,7 +417,9 @@ class MainActivity : AppCompatActivity() {
             KeyEvent.KEYCODE_SOFT_LEFT, KeyEvent.KEYCODE_SOFT_RIGHT,
             KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
             KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
-            KeyEvent.KEYCODE_CAMERA -> {
+            KeyEvent.KEYCODE_CAMERA, LauncherPrefs.KEYCODE_CAMERA_ALT,
+            LauncherPrefs.KEYCODE_EXTRA_1, LauncherPrefs.KEYCODE_EXTRA_2,
+            LauncherPrefs.KEYCODE_EXTRA_3, LauncherPrefs.KEYCODE_EXTRA_4 -> {
                 beginPressTracking(keyCode, event)
                 if (event.repeatCount == 0) scheduleAssign(keyCode)
                 return true
@@ -560,7 +476,9 @@ class MainActivity : AppCompatActivity() {
             }
             KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
             KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
-            KeyEvent.KEYCODE_CAMERA -> {
+            KeyEvent.KEYCODE_CAMERA, LauncherPrefs.KEYCODE_CAMERA_ALT,
+            LauncherPrefs.KEYCODE_EXTRA_1, LauncherPrefs.KEYCODE_EXTRA_2,
+            LauncherPrefs.KEYCODE_EXTRA_3, LauncherPrefs.KEYCODE_EXTRA_4 -> {
                 cancelAssign(keyCode)
                 if (assignFired.remove(keyCode)) return true
                 launchDirectionalKeyApp(keyCode)
@@ -615,7 +533,7 @@ class MainActivity : AppCompatActivity() {
         assignRunnables.remove(keyCode)?.let { assignHandler.removeCallbacks(it) }
     }
 
-    /** Opens the app picker to assign [keyCode] (MENU/BACK/soft-key/D-pad/Camera - digits are Settings-only, see [dialSpeedDial]). */
+    /** Opens the app picker to assign [keyCode] (MENU/BACK/soft-key/D-pad/Camera/extra-key - digits are Settings-only, see [dialSpeedDial]). */
     private fun openAssignMenu(keyCode: Int) {
         pendingAssignAppKey = keyCode
         assignAppLauncher.launch(Intent(this, AppPickerActivity::class.java))
@@ -635,31 +553,50 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** Launches [keyCode]'s bound app immediately, or - if unset - toasts and jumps to Home Screen & Keys settings. */
+    /**
+     * Launches [keyCode]'s bound app immediately, or - if unset - falls back to
+     * the default camera app for Camera, or toasts and jumps to Home Screen &
+     * Keys settings for every other key.
+     */
     private fun launchDirectionalKeyApp(keyCode: Int) {
         val key = when (keyCode) {
             KeyEvent.KEYCODE_DPAD_UP -> prefs.getDpadUpApp()
             KeyEvent.KEYCODE_DPAD_DOWN -> prefs.getDpadDownApp()
             KeyEvent.KEYCODE_DPAD_LEFT -> prefs.getDpadLeftApp()
             KeyEvent.KEYCODE_DPAD_RIGHT -> prefs.getDpadRightApp()
-            KeyEvent.KEYCODE_CAMERA -> prefs.getCameraKeyApp()
+            KeyEvent.KEYCODE_CAMERA, LauncherPrefs.KEYCODE_CAMERA_ALT -> prefs.getCameraKeyApp()
+            LauncherPrefs.KEYCODE_EXTRA_1 -> prefs.getExtraKey1App()
+            LauncherPrefs.KEYCODE_EXTRA_2 -> prefs.getExtraKey2App()
+            LauncherPrefs.KEYCODE_EXTRA_3 -> prefs.getExtraKey3App()
+            LauncherPrefs.KEYCODE_EXTRA_4 -> prefs.getExtraKey4App()
             else -> null
         }
-        if (key == null) {
-            Toast.makeText(this, R.string.directional_key_unset_toast, Toast.LENGTH_SHORT).show()
-            startActivity(Intent(this, HomeKeysSettingsActivity::class.java))
-        } else {
+        if (key != null) {
             launchAppByKey(key)
+            return
+        }
+        if (keyCode == KeyEvent.KEYCODE_CAMERA || keyCode == LauncherPrefs.KEYCODE_CAMERA_ALT) {
+            openDefaultCamera()
+            return
+        }
+        Toast.makeText(this, R.string.directional_key_unset_toast, Toast.LENGTH_SHORT).show()
+        startActivity(Intent(this, HomeKeysSettingsActivity::class.java))
+    }
+
+    private fun openDefaultCamera() {
+        try {
+            startActivity(Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA))
+        } catch (e: Exception) {
+            Toast.makeText(this, R.string.toast_not_available, Toast.LENGTH_SHORT).show()
         }
     }
 
-    /** Refreshes the D-pad shortcut pod's four icons, hiding the whole pod when nothing is assigned. */
+    /** Refreshes the D-pad shortcut pod's four icons; the pod itself always stays visible (it also houses the OK button). */
     private fun refreshDirectionalPod() {
-        val up = bindPodIcon(dpadIconUp, prefs.getDpadUpApp())
-        val down = bindPodIcon(dpadIconDown, prefs.getDpadDownApp())
-        val left = bindPodIcon(dpadIconLeft, prefs.getDpadLeftApp())
-        val right = bindPodIcon(dpadIconRight, prefs.getDpadRightApp())
-        dpadPod.visibility = if (up || down || left || right) View.VISIBLE else View.GONE
+        bindPodIcon(dpadIconUp, prefs.getDpadUpApp())
+        bindPodIcon(dpadIconDown, prefs.getDpadDownApp())
+        bindPodIcon(dpadIconLeft, prefs.getDpadLeftApp())
+        bindPodIcon(dpadIconRight, prefs.getDpadRightApp())
     }
 
     /** Binds [key]'s squircle-masked icon into [view] and shows it, or hides [view] when [key] is null. Returns whether it was bound. */
@@ -732,8 +669,6 @@ class MainActivity : AppCompatActivity() {
         // Shown at most once per process so we don't nag on every resume.
         private var defaultPromptShown = false
 
-        private const val STATE_PENDING_INDEX = "pending_index"
-
         /** How long an assignable key must be held to open its assign menu. */
         private const val ASSIGN_HOLD_MS = 5000L
 
@@ -744,6 +679,19 @@ class MainActivity : AppCompatActivity() {
             KeyEvent.KEYCODE_DPAD_LEFT,
             KeyEvent.KEYCODE_DPAD_RIGHT,
             KeyEvent.KEYCODE_CAMERA,
+            LauncherPrefs.KEYCODE_CAMERA_ALT,
+        )
+
+        /**
+         * Four vendor-specific buttons with no reliable KeyEvent.KEYCODE_* of
+         * their own, identified instead by raw scan code and remapped to an
+         * app-defined synthetic keycode in [dispatchKeyEvent].
+         */
+        private val EXTRA_KEY_SCAN_CODES = mapOf(
+            763 to LauncherPrefs.KEYCODE_EXTRA_1,
+            764 to LauncherPrefs.KEYCODE_EXTRA_2,
+            765 to LauncherPrefs.KEYCODE_EXTRA_3,
+            766 to LauncherPrefs.KEYCODE_EXTRA_4,
         )
 
         /** Keys that should never trigger the unrecognized-key diagnostic toast. */

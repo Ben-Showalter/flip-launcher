@@ -32,6 +32,9 @@
             <action android:name="android.intent.action.PICK" />
             <data android:mimeType="vnd.android.cursor.dir/phone_v2" />
         </intent>
+        <intent>
+            <action android:name="android.media.action.STILL_IMAGE_CAMERA" />
+        </intent>
     </queries>
 
     <application
@@ -111,12 +114,6 @@
 
         <activity
             android:name=".activities.HideAppsActivity"
-            android:exported="false"
-            android:screenOrientation="portrait"
-            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize" />
-
-        <activity
-            android:name=".activities.ShortcutConfigActivity"
             android:exported="false"
             android:screenOrientation="portrait"
             android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize" />

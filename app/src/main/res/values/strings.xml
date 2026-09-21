@@ -18,7 +18,6 @@
 
     <!-- Options menu -->
     <string name="opt_all_apps">All Apps</string>
-    <string name="opt_customize_shortcuts">Customize Home Shortcuts</string>
     <string name="opt_hide_apps">Hide / Show Apps</string>
     <string name="opt_set_wallpaper">Set Wallpaper</string>
     <string name="opt_default_launcher">Set as Default Launcher</string>
@@ -29,7 +28,6 @@
 
     <!-- App drawer context options -->
     <string name="ctx_open">Open</string>
-    <string name="ctx_add_home">Add to Home Shortcuts</string>
     <string name="ctx_hide">Hide App</string>
     <string name="ctx_change_icon">Change Icon</string>
     <string name="ctx_reset_icon">Reset Icon</string>
@@ -41,7 +39,6 @@
     <string name="title_all_apps">All Apps</string>
     <string name="title_options">Options</string>
     <string name="title_hide_apps">Hide / Show Apps</string>
-    <string name="title_shortcuts">Home Shortcuts</string>
     <string name="title_pick_app">Choose an App</string>
     <string name="title_pick_activity">Pick Activity</string>
     <string name="title_notices">%1$d Notices</string>
@@ -54,9 +51,7 @@
 
     <!-- Misc -->
     <string name="empty_slot">Empty</string>
-    <string name="add_shortcut">Add shortcut</string>
     <string name="shortcut_slot_label">Key %1$d</string>
-    <string name="home_full">Home is full (9 shortcuts max)</string>
     <string name="content_apps">Open apps menu</string>
     <string name="hidden_badge">Hidden</string>
     <string name="choose_home_app">Choose this app as your Home screen to finish setup.</string>
@@ -78,6 +73,14 @@
     <string name="opt_dpad_left">D-pad Left</string>
     <string name="opt_dpad_right">D-pad Right</string>
     <string name="opt_camera_key">Camera Button</string>
+    <string name="opt_camera_key_default">Camera app (default)</string>
+
+    <!-- Extra buttons (identified by scan code, see MainActivity) -->
+    <string name="sec_extra_keys">Other Buttons</string>
+    <string name="opt_extra_key_1">Extra Key 1</string>
+    <string name="opt_extra_key_2">Extra Key 2</string>
+    <string name="opt_extra_key_3">Extra Key 3</string>
+    <string name="opt_extra_key_4">Extra Key 4</string>
 
     <!-- Speed dial (long-press digit keys 0, 2-9) -->
     <string name="speed_dial_not_set">Not set</string>
@@ -182,8 +185,6 @@
     <string name="wallpaper_set_failed">Couldn\'t set wallpaper</string>
 
     <!-- Toasts -->
-    <string name="toast_already_on_home">Already on Home</string>
-    <string name="toast_added_to_home">Added to Home</string>
     <string name="toast_app_hidden">%1$s hidden</string>
     <string name="toast_uninstall_failed">Can\'t uninstall app</string>
     <string name="toast_not_available">Not available on this device</string>
@@ -192,10 +193,6 @@
     <string name="toast_launch_denied">Can\'t open this app</string>
     <string name="toast_no_dialer">No dialer available</string>
     <string name="toast_no_contacts">No contacts app</string>
-
-    <!-- Home rail long-press menu -->
-    <string name="railitem_change_app">Change app</string>
-    <string name="railitem_remove">Remove from Home</string>
 
     <!-- Notices empty state / confirmations -->
     <string name="notices_empty">No notices</string>
