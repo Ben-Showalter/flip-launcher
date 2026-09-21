@@ -13,13 +13,18 @@ person's laptop.
   ./gradlew :app:assembleDebug
   ```
   Output: `app/build/outputs/apk/debug/app-debug.apk`.
-- **JDK is auto-provisioned.** The build declares a Java toolchain
-  (`kotlin { jvmToolchain(17) }` in `app/build.gradle.kts`) and applies the
-  Foojay resolver in `settings.gradle.kts`, so Gradle downloads/selects JDK 17
-  for compilation regardless of the machine's default JDK. There is no need to
-  set `JAVA_HOME` or prefix Gradle commands. Gradle itself (9.6.x) runs on any
-  JDK from 17 to 26.
-- **Android SDK is required** and is the one thing not auto-provisioned. Point
+- **JDK 17 is required for compilation** (`kotlin { jvmToolchain(17) }` in
+  `app/build.gradle.kts`). Gradle auto-detects it from whatever's already on
+  the machine (`JAVA_HOME`, `~/.jdks`, Android Studio's bundled JBR, etc.) —
+  usually nothing to configure. It will **not** download one over the network
+  (`org.gradle.java.installations.auto-download=false` in `gradle.properties`),
+  so the build stays usable behind proxies/VPNs that break TLS to
+  `api.foojay.io`. If no JDK 17 is found, install one and either let
+  auto-detection pick it up or point Gradle at it directly with
+  `org.gradle.java.installations.paths=/path/to/jdk-17` (in a local,
+  gitignored `gradle.properties` override, not the committed one) or
+  `JAVA_HOME`. Gradle itself (9.6.x) runs on any JDK from 17 to 26.
+- **Android SDK is required** and is the other thing not auto-provisioned. Point
   the build at an SDK either via `local.properties` (`sdk.dir=/path/to/sdk`,
   gitignored) or the `ANDROID_HOME` environment variable. You need
   `platforms;android-36` and `build-tools;36.0.0` (AGP 9.3's defaults). See

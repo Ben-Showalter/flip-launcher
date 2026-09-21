@@ -37,8 +37,10 @@ android {
 }
 
 kotlin {
-    // Pins the compile JDK to 17 and lets Gradle auto-provision it via the
-    // Foojay resolver, so the build works regardless of the machine's default JDK.
+    // Pins the compile JDK to 17. Gradle resolves it from a locally-installed
+    // JDK it can auto-detect (JAVA_HOME, ~/.jdks, Android Studio's bundled
+    // JBR, etc.) - see org.gradle.java.installations.auto-download=false in
+    // gradle.properties, which keeps this from ever requiring network access.
     jvmToolchain(17)
 }
 
