@@ -5,7 +5,8 @@ a built APK, and covers the few project-specific conventions.
 
 ## Prerequisites
 
-You need three things on your machine.
+You need two things on your machine. Everything else (notably the JDK) is
+already whatever's running Gradle for you — see below.
 
 ### 1. Android SDK
 
@@ -34,21 +35,16 @@ Then tell the build where the SDK is, using **either**:
 `adb` should be on your `PATH`. It comes with the SDK's `platform-tools`, or on
 macOS: `brew install --cask android-platform-tools`.
 
-### 3. JDK 17 (for compilation)
+### What you do NOT need
 
-The build pins Kotlin/Java compilation to JDK 17 (`kotlin { jvmToolchain(17) }`
-in `app/build.gradle.kts`). Gradle auto-detects it from whatever's already on
-your machine — `JAVA_HOME`, `~/.jdks`, Android Studio's own bundled JBR — so
-there's usually nothing to install or configure. It will **not** download a
-JDK over the network, so a proxy/VPN that breaks TLS won't break this build.
-If auto-detection can't find a JDK 17, install one and either let it be
-found automatically or point Gradle at it directly by adding
-`org.gradle.java.installations.paths=/path/to/jdk-17` to a local,
-gitignored `gradle.properties` override (not the committed one), or by
-setting `JAVA_HOME`.
-
-Gradle itself (9.6.x, used to run the build) works fine on any JDK from 17
-through 26 — the pin above is specifically for what compiles the app's code.
+- **A specific JDK.** Compilation just runs on whichever JDK is already
+  launching Gradle for you — Android Studio's own bundled JBR when building
+  from the IDE, or whatever `JAVA_HOME`/`PATH` points at on the command
+  line. Any version 17 through 26 works; do not set `JAVA_HOME` or prefix
+  Gradle commands with it unless you're troubleshooting something else. The
+  build still always produces Java 17-level bytecode
+  (`android.compileOptions` in `app/build.gradle.kts`) no matter which of
+  those JDKs compiles it, and never reaches out to the network for a JDK.
 
 ## Building & installing
 
