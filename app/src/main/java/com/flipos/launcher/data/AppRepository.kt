@@ -124,6 +124,27 @@ object AppRepository {
     }
 
     /**
+     * Resolves [key] to its icon exactly like [resolveComponent] (per-app
+     * override / active icon pack, falling back to the app's own icon), but
+     * skips the final shape-masking step — for callers that need to apply a
+     * *different* shape than the user's global [LauncherPrefs.IconShape]
+     * (e.g. the Home D-pad shortcut pod, always squircle regardless of the
+     * global setting).
+     */
+    fun resolveRawIcon(context: Context, key: String): Drawable? {
+        val component = ComponentName.unflattenFromString(key) ?: return null
+        val pm = context.packageManager
+        val prefs = LauncherPrefs(context)
+        return try {
+            @Suppress("DEPRECATION")
+            val ai = pm.getActivityInfo(component, 0)
+            rawIcon(context, prefs, key, ai.loadIcon(pm))
+        } catch (e: PackageManager.NameNotFoundException) {
+            null
+        }
+    }
+
+    /**
      * Swaps in a per-app icon override if one is set, else the active icon
      * pack's mapping for [componentKey] if it has one, else [fallback] — then
      * masks the result into the user's chosen icon shape. The shaped result is

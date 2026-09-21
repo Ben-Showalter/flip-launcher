@@ -28,12 +28,12 @@ import androidx.core.view.doOnLayout
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.flipos.launcher.data.AppRepository
+import com.flipos.launcher.data.IconShapeRenderer
 import com.flipos.launcher.data.LauncherPrefs
 import com.flipos.launcher.data.NotificationCounts
 import com.flipos.launcher.ui.HomeRailAdapter
 import com.flipos.launcher.ui.RailItem
 import com.flipos.launcher.util.BackgroundLoader
-import com.flipos.launcher.util.NumberAssigner
 import com.flipos.launcher.util.PermissionGate
 import com.flipos.launcher.util.accentColorAlpha
 import com.flipos.launcher.util.launchAppByKey
@@ -45,18 +45,20 @@ import java.util.Locale
 /**
  * The KaiOS-style home screen:
  *  - a vertical rail of shortcut icons on the left,
- *  - a large clock + date on the right, and
+ *  - a large clock + date on the right,
+ *  - a D-pad/Camera shortcut icon pod bottom-center, and
  *  - "Notifications · apps · Contacts" soft keys along the bottom.
  *
- * Tap a rail icon (or D-pad to it and press OK) to launch it. Typing a digit -
- * or `*` / `#` - anywhere on Home opens the phone dialer prefilled with it: on
- * Home the number keys are a dialer shortcut, not a rail launcher (the rail is
- * driven by focus + OK). The center button opens All Apps; long-pressing it
- * (via touch) opens Settings.
+ * Tap a rail icon to launch it (the rail is touch-only - D-pad no longer
+ * navigates focus into it, see below). Typing a digit - or `*` / `#` -
+ * anywhere on Home opens the phone dialer prefilled with it. The center
+ * button opens All Apps; long-pressing it (via touch) opens Settings.
  *
- * Most physical keys (digits 0/2-9, MENU, BACK, the soft keys) also carry a
- * long-press action and a 5-second-hold "assign" menu - see the Key handling
- * section below.
+ * Most physical keys (digits 0/2-9, MENU, BACK, the soft keys, D-pad
+ * Up/Down/Left/Right, Camera) also carry a long-press action and a
+ * 5-second-hold "assign" menu - see the Key handling section below. Digits
+ * are the exception: their long-press (speed dial / voicemail) fires the
+ * instant it's detected, and assignment for them is Settings-only.
  */
 class MainActivity : AppCompatActivity() {
 
@@ -74,6 +76,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var notifMessagesCount: TextView
     private lateinit var notifOtherGroup: View
     private lateinit var notifOtherCount: TextView
+    private lateinit var dpadPod: View
+    private lateinit var dpadIconUp: ImageView
+    private lateinit var dpadIconDown: ImageView
+    private lateinit var dpadIconLeft: ImageView
+    private lateinit var dpadIconRight: ImageView
 
     private val ampmFmt = SimpleDateFormat("a", Locale.getDefault())
     private val time12 = SimpleDateFormat("h:mm", Locale.getDefault())
@@ -83,9 +90,6 @@ class MainActivity : AppCompatActivity() {
 
     /** Rail index awaiting an app from the picker (-1 = none). */
     private var pendingIndex = -1
-
-    /** Digit awaiting a number from [speedDialAssigner] (-1 = none). */
-    private var pendingSpeedDialDigit = -1
 
     /** Physical key awaiting an app from [assignAppLauncher] (0 = none). */
     private var pendingAssignAppKey = 0
@@ -115,17 +119,7 @@ class MainActivity : AppCompatActivity() {
 
     private val callPermission = PermissionGate(this, Manifest.permission.CALL_PHONE)
 
-    /** Contact-or-manual-number chooser for speed dial, shared with [pendingSpeedDialDigit]. */
-    private val speedDialAssigner = NumberAssigner(this) { number, label ->
-        if (pendingSpeedDialDigit >= 0) {
-            val digit = pendingSpeedDialDigit
-            pendingSpeedDialDigit = -1
-            prefs.setSpeedDial(digit, number, label)
-            Toast.makeText(this, getString(R.string.speed_dial_set, label), Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    /** App picker for MENU/BACK/soft-key assignment, writing back based on [pendingAssignAppKey]. */
+    /** App picker for MENU/BACK/soft-key/D-pad/Camera assignment, writing back based on [pendingAssignAppKey]. */
     private val assignAppLauncher = registerForActivityResult(StartActivityForResult()) { result ->
         val key = result.data?.getStringExtra(AppPickerActivity.EXTRA_APP_KEY)
         val target = pendingAssignAppKey
@@ -136,12 +130,18 @@ class MainActivity : AppCompatActivity() {
                 KeyEvent.KEYCODE_BACK -> prefs.setBackLongPressApp(key)
                 KeyEvent.KEYCODE_SOFT_LEFT -> prefs.setLeftKeyApp(key)
                 KeyEvent.KEYCODE_SOFT_RIGHT -> prefs.setRightKeyApp(key)
+                KeyEvent.KEYCODE_DPAD_UP -> prefs.setDpadUpApp(key)
+                KeyEvent.KEYCODE_DPAD_DOWN -> prefs.setDpadDownApp(key)
+                KeyEvent.KEYCODE_DPAD_LEFT -> prefs.setDpadLeftApp(key)
+                KeyEvent.KEYCODE_DPAD_RIGHT -> prefs.setDpadRightApp(key)
+                KeyEvent.KEYCODE_CAMERA -> prefs.setCameraKeyApp(key)
             }
             AppRepository.resolveComponent(this, key)?.label?.let {
                 Toast.makeText(this, getString(R.string.key_assigned_toast, it), Toast.LENGTH_SHORT).show()
             }
             refreshLeftKeyLabel()
             refreshRightKeyLabel()
+            refreshDirectionalPod()
         }
     }
 
@@ -205,6 +205,11 @@ class MainActivity : AppCompatActivity() {
         notifMessagesCount = findViewById(R.id.notif_messages_count)
         notifOtherGroup = findViewById(R.id.notif_other_group)
         notifOtherCount = findViewById(R.id.notif_other_count)
+        dpadPod = findViewById(R.id.dpad_pod)
+        dpadIconUp = findViewById(R.id.dpad_icon_up)
+        dpadIconDown = findViewById(R.id.dpad_icon_down)
+        dpadIconLeft = findViewById(R.id.dpad_icon_left)
+        dpadIconRight = findViewById(R.id.dpad_icon_right)
         rail = findViewById(R.id.shortcuts_rail)
 
         adapter = HomeRailAdapter(
@@ -231,24 +236,6 @@ class MainActivity : AppCompatActivity() {
             backgroundTintList = ColorStateList.valueOf(accentColorAlpha(0x4D))
             setOnClickListener { openAppDrawer() }
             setOnLongClickListener { openOptions(); true }
-            // Left jumps straight to the first pinned shortcut. The soft keys
-            // either side of this button aren't keyboard-focusable, so without
-            // this, default focus search would still wander into the rail on
-            // its own (it's the only other focusable view) - landing on
-            // whichever item geometric search happens to pick, not the top one.
-            // Right has no focusable target and is swallowed so it's a no-op
-            // instead of also leaking into the rail.
-            setOnKeyListener { _, keyCode, event ->
-                if (event.action != KeyEvent.ACTION_DOWN) return@setOnKeyListener false
-                when (keyCode) {
-                    KeyEvent.KEYCODE_DPAD_LEFT -> {
-                        rail.layoutManager?.findViewByPosition(0)?.requestFocus() ?: rail.requestFocus()
-                        true
-                    }
-                    KeyEvent.KEYCODE_DPAD_RIGHT -> true
-                    else -> false
-                }
-            }
         }
 
         // Back opens the app drawer; long-pressing it launches the configured app instead
@@ -288,6 +275,7 @@ class MainActivity : AppCompatActivity() {
         refreshShortcuts()
         refreshLeftKeyLabel()
         refreshRightKeyLabel()
+        refreshDirectionalPod()
         focusAppMenu()
         NotificationCounts.addListener(notifListener)
         updateNotifSummary()
@@ -470,26 +458,52 @@ class MainActivity : AppCompatActivity() {
 
     // ----------------------------------------------------------- Key handling
     //
-    // Every assignable key (digits 0/2-9, MENU, BACK, the soft keys) is
-    // swallowed on key-down and resolved on key-up, exactly like the digit
-    // dial-prefill below always has been: launching anything on key-down
-    // leaves the matching key-up to be delivered to whatever gets focused as
-    // a result, which on some devices re-enters the same input. Key-down only
-    // starts long-press tracking and the 5-second assign timer; key-up
-    // decides between a tap, a long-press action, or (if the timer already
-    // fired) nothing further.
+    // Digits 1-9/0 fire their long-press action (dial a speed-dial number,
+    // dial voicemail) the instant the framework's long-press threshold
+    // crosses, like a real feature phone - see the digit branches below.
+    // Assignment for digits is Settings-only now (SpeedDialSettingsActivity);
+    // there's no in-place hold for them.
+    //
+    // Every other assignable key (MENU, BACK, the soft keys, D-pad, Camera)
+    // keeps the original model: swallowed on key-down, resolved on key-up -
+    // launching anything on key-down leaves the matching key-up to be
+    // delivered to whatever gets focused as a result, which on some devices
+    // re-enters the same input. Key-down starts long-press tracking and the
+    // 5-second assign timer; key-up decides between a tap, a long-press
+    // action, or (if the timer already fired) nothing further.
+    //
+    // KEYCODE_DPAD_UP/DOWN/LEFT/RIGHT are exactly the keys Android's default
+    // focus-search machinery intercepts at the currently-focused View, before
+    // an unconsumed event would ever reach onKeyDown/onKeyUp below - so they
+    // (and Camera, for uniformity) are captured a level higher, in
+    // dispatchKeyEvent, before the view hierarchy gets a look at them.
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.keyCode in DIRECTIONAL_KEYS) {
+            return when (event.action) {
+                KeyEvent.ACTION_DOWN -> onKeyDown(event.keyCode, event)
+                KeyEvent.ACTION_UP -> onKeyUp(event.keyCode, event)
+                else -> super.dispatchKeyEvent(event)
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         when (keyCode) {
             in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> {
                 beginPressTracking(keyCode, event)
-                // Key 1 is hard-coded to voicemail - never assignable.
-                if (event.repeatCount == 0 && keyCode != KeyEvent.KEYCODE_1) scheduleAssign(keyCode)
-                trackLongPress(keyCode, event)
+                if (event.isLongPress && keyCode !in longPressFired) {
+                    longPressFired.add(keyCode)
+                    if (keyCode == KeyEvent.KEYCODE_1) callVoicemail() else dialSpeedDial(keyCode - KeyEvent.KEYCODE_0)
+                }
                 return true
             }
             KeyEvent.KEYCODE_STAR, KeyEvent.KEYCODE_POUND -> return true
-            KeyEvent.KEYCODE_SOFT_LEFT, KeyEvent.KEYCODE_SOFT_RIGHT -> {
+            KeyEvent.KEYCODE_SOFT_LEFT, KeyEvent.KEYCODE_SOFT_RIGHT,
+            KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
+            KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
+            KeyEvent.KEYCODE_CAMERA -> {
                 beginPressTracking(keyCode, event)
                 if (event.repeatCount == 0) scheduleAssign(keyCode)
                 return true
@@ -506,6 +520,18 @@ class MainActivity : AppCompatActivity() {
                 if (event.repeatCount == 0) scheduleAssign(keyCode)
                 trackLongPress(keyCode, event)
             }
+            else -> {
+                // Diagnostic aid for identifying vendor-specific physical buttons
+                // (e.g. on Kyocera-style hardware) that don't map to a keycode
+                // this app already recognizes above.
+                if (event.repeatCount == 0 && keyCode !in SILENT_UNKNOWN_KEYS) {
+                    Toast.makeText(
+                        this,
+                        getString(R.string.unrecognized_key_toast, keyCode, event.scanCode),
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                }
+            }
         }
         return super.onKeyDown(keyCode, event)
     }
@@ -513,15 +539,9 @@ class MainActivity : AppCompatActivity() {
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
         when (keyCode) {
             in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> {
-                cancelAssign(keyCode)
-                if (assignFired.remove(keyCode)) return true
-                val digit = keyCode - KeyEvent.KEYCODE_0
-                val longPress = longPressFired.remove(keyCode)
-                when {
-                    keyCode == KeyEvent.KEYCODE_1 && longPress -> callVoicemail()
-                    longPress -> dialSpeedDial(digit)
-                    else -> startDial(digit.toString())
-                }
+                // The long-press action (if any) already fired in onKeyDown.
+                if (longPressFired.remove(keyCode)) return true
+                startDial((keyCode - KeyEvent.KEYCODE_0).toString())
                 return true
             }
             KeyEvent.KEYCODE_STAR -> { startDial("*"); return true }
@@ -536,6 +556,14 @@ class MainActivity : AppCompatActivity() {
                 cancelAssign(keyCode)
                 if (assignFired.remove(keyCode)) return true
                 openRightKeyApp()
+                return true
+            }
+            KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
+            KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
+            KeyEvent.KEYCODE_CAMERA -> {
+                cancelAssign(keyCode)
+                if (assignFired.remove(keyCode)) return true
+                launchDirectionalKeyApp(keyCode)
                 return true
             }
             KeyEvent.KEYCODE_MENU -> {
@@ -587,24 +615,71 @@ class MainActivity : AppCompatActivity() {
         assignRunnables.remove(keyCode)?.let { assignHandler.removeCallbacks(it) }
     }
 
-    /** Opens the assign menu for [keyCode]: a contact/manual-number chooser for digits, an app picker otherwise. */
+    /** Opens the app picker to assign [keyCode] (MENU/BACK/soft-key/D-pad/Camera - digits are Settings-only, see [dialSpeedDial]). */
     private fun openAssignMenu(keyCode: Int) {
-        if (keyCode in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9) {
-            pendingSpeedDialDigit = keyCode - KeyEvent.KEYCODE_0
-            speedDialAssigner.start()
-        } else {
-            pendingAssignAppKey = keyCode
-            assignAppLauncher.launch(Intent(this, AppPickerActivity::class.java))
-        }
+        pendingAssignAppKey = keyCode
+        assignAppLauncher.launch(Intent(this, AppPickerActivity::class.java))
     }
 
+    /** Dials [digit]'s speed-dial number immediately, or - if unset - jumps straight to Speed Dial settings on that row. */
     private fun dialSpeedDial(digit: Int) {
         val entry = prefs.getSpeedDial(digit)
         if (entry == null) {
-            Toast.makeText(this, R.string.speed_dial_unset_toast, Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.speed_dial_unset_shortcut_toast, digit), Toast.LENGTH_SHORT).show()
+            startActivity(
+                Intent(this, SpeedDialSettingsActivity::class.java)
+                    .putExtra(SpeedDialSettingsActivity.EXTRA_FOCUS_DIGIT, digit),
+            )
         } else {
             placeCall(callPermission, entry.number)
         }
+    }
+
+    /** Launches [keyCode]'s bound app immediately, or - if unset - toasts and jumps to Home Screen & Keys settings. */
+    private fun launchDirectionalKeyApp(keyCode: Int) {
+        val key = when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_UP -> prefs.getDpadUpApp()
+            KeyEvent.KEYCODE_DPAD_DOWN -> prefs.getDpadDownApp()
+            KeyEvent.KEYCODE_DPAD_LEFT -> prefs.getDpadLeftApp()
+            KeyEvent.KEYCODE_DPAD_RIGHT -> prefs.getDpadRightApp()
+            KeyEvent.KEYCODE_CAMERA -> prefs.getCameraKeyApp()
+            else -> null
+        }
+        if (key == null) {
+            Toast.makeText(this, R.string.directional_key_unset_toast, Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this, HomeKeysSettingsActivity::class.java))
+        } else {
+            launchAppByKey(key)
+        }
+    }
+
+    /** Refreshes the D-pad shortcut pod's four icons, hiding the whole pod when nothing is assigned. */
+    private fun refreshDirectionalPod() {
+        val up = bindPodIcon(dpadIconUp, prefs.getDpadUpApp())
+        val down = bindPodIcon(dpadIconDown, prefs.getDpadDownApp())
+        val left = bindPodIcon(dpadIconLeft, prefs.getDpadLeftApp())
+        val right = bindPodIcon(dpadIconRight, prefs.getDpadRightApp())
+        dpadPod.visibility = if (up || down || left || right) View.VISIBLE else View.GONE
+    }
+
+    /** Binds [key]'s squircle-masked icon into [view] and shows it, or hides [view] when [key] is null. Returns whether it was bound. */
+    private fun bindPodIcon(view: ImageView, key: String?): Boolean {
+        val icon = key?.let { AppRepository.resolveRawIcon(this, it) }
+        if (icon == null) {
+            view.visibility = View.GONE
+            return false
+        }
+        view.setImageDrawable(
+            IconShapeRenderer.render(
+                context = this,
+                source = icon,
+                shape = LauncherPrefs.IconShape.SQUIRCLE,
+                wrapEnabled = true,
+                legacyBackgroundEnabled = prefs.isLegacyIconBackgroundEnabled(),
+            ),
+        )
+        view.visibility = View.VISIBLE
+        return true
     }
 
     private fun callVoicemail() {
@@ -661,5 +736,24 @@ class MainActivity : AppCompatActivity() {
 
         /** How long an assignable key must be held to open its assign menu. */
         private const val ASSIGN_HOLD_MS = 5000L
+
+        /** Captured in [dispatchKeyEvent], before default focus-search can consume them. */
+        private val DIRECTIONAL_KEYS = setOf(
+            KeyEvent.KEYCODE_DPAD_UP,
+            KeyEvent.KEYCODE_DPAD_DOWN,
+            KeyEvent.KEYCODE_DPAD_LEFT,
+            KeyEvent.KEYCODE_DPAD_RIGHT,
+            KeyEvent.KEYCODE_CAMERA,
+        )
+
+        /** Keys that should never trigger the unrecognized-key diagnostic toast. */
+        private val SILENT_UNKNOWN_KEYS = setOf(
+            KeyEvent.KEYCODE_VOLUME_UP,
+            KeyEvent.KEYCODE_VOLUME_DOWN,
+            KeyEvent.KEYCODE_VOLUME_MUTE,
+            KeyEvent.KEYCODE_POWER,
+            KeyEvent.KEYCODE_DPAD_CENTER,
+            KeyEvent.KEYCODE_ENTER,
+        )
     }
 }

@@ -51,7 +51,16 @@ class SpeedDialSettingsActivity : BaseListActivity() {
         softKeys.setOnCenterClick { onRowClick(focusedPosition()) }
         softKeys.setOnRightClick { clearAt(focusedPosition()) }
         refreshRows()
-        focusFirst()
+
+        // Arrived as a shortcut from Home (long-pressing an unassigned digit) -
+        // jump straight into assigning that row instead of just focusing it.
+        val focusDigit = intent.getIntExtra(EXTRA_FOCUS_DIGIT, -1)
+        if (focusDigit >= 0 && intent.getBooleanExtra(EXTRA_FOCUS_DIGIT_CONSUMED, false).not()) {
+            intent.putExtra(EXTRA_FOCUS_DIGIT_CONSUMED, true)
+            onRowClick(digitsInOrder.indexOf(focusDigit))
+        } else {
+            focusFirst()
+        }
     }
 
     override fun onResume() {
@@ -121,5 +130,9 @@ class SpeedDialSettingsActivity : BaseListActivity() {
 
     companion object {
         private const val LOCKED_VOICEMAIL_DIGIT = 1
+
+        /** Digit to jump straight into assigning on launch (see Home's unassigned-digit long-press shortcut). */
+        const val EXTRA_FOCUS_DIGIT = "focus_digit"
+        private const val EXTRA_FOCUS_DIGIT_CONSUMED = "focus_digit_consumed"
     }
 }

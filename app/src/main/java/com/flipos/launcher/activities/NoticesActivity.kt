@@ -4,8 +4,10 @@ import com.flipos.launcher.R
 
 import android.content.ComponentName
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.service.notification.NotificationListenerService
 import android.view.KeyEvent
 import android.widget.TextView
 import android.widget.Toast
@@ -50,6 +52,8 @@ class NoticesActivity : BaseListActivity() {
         NotificationStore.addListener(storeListener)
         if (!isNotificationAccessGranted()) {
             Toast.makeText(this, R.string.notices_access_required, Toast.LENGTH_LONG).show()
+        } else {
+            requestRebindIfStale()
         }
         refresh()
     }
@@ -81,6 +85,27 @@ class NoticesActivity : BaseListActivity() {
         val flat = Settings.Secure.getString(contentResolver, "enabled_notification_listeners") ?: return false
         return flat.split(':').any {
             ComponentName.unflattenFromString(it)?.packageName == packageName
+        }
+    }
+
+    /**
+     * The OS doesn't always redeliver onListenerConnected() after an app
+     * update/reinstall, even though access was already granted -
+     * isNotificationAccessGranted() still reads true (it only checks the
+     * Settings.Secure string) but NotificationCountService.instance stays
+     * null forever, silently keeping this list empty. Detect that state here
+     * and proactively ask the framework to rebind, exactly like
+     * NotificationCountService.onListenerDisconnected() already does for a
+     * mid-session drop; [storeListener] picks up the result once it lands.
+     */
+    private fun requestRebindIfStale() {
+        if (NotificationCountService.instance != null) return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            try {
+                NotificationListenerService.requestRebind(ComponentName(this, NotificationCountService::class.java))
+            } catch (e: Exception) {
+                // Best-effort; the framework rebinds on its own schedule anyway.
+            }
         }
     }
 

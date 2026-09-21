@@ -204,6 +204,72 @@
         </LinearLayout>
     </LinearLayout>
 
+    <!-- D-pad shortcut pod: up/left/right/down app icons bound via a long
+         hold on the matching physical key (see MainActivity). Hidden until at
+         least one direction is assigned; each icon is independently hidden
+         when its own direction is unset. -->
+    <LinearLayout
+        android:id="@+id/dpad_pod"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:background="@drawable/bg_dpad_pod"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:padding="6dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@id/home_softkeys"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <ImageView
+            android:id="@+id/dpad_icon_up"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:contentDescription="@null"
+            android:scaleType="fitCenter"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:id="@+id/dpad_icon_left"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_marginEnd="6dp"
+                android:contentDescription="@null"
+                android:scaleType="fitCenter"
+                android:visibility="gone" />
+
+            <!-- Neutral center slot, matching the reference layout - DPAD_CENTER/OK stays reserved. -->
+            <View
+                android:layout_width="28dp"
+                android:layout_height="28dp" />
+
+            <ImageView
+                android:id="@+id/dpad_icon_right"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_marginStart="6dp"
+                android:contentDescription="@null"
+                android:scaleType="fitCenter"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <ImageView
+            android:id="@+id/dpad_icon_down"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:contentDescription="@null"
+            android:scaleType="fitCenter"
+            android:visibility="gone" />
+
+    </LinearLayout>
+
     <!-- Soft keys over the wallpaper: Notices | apps | Contacts -->
     <LinearLayout
         android:id="@+id/home_softkeys"

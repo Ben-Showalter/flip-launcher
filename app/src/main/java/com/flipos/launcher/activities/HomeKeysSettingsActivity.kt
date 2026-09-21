@@ -68,6 +68,23 @@ class HomeKeysSettingsActivity : BaseListActivity() {
         }
     }
 
+    /** Which D-pad/Camera key is awaiting an app from [pickDirectionalKeyApp] (0 = none). */
+    private var pendingDirectionalKey = 0
+
+    private val pickDirectionalKeyApp = registerForActivityResult(StartActivityForResult()) { result ->
+        val target = pendingDirectionalKey
+        pendingDirectionalKey = 0
+        if (result.resultCode == RESULT_OK && target != 0) {
+            result.data?.getStringExtra(AppPickerActivity.EXTRA_APP_KEY)?.let { key ->
+                setDirectionalKeyApp(target, key)
+                AppRepository.resolveComponent(this, key)?.label?.let {
+                    Toast.makeText(this, getString(R.string.key_assigned_toast, it), Toast.LENGTH_SHORT).show()
+                }
+                refreshRows()
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = LauncherPrefs(this)
@@ -77,6 +94,11 @@ class HomeKeysSettingsActivity : BaseListActivity() {
         actions[ID_RIGHT_KEY] = { chooseRightKey() }
         actions[ID_BACK_LONGPRESS] = { configureBackLongPress() }
         actions[ID_MENU_KEY] = { configureMenuKey() }
+        actions[ID_DPAD_UP] = { configureDirectionalKey(KeyEvent.KEYCODE_DPAD_UP) }
+        actions[ID_DPAD_DOWN] = { configureDirectionalKey(KeyEvent.KEYCODE_DPAD_DOWN) }
+        actions[ID_DPAD_LEFT] = { configureDirectionalKey(KeyEvent.KEYCODE_DPAD_LEFT) }
+        actions[ID_DPAD_RIGHT] = { configureDirectionalKey(KeyEvent.KEYCODE_DPAD_RIGHT) }
+        actions[ID_CAMERA_KEY] = { configureDirectionalKey(KeyEvent.KEYCODE_CAMERA) }
         actions[ID_SHORTCUTS] = { startActivity(Intent(this, ShortcutConfigActivity::class.java)) }
         actions[ID_SPEED_DIAL] = { startActivity(Intent(this, SpeedDialSettingsActivity::class.java)) }
 
@@ -109,6 +131,8 @@ class HomeKeysSettingsActivity : BaseListActivity() {
             ?: getString(R.string.back_longpress_not_set)
         val menuLabel = prefs.getMenuKeyApp()?.let { AppRepository.resolveComponent(this, it)?.label }
             ?: getString(R.string.back_longpress_not_set)
+        fun directionalLabel(keyCode: Int) = getDirectionalKeyApp(keyCode)?.let { AppRepository.resolveComponent(this, it)?.label }
+            ?: getString(R.string.back_longpress_not_set)
 
         adapter.submit(
             listOf(
@@ -118,6 +142,12 @@ class HomeKeysSettingsActivity : BaseListActivity() {
                 Row.section(getString(R.string.sec_buttons)),
                 Row(id = ID_BACK_LONGPRESS, title = getString(R.string.opt_back_longpress), trailing = backLabel, chevron = true),
                 Row(id = ID_MENU_KEY, title = getString(R.string.opt_menu_key), trailing = menuLabel, chevron = true),
+                Row.section(getString(R.string.sec_dpad_keys)),
+                Row(id = ID_DPAD_UP, title = getString(R.string.opt_dpad_up), trailing = directionalLabel(KeyEvent.KEYCODE_DPAD_UP), chevron = true),
+                Row(id = ID_DPAD_DOWN, title = getString(R.string.opt_dpad_down), trailing = directionalLabel(KeyEvent.KEYCODE_DPAD_DOWN), chevron = true),
+                Row(id = ID_DPAD_LEFT, title = getString(R.string.opt_dpad_left), trailing = directionalLabel(KeyEvent.KEYCODE_DPAD_LEFT), chevron = true),
+                Row(id = ID_DPAD_RIGHT, title = getString(R.string.opt_dpad_right), trailing = directionalLabel(KeyEvent.KEYCODE_DPAD_RIGHT), chevron = true),
+                Row(id = ID_CAMERA_KEY, title = getString(R.string.opt_camera_key), trailing = directionalLabel(KeyEvent.KEYCODE_CAMERA), chevron = true),
                 Row.section(getString(R.string.sec_shortcuts)),
                 Row(id = ID_SHORTCUTS, title = getString(R.string.opt_customize_shortcuts), chevron = true),
                 Row(id = ID_SPEED_DIAL, title = getString(R.string.opt_speed_dial), chevron = true),
@@ -206,6 +236,49 @@ class HomeKeysSettingsActivity : BaseListActivity() {
             .show()
     }
 
+    private fun getDirectionalKeyApp(keyCode: Int): String? = when (keyCode) {
+        KeyEvent.KEYCODE_DPAD_UP -> prefs.getDpadUpApp()
+        KeyEvent.KEYCODE_DPAD_DOWN -> prefs.getDpadDownApp()
+        KeyEvent.KEYCODE_DPAD_LEFT -> prefs.getDpadLeftApp()
+        KeyEvent.KEYCODE_DPAD_RIGHT -> prefs.getDpadRightApp()
+        KeyEvent.KEYCODE_CAMERA -> prefs.getCameraKeyApp()
+        else -> null
+    }
+
+    private fun setDirectionalKeyApp(keyCode: Int, key: String?) {
+        when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_UP -> prefs.setDpadUpApp(key)
+            KeyEvent.KEYCODE_DPAD_DOWN -> prefs.setDpadDownApp(key)
+            KeyEvent.KEYCODE_DPAD_LEFT -> prefs.setDpadLeftApp(key)
+            KeyEvent.KEYCODE_DPAD_RIGHT -> prefs.setDpadRightApp(key)
+            KeyEvent.KEYCODE_CAMERA -> prefs.setCameraKeyApp(key)
+        }
+    }
+
+    private fun configureDirectionalKey(keyCode: Int) {
+        if (getDirectionalKeyApp(keyCode) == null) {
+            pendingDirectionalKey = keyCode
+            pickDirectionalKeyApp.launch(Intent(this, AppPickerActivity::class.java))
+            return
+        }
+        AlertDialog.Builder(this)
+            .setItems(
+                arrayOf(getString(R.string.back_longpress_choose), getString(R.string.back_longpress_clear)),
+            ) { _, which ->
+                when (which) {
+                    0 -> {
+                        pendingDirectionalKey = keyCode
+                        pickDirectionalKeyApp.launch(Intent(this, AppPickerActivity::class.java))
+                    }
+                    1 -> {
+                        setDirectionalKeyApp(keyCode, null)
+                        refreshRows()
+                    }
+                }
+            }
+            .show()
+    }
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         if (keyCode == KeyEvent.KEYCODE_SOFT_LEFT) {
             finish()
@@ -219,6 +292,11 @@ class HomeKeysSettingsActivity : BaseListActivity() {
         private const val ID_RIGHT_KEY = "right_key"
         private const val ID_BACK_LONGPRESS = "back_longpress"
         private const val ID_MENU_KEY = "menu_key"
+        private const val ID_DPAD_UP = "dpad_up"
+        private const val ID_DPAD_DOWN = "dpad_down"
+        private const val ID_DPAD_LEFT = "dpad_left"
+        private const val ID_DPAD_RIGHT = "dpad_right"
+        private const val ID_CAMERA_KEY = "camera_key"
         private const val ID_SHORTCUTS = "shortcuts"
         private const val ID_SPEED_DIAL = "speed_dial"
     }

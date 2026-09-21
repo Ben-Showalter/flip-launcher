@@ -2,14 +2,20 @@ package com.flipos.launcher.activities
 
 import com.flipos.launcher.R
 
+import android.Manifest
 import android.content.ComponentName
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.service.notification.NotificationListenerService
 import android.view.KeyEvent
 import com.flipos.launcher.data.LauncherPrefs
+import com.flipos.launcher.service.NotificationCountService
 import com.flipos.launcher.ui.ListRowAdapter
 import com.flipos.launcher.ui.Row
+import com.flipos.launcher.util.PermissionGate
+import com.flipos.launcher.util.openAppPermissionSettings
 
 /** Notification settings: access grant plus which badges appear on Home/icons. */
 class NotificationSettingsActivity : BaseListActivity() {
@@ -18,12 +24,15 @@ class NotificationSettingsActivity : BaseListActivity() {
     private lateinit var adapter: ListRowAdapter
     private val actions = HashMap<String, () -> Unit>()
 
+    private val readCallLogPermission = PermissionGate(this, Manifest.permission.READ_CALL_LOG)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = LauncherPrefs(this)
         titleView.text = getString(R.string.cat_notifications)
 
         actions[ID_ACCESS] = { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }
+        actions[ID_CALL_LOG_ACCESS] = { requestCallLogAccess() }
         actions[ID_CALLS] = {
             prefs.setCallBadgeEnabled(!prefs.isCallBadgeEnabled()); refreshRows()
         }
@@ -56,10 +65,37 @@ class NotificationSettingsActivity : BaseListActivity() {
         if (isRecreatingForAccent) return
         // Access is granted from a separate system screen, so re-check on return.
         refreshRows()
+        requestRebindIfStale()
+    }
+
+    /**
+     * The OS doesn't always redeliver onListenerConnected() after an app
+     * update/reinstall, even though access was already granted - the
+     * Settings.Secure string still lists us (isNotificationAccessGranted
+     * reads true) but NotificationCountService.instance stays null forever,
+     * silently keeping Notices and the Home badges empty. Detect that state
+     * here and proactively ask the framework to rebind, exactly like
+     * NotificationCountService.onListenerDisconnected() already does for a
+     * mid-session drop.
+     */
+    private fun requestRebindIfStale() {
+        if (!isNotificationAccessGranted() || NotificationCountService.instance != null) return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            try {
+                NotificationListenerService.requestRebind(ComponentName(this, NotificationCountService::class.java))
+            } catch (e: Exception) {
+                // Best-effort; the framework rebinds on its own schedule anyway.
+            }
+        }
     }
 
     private fun refreshRows() {
         val accessTrailing = if (isNotificationAccessGranted()) {
+            getString(R.string.settings_notif_access_granted)
+        } else {
+            getString(R.string.settings_notif_access_denied)
+        }
+        val callLogTrailing = if (readCallLogPermission.isGranted()) {
             getString(R.string.settings_notif_access_granted)
         } else {
             getString(R.string.settings_notif_access_denied)
@@ -72,6 +108,13 @@ class NotificationSettingsActivity : BaseListActivity() {
                     title = getString(R.string.settings_notif_access),
                     subtitle = getString(R.string.settings_notif_access_sub),
                     trailing = accessTrailing,
+                    chevron = true,
+                ),
+                Row(
+                    id = ID_CALL_LOG_ACCESS,
+                    title = getString(R.string.settings_calllog_access),
+                    subtitle = getString(R.string.settings_calllog_access_sub),
+                    trailing = callLogTrailing,
                     chevron = true,
                 ),
                 Row.section(getString(R.string.sec_notif_home)),
@@ -95,6 +138,22 @@ class NotificationSettingsActivity : BaseListActivity() {
         }
     }
 
+    private fun requestCallLogAccess() {
+        readCallLogPermission.run(
+            onDenied = {
+                // shouldShowRequestPermissionRationale is false both before the
+                // first ask and after a permanent denial; inside this callback
+                // we've just been denied, so false here means permanent - send
+                // the user to the app's permission settings page instead of a
+                // dead end (same reasoning as CallLogActivity's own request).
+                if (!shouldShowRequestPermissionRationale(Manifest.permission.READ_CALL_LOG)) {
+                    openAppPermissionSettings()
+                }
+            },
+            action = { refreshRows() },
+        )
+    }
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         if (keyCode == KeyEvent.KEYCODE_SOFT_LEFT) {
             finish()
@@ -105,6 +164,7 @@ class NotificationSettingsActivity : BaseListActivity() {
 
     companion object {
         private const val ID_ACCESS = "access"
+        private const val ID_CALL_LOG_ACCESS = "call_log_access"
         private const val ID_CALLS = "calls"
         private const val ID_MESSAGES = "messages"
         private const val ID_OTHER = "other"

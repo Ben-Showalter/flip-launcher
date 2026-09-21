@@ -89,6 +89,28 @@ class LauncherPrefs(context: Context) {
         prefs.edit().putString(KEY_MENU_KEY_APP, key).apply()
     }
 
+    // --------------------------------------------- D-pad / Camera shortcuts
+
+    /** App key launched by pressing D-pad Up on Home, or null if unconfigured. */
+    fun getDpadUpApp(): String? = prefs.getString(KEY_DPAD_UP_APP, null)
+    fun setDpadUpApp(key: String?) = prefs.edit().putString(KEY_DPAD_UP_APP, key).apply()
+
+    /** App key launched by pressing D-pad Down on Home, or null if unconfigured. */
+    fun getDpadDownApp(): String? = prefs.getString(KEY_DPAD_DOWN_APP, null)
+    fun setDpadDownApp(key: String?) = prefs.edit().putString(KEY_DPAD_DOWN_APP, key).apply()
+
+    /** App key launched by pressing D-pad Left on Home, or null if unconfigured. */
+    fun getDpadLeftApp(): String? = prefs.getString(KEY_DPAD_LEFT_APP, null)
+    fun setDpadLeftApp(key: String?) = prefs.edit().putString(KEY_DPAD_LEFT_APP, key).apply()
+
+    /** App key launched by pressing D-pad Right on Home, or null if unconfigured. */
+    fun getDpadRightApp(): String? = prefs.getString(KEY_DPAD_RIGHT_APP, null)
+    fun setDpadRightApp(key: String?) = prefs.edit().putString(KEY_DPAD_RIGHT_APP, key).apply()
+
+    /** App key launched by pressing the Camera button on Home, or null if unconfigured. */
+    fun getCameraKeyApp(): String? = prefs.getString(KEY_CAMERA_KEY_APP, null)
+    fun setCameraKeyApp(key: String?) = prefs.edit().putString(KEY_CAMERA_KEY_APP, key).apply()
+
     // ------------------------------------------------------------ Speed dial
 
     /** The phone number + display label long-press-dialed by a digit key, or null if unset. */
@@ -309,6 +331,11 @@ class LauncherPrefs(context: Context) {
         private const val KEY_SHORTCUTS = "home_shortcuts"
         private const val KEY_BACK_LONGPRESS_APP = "back_longpress_app"
         private const val KEY_MENU_KEY_APP = "menu_key_app"
+        private const val KEY_DPAD_UP_APP = "dpad_up_app"
+        private const val KEY_DPAD_DOWN_APP = "dpad_down_app"
+        private const val KEY_DPAD_LEFT_APP = "dpad_left_app"
+        private const val KEY_DPAD_RIGHT_APP = "dpad_right_app"
+        private const val KEY_CAMERA_KEY_APP = "camera_key_app"
         private const val KEY_SPEED_DIAL_PREFIX = "speed_dial_"
         private const val SPEED_DIAL_SEPARATOR = "::"
         private const val KEY_ICON_SIZE_PERCENT = "icon_size_percent"
