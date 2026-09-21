@@ -84,3 +84,16 @@ private fun AppCompatActivity.dialPrefill(number: String) {
         Toast.makeText(this, R.string.toast_no_dialer, Toast.LENGTH_SHORT).show()
     }
 }
+
+/**
+ * Opens the default messaging app, composing a text to [number]. No runtime
+ * permission needed since this hands off to the messaging app rather than
+ * sending directly.
+ */
+fun AppCompatActivity.sendMessage(number: String) {
+    try {
+        startActivity(Intent(Intent.ACTION_SENDTO, Uri.fromParts("smsto", number, null)))
+    } catch (e: Exception) {
+        Toast.makeText(this, R.string.toast_no_messaging_app, Toast.LENGTH_SHORT).show()
+    }
+}

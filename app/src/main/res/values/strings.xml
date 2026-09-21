@@ -77,10 +77,10 @@
 
     <!-- Extra buttons (identified by scan code, see MainActivity) -->
     <string name="sec_extra_keys">Other Buttons</string>
-    <string name="opt_extra_key_1">Extra Key 1</string>
-    <string name="opt_extra_key_2">Extra Key 2</string>
-    <string name="opt_extra_key_3">Extra Key 3</string>
-    <string name="opt_extra_key_4">Extra Key 4</string>
+    <string name="opt_extra_key_1">SOS</string>
+    <string name="opt_extra_key_2">Outer END Key</string>
+    <string name="opt_extra_key_3">Outer Speaker Key</string>
+    <string name="opt_extra_key_4">PTT</string>
 
     <!-- Speed dial (long-press digit keys 0, 2-9) -->
     <string name="speed_dial_not_set">Not set</string>
@@ -97,6 +97,7 @@
     <!-- Recent Calls (Send key) -->
     <string name="calllog_access_required">Turn on Call Log access to see recent calls here — press Select</string>
     <string name="calllog_empty">No recent calls</string>
+    <string name="calllog_send_message">Send Message</string>
     <string name="calllog_add_to_speed_dial">Add to Speed Dial</string>
     <string name="calllog_incoming">Incoming</string>
     <string name="calllog_outgoing">Outgoing</string>
@@ -193,6 +194,7 @@
     <string name="toast_launch_denied">Can\'t open this app</string>
     <string name="toast_no_dialer">No dialer available</string>
     <string name="toast_no_contacts">No contacts app</string>
+    <string name="toast_no_messaging_app">No messaging app available</string>
 
     <!-- Notices empty state / confirmations -->
     <string name="notices_empty">No notices</string>

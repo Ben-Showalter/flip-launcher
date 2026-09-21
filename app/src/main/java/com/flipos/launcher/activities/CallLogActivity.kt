@@ -16,6 +16,7 @@ import com.flipos.launcher.util.BackgroundLoader
 import com.flipos.launcher.util.PermissionGate
 import com.flipos.launcher.util.openAppPermissionSettings
 import com.flipos.launcher.util.placeCall
+import com.flipos.launcher.util.sendMessage
 
 /**
  * The KaiOS "Recent Calls" action for the Send key: our own list screen over
@@ -157,8 +158,13 @@ class CallLogActivity : BaseListActivity() {
     private fun showOptions(item: CallLogItem) {
         if (item.number.isBlank()) return
         AlertDialog.Builder(this)
-            .setItems(arrayOf(getString(R.string.calllog_add_to_speed_dial))) { _, which ->
-                if (which == 0) pickSpeedDialSlot(item)
+            .setItems(
+                arrayOf(getString(R.string.calllog_send_message), getString(R.string.calllog_add_to_speed_dial)),
+            ) { _, which ->
+                when (which) {
+                    0 -> sendMessage(item.number)
+                    1 -> pickSpeedDialSlot(item)
+                }
             }
             .show()
     }

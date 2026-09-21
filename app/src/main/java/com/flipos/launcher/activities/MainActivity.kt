@@ -9,6 +9,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
+import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -340,14 +341,39 @@ class MainActivity : AppCompatActivity() {
         val key = prefs.getRightKeyApp()
         val label = key?.let { AppRepository.resolveComponent(this, it)?.label }
             ?: getString(R.string.softkey_contacts)
-        findViewById<TextView>(R.id.softkey_right).text = label
+        findViewById<TextView>(R.id.softkey_right).apply {
+            text = label
+            setCompoundDrawables(null, null, softKeyIconDrawable(key), null)
+        }
     }
 
     private fun refreshLeftKeyLabel() {
         val key = prefs.getLeftKeyApp()
         val label = key?.let { AppRepository.resolveComponent(this, it)?.label }
             ?: getString(R.string.softkey_notifications)
-        findViewById<TextView>(R.id.softkey_left).text = label
+        findViewById<TextView>(R.id.softkey_left).apply {
+            text = label
+            setCompoundDrawables(softKeyIconDrawable(key), null, null, null)
+        }
+    }
+
+    /**
+     * Assigned-app icon for a Home soft-key label, sized to sit inline with the
+     * text via a compound drawable - null for the built-in Notices/Contacts
+     * defaults (no key).
+     */
+    private fun softKeyIconDrawable(key: String?): Drawable? {
+        val icon = key?.let { AppRepository.resolveRawIcon(this, it) } ?: return null
+        val shaped = IconShapeRenderer.render(
+            context = this,
+            source = icon,
+            shape = LauncherPrefs.IconShape.SQUIRCLE,
+            wrapEnabled = true,
+            legacyBackgroundEnabled = prefs.isLegacyIconBackgroundEnabled(),
+        )
+        val sizePx = (20 * resources.displayMetrics.density).toInt()
+        shaped.setBounds(0, 0, sizePx, sizePx)
+        return shaped
     }
 
     /** The KaiOS "Notices" action: our own list screen, not the system shade. */
