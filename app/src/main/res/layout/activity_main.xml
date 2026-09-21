@@ -208,8 +208,8 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="bottom"
-            android:orientation="horizontal"
+            android:gravity="bottom|start"
+            android:orientation="vertical"
             android:paddingStart="18dp"
             android:paddingEnd="8dp"
             android:paddingBottom="10dp"
@@ -218,18 +218,17 @@
 
             <ImageView
                 android:id="@+id/softkey_left_icon"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:layout_marginEnd="6dp"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_marginBottom="4dp"
                 android:contentDescription="@null"
                 android:scaleType="fitCenter"
                 android:visibility="gone" />
 
             <TextView
                 android:id="@+id/softkey_left"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
                 android:ellipsize="end"
                 android:focusable="false"
                 android:maxLines="2"
@@ -312,17 +311,25 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="bottom"
-            android:orientation="horizontal"
+            android:gravity="bottom|end"
+            android:orientation="vertical"
             android:paddingStart="8dp"
             android:paddingEnd="18dp"
             android:paddingBottom="10dp">
 
+            <ImageView
+                android:id="@+id/softkey_right_icon"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_marginBottom="4dp"
+                android:contentDescription="@null"
+                android:scaleType="fitCenter"
+                android:visibility="gone" />
+
             <TextView
                 android:id="@+id/softkey_right"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
                 android:ellipsize="end"
                 android:focusable="false"
                 android:gravity="end"
@@ -334,15 +341,6 @@
                 android:text="@string/softkey_contacts"
                 android:textColor="@color/kai_text"
                 android:textSize="@dimen/softkey_text" />
-
-            <ImageView
-                android:id="@+id/softkey_right_icon"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:layout_marginStart="6dp"
-                android:contentDescription="@null"
-                android:scaleType="fitCenter"
-                android:visibility="gone" />
         </LinearLayout>
     </LinearLayout>
 
