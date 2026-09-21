@@ -9,7 +9,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
-import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -341,39 +340,16 @@ class MainActivity : AppCompatActivity() {
         val key = prefs.getRightKeyApp()
         val label = key?.let { AppRepository.resolveComponent(this, it)?.label }
             ?: getString(R.string.softkey_contacts)
-        findViewById<TextView>(R.id.softkey_right).apply {
-            text = label
-            setCompoundDrawables(null, null, softKeyIconDrawable(key), null)
-        }
+        findViewById<TextView>(R.id.softkey_right).text = label
+        bindKeyIcon(findViewById(R.id.softkey_right_icon), key)
     }
 
     private fun refreshLeftKeyLabel() {
         val key = prefs.getLeftKeyApp()
         val label = key?.let { AppRepository.resolveComponent(this, it)?.label }
             ?: getString(R.string.softkey_notifications)
-        findViewById<TextView>(R.id.softkey_left).apply {
-            text = label
-            setCompoundDrawables(softKeyIconDrawable(key), null, null, null)
-        }
-    }
-
-    /**
-     * Assigned-app icon for a Home soft-key label, sized to sit inline with the
-     * text via a compound drawable - null for the built-in Notices/Contacts
-     * defaults (no key).
-     */
-    private fun softKeyIconDrawable(key: String?): Drawable? {
-        val icon = key?.let { AppRepository.resolveRawIcon(this, it) } ?: return null
-        val shaped = IconShapeRenderer.render(
-            context = this,
-            source = icon,
-            shape = LauncherPrefs.IconShape.SQUIRCLE,
-            wrapEnabled = true,
-            legacyBackgroundEnabled = prefs.isLegacyIconBackgroundEnabled(),
-        )
-        val sizePx = (20 * resources.displayMetrics.density).toInt()
-        shaped.setBounds(0, 0, sizePx, sizePx)
-        return shaped
+        findViewById<TextView>(R.id.softkey_left).text = label
+        bindKeyIcon(findViewById(R.id.softkey_left_icon), key)
     }
 
     /** The KaiOS "Notices" action: our own list screen, not the system shade. */
@@ -619,14 +595,14 @@ class MainActivity : AppCompatActivity() {
 
     /** Refreshes the D-pad shortcut pod's four icons; the pod itself always stays visible (it also houses the OK button). */
     private fun refreshDirectionalPod() {
-        bindPodIcon(dpadIconUp, prefs.getDpadUpApp())
-        bindPodIcon(dpadIconDown, prefs.getDpadDownApp())
-        bindPodIcon(dpadIconLeft, prefs.getDpadLeftApp())
-        bindPodIcon(dpadIconRight, prefs.getDpadRightApp())
+        bindKeyIcon(dpadIconUp, prefs.getDpadUpApp())
+        bindKeyIcon(dpadIconDown, prefs.getDpadDownApp())
+        bindKeyIcon(dpadIconLeft, prefs.getDpadLeftApp())
+        bindKeyIcon(dpadIconRight, prefs.getDpadRightApp())
     }
 
     /** Binds [key]'s squircle-masked icon into [view] and shows it, or hides [view] when [key] is null. Returns whether it was bound. */
-    private fun bindPodIcon(view: ImageView, key: String?): Boolean {
+    private fun bindKeyIcon(view: ImageView, key: String?): Boolean {
         val icon = key?.let { AppRepository.resolveRawIcon(this, it) }
         if (icon == null) {
             view.visibility = View.GONE
