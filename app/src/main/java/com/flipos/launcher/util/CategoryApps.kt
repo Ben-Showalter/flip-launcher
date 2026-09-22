@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
-import android.provider.AlarmClock
 import android.provider.Settings
 import android.provider.Telephony
 import android.telecom.TelecomManager
@@ -37,7 +36,6 @@ object CategoryApps {
     fun contactsKey(context: Context): String? = categoryKey(context, Intent.CATEGORY_APP_CONTACTS)
     fun galleryKey(context: Context): String? = categoryKey(context, Intent.CATEGORY_APP_GALLERY)
     fun calendarKey(context: Context): String? = categoryKey(context, Intent.CATEGORY_APP_CALENDAR)
-    fun calculatorKey(context: Context): String? = categoryKey(context, Intent.CATEGORY_APP_CALCULATOR)
 
     /**
      * The real Android Settings app's package, or null. Not a launch
@@ -70,18 +68,6 @@ object CategoryApps {
     fun filesKey(context: Context): String? {
         if (Build.VERSION.SDK_INT < 29) return null
         return categoryKey(context, Intent.CATEGORY_APP_FILES)
-    }
-
-    /**
-     * The system's Timer target. Unlike the other resolvers this can be a
-     * deep, non-launcher-main activity - fine since it's only ever used as a
-     * key default, never as an app-drawer/seeding entry.
-     */
-    fun timerKey(context: Context): String? {
-        if (Build.VERSION.SDK_INT < 23) return null
-        val ai = context.packageManager.resolveActivity(Intent(AlarmClock.ACTION_SHOW_TIMERS), 0)?.activityInfo
-            ?: return null
-        return ComponentName(ai.packageName, ai.name).flattenToString()
     }
 
     private fun categoryKey(context: Context, category: String): String? {

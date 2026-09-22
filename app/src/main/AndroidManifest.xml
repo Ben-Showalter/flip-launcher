@@ -14,11 +14,6 @@
          Requested at runtime the first time that screen is opened. -->
     <uses-permission android:name="android.permission.READ_CALL_LOG" />
 
-    <!-- Normal protection-level, auto-granted at install. Required by the
-         StatusBarManager.expandSettingsPanel() reflection call D-pad Right's
-         Quick Settings default uses (see MainActivity.openQuickSettingsPanel). -->
-    <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
-
     <!--
       A launcher only needs to see launchable activities and the dialer.
       Using a <queries> block keeps us off the sensitive QUERY_ALL_PACKAGES
@@ -62,21 +57,14 @@
         </intent>
         <intent>
             <action android:name="android.intent.action.MAIN" />
-            <category android:name="android.intent.category.APP_CALCULATOR" />
-        </intent>
-        <intent>
-            <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.APP_FILES" />
-        </intent>
-        <intent>
-            <action android:name="android.intent.action.SHOW_TIMERS" />
         </intent>
         <intent>
             <action android:name="android.settings.SETTINGS" />
         </intent>
         <!-- This Kyocera hardware's own Settings app (see
-             util/CategoryApps.kt#systemSettingsPackage and
-             MainActivity#openSystemSettings) - explicit insurance for the
+             util/CategoryApps.kt#systemSettingsPackage, used to seed the app
+             grid's "Settings" slot) - explicit insurance for the
              getPackageInfo() visibility check, though it's very likely
              already visible via the generic LAUNCHER query above. -->
         <package android:name="jp.kyocera.settings.nfp" />

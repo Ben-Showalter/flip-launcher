@@ -71,13 +71,9 @@
     <!-- D-pad / Camera Home shortcuts -->
     <string name="sec_dpad_keys">D-pad &amp; Camera</string>
     <string name="opt_dpad_up">D-pad Up</string>
-    <string name="opt_dpad_up_default">Calculator (default)</string>
     <string name="opt_dpad_down">D-pad Down</string>
-    <string name="opt_dpad_down_default">Calendar (default)</string>
     <string name="opt_dpad_left">D-pad Left</string>
-    <string name="opt_dpad_left_default">Timer (default)</string>
     <string name="opt_dpad_right">D-pad Right</string>
-    <string name="opt_dpad_right_default">Quick Settings (default)</string>
     <string name="opt_camera_key">Camera Button</string>
     <string name="opt_camera_key_default">Camera app (default)</string>
 

@@ -134,15 +134,8 @@ class HomeKeysSettingsActivity : BaseListActivity() {
             ?: getString(R.string.back_longpress_not_set)
         val menuLabel = prefs.getMenuKeyApp()?.let { AppRepository.resolveComponent(this, it)?.label }
             ?: getString(R.string.back_longpress_not_set)
-        fun directionalDefaultLabel(keyCode: Int) = when (keyCode) {
-            KeyEvent.KEYCODE_DPAD_UP -> getString(R.string.opt_dpad_up_default)
-            KeyEvent.KEYCODE_DPAD_DOWN -> getString(R.string.opt_dpad_down_default)
-            KeyEvent.KEYCODE_DPAD_LEFT -> getString(R.string.opt_dpad_left_default)
-            KeyEvent.KEYCODE_DPAD_RIGHT -> getString(R.string.opt_dpad_right_default)
-            else -> getString(R.string.back_longpress_not_set)
-        }
         fun directionalLabel(keyCode: Int) = getDirectionalKeyApp(keyCode)?.let { AppRepository.resolveComponent(this, it)?.label }
-            ?: directionalDefaultLabel(keyCode)
+            ?: getString(R.string.back_longpress_not_set)
         val cameraLabel = prefs.getCameraKeyApp()?.let { AppRepository.resolveComponent(this, it)?.label }
             ?: getString(R.string.opt_camera_key_default)
 
