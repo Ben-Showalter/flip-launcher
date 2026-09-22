@@ -110,6 +110,16 @@ class MainActivity : AppCompatActivity() {
     /** Scheduled digit short-tap dial runnables (debounced against a same-key re-press), keyed by keyCode. */
     private val digitTapRunnables = HashMap<Int, Runnable>()
 
+    /**
+     * [KeyEvent.getDownTime] of the digit press session already resolved
+     * (hold fired, or a tap already scheduled), keyed by keyCode. Some
+     * hardware delivers a spurious extra ACTION_UP mid-hold (with a repeat
+     * ACTION_DOWN in between, same downTime) for what is really one
+     * continuous press - this lets a second UP for a downTime we've already
+     * handled be ignored instead of re-triggering the tap action.
+     */
+    private val digitHandledDownTime = HashMap<Int, Long>()
+
     /** Keycodes whose 5-second assign menu already fired for the current press. */
     private val assignFired = HashSet<Int>()
 
@@ -268,6 +278,7 @@ class MainActivity : AppCompatActivity() {
         assignRunnables.clear()
         digitHoldRunnables.clear()
         digitTapRunnables.clear()
+        digitHandledDownTime.clear()
     }
 
     override fun onDestroy() {
@@ -466,6 +477,7 @@ class MainActivity : AppCompatActivity() {
                 if (event.repeatCount == 0) {
                     cancelDigitTap(keyCode)
                     longPressFired.remove(keyCode)
+                    digitHandledDownTime.remove(keyCode)
                     scheduleDigitHold(keyCode)
                 }
                 return true
@@ -519,7 +531,15 @@ class MainActivity : AppCompatActivity() {
                 )
                 cancelDigitHold(keyCode)
                 // The long-press action (if any) already fired from the scheduled runnable.
-                if (longPressFired.remove(keyCode)) return true
+                if (longPressFired.remove(keyCode)) {
+                    digitHandledDownTime[keyCode] = event.downTime
+                    return true
+                }
+                // Some hardware delivers a spurious extra ACTION_UP mid-hold (see
+                // digitHandledDownTime's doc) - a second UP sharing a downTime we've
+                // already resolved is that spurious event, not a real new release.
+                if (digitHandledDownTime[keyCode] == event.downTime) return true
+                digitHandledDownTime[keyCode] = event.downTime
                 scheduleDigitTap(keyCode)
                 return true
             }
