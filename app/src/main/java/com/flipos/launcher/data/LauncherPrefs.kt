@@ -264,6 +264,18 @@ class LauncherPrefs(context: Context) {
         prefs.edit().putString(KEY_ACCENT_COLOR, color.key).apply()
     }
 
+    // --------------------------------------------------------------- Theme
+
+    /** The user's chosen theme mode, or [ThemeMode.DARK] (the original KaiOS look) if unset. */
+    fun getThemeMode(): ThemeMode {
+        val stored = prefs.getString(KEY_THEME_MODE, null) ?: return ThemeMode.DARK
+        return ThemeMode.entries.find { it.key == stored } ?: ThemeMode.DARK
+    }
+
+    fun setThemeMode(mode: ThemeMode) {
+        prefs.edit().putString(KEY_THEME_MODE, mode.key).apply()
+    }
+
     // --------------------------------------------------------- Icon wrapping
 
     /** The shape every wrapped icon is masked into, launcher-wide. */
@@ -332,6 +344,20 @@ class LauncherPrefs(context: Context) {
         VIOLET("violet", R.string.accent_color_violet, R.style.ThemeOverlay_FlipLauncher_Accent_Violet),
     }
 
+    /**
+     * Light vs dark base theme for the "flat" list/settings screens (see
+     * [com.flipos.launcher.activities.BaseListActivity]) - Home and the App
+     * Drawer are unaffected, always dark, since their wallpaper scrim is
+     * about legibility over an arbitrary photo, not a light/dark choice.
+     * [themeRes] is a full theme (via `Activity.setTheme()`), not a runtime
+     * overlay like [AccentColor.themeOverlayRes] - a real AlertDialog needs
+     * the AppCompat.Light family itself to render its own chrome light too.
+     */
+    enum class ThemeMode(val key: String, val labelRes: Int, val themeRes: Int) {
+        DARK("dark", R.string.theme_mode_dark, 0),
+        LIGHT("light", R.string.theme_mode_light, R.style.Theme_FlipLauncher_Light),
+    }
+
     companion object {
         /** Digits that can carry a speed dial assignment. 1 is reserved for voicemail. */
         val SPEED_DIAL_DIGITS = listOf(0, 2, 3, 4, 5, 6, 7, 8, 9)
@@ -393,6 +419,7 @@ class LauncherPrefs(context: Context) {
         private const val KEY_DRAWER_LIST_VIEW = "drawer_list_view"
         private const val KEY_ICON_OVERRIDE_PREFIX = "icon_override_"
         private const val KEY_ACCENT_COLOR = "accent_color"
+        private const val KEY_THEME_MODE = "theme_mode"
         private const val ICON_OVERRIDE_SEPARATOR = "::"
         private const val KEY_ICON_SHAPE = "icon_shape"
         private const val KEY_LEGACY_ICON_BG = "legacy_icon_background"
