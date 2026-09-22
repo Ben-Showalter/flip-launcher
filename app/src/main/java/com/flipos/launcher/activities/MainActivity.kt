@@ -278,7 +278,12 @@ class MainActivity : AppCompatActivity() {
         assignRunnables.clear()
         digitHoldRunnables.clear()
         digitTapRunnables.clear()
-        digitHandledDownTime.clear()
+        // digitHandledDownTime deliberately survives a pause: placing a
+        // speed-dial call (from a hold firing) backgrounds this Activity via
+        // the system InCallActivity, triggering this very onPause() while
+        // more events for the same physical press are still arriving -
+        // clearing it here reopens the double-dial window it exists to
+        // close. Each new press already clears its own entry in onKeyDown.
     }
 
     override fun onDestroy() {
