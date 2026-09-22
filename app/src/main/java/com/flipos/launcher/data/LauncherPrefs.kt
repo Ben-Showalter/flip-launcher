@@ -207,6 +207,10 @@ class LauncherPrefs(context: Context) {
     fun isIconNotificationDotEnabled(): Boolean = prefs.getBoolean(KEY_BADGE_ICON_DOT, true)
     fun setIconNotificationDotEnabled(enabled: Boolean) = prefs.edit().putBoolean(KEY_BADGE_ICON_DOT, enabled).apply()
 
+    /** Whether the Home notification banner hides message text, keeping only the app name. */
+    fun isNotificationTextHidden(): Boolean = prefs.getBoolean(KEY_NOTIF_TEXT_HIDDEN, false)
+    fun setNotificationTextHidden(hidden: Boolean) = prefs.edit().putBoolean(KEY_NOTIF_TEXT_HIDDEN, hidden).apply()
+
     // ------------------------------------------------------------- Icon packs
 
     /** Icon pack package applied launcher-wide, or null for default icons. */
@@ -415,6 +419,7 @@ class LauncherPrefs(context: Context) {
         private const val KEY_BADGE_MESSAGES = "badge_messages"
         private const val KEY_BADGE_OTHER = "badge_other"
         private const val KEY_BADGE_ICON_DOT = "badge_icon_dot"
+        private const val KEY_NOTIF_TEXT_HIDDEN = "notif_text_hidden"
         private const val KEY_ACTIVE_ICON_PACK = "active_icon_pack"
         private const val KEY_DRAWER_LIST_VIEW = "drawer_list_view"
         private const val KEY_ICON_OVERRIDE_PREFIX = "icon_override_"

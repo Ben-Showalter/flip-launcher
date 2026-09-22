@@ -42,6 +42,9 @@ class NotificationSettingsActivity : BaseListActivity() {
         actions[ID_OTHER] = {
             prefs.setOtherBadgeEnabled(!prefs.isOtherBadgeEnabled()); refreshRows()
         }
+        actions[ID_HIDE_TEXT] = {
+            prefs.setNotificationTextHidden(!prefs.isNotificationTextHidden()); refreshRows()
+        }
         actions[ID_DOTS] = {
             prefs.setIconNotificationDotEnabled(!prefs.isIconNotificationDotEnabled()); refreshRows()
         }
@@ -121,6 +124,12 @@ class NotificationSettingsActivity : BaseListActivity() {
                 Row(id = ID_CALLS, title = getString(R.string.settings_notif_calls), toggle = prefs.isCallBadgeEnabled()),
                 Row(id = ID_MESSAGES, title = getString(R.string.settings_notif_messages), toggle = prefs.isMessageBadgeEnabled()),
                 Row(id = ID_OTHER, title = getString(R.string.settings_notif_other), toggle = prefs.isOtherBadgeEnabled()),
+                Row(
+                    id = ID_HIDE_TEXT,
+                    title = getString(R.string.settings_notif_hide_text),
+                    subtitle = getString(R.string.settings_notif_hide_text_sub),
+                    toggle = prefs.isNotificationTextHidden(),
+                ),
                 Row.section(getString(R.string.sec_icons)),
                 Row(id = ID_DOTS, title = getString(R.string.settings_notif_icon_dots), toggle = prefs.isIconNotificationDotEnabled()),
             ),
@@ -168,6 +177,7 @@ class NotificationSettingsActivity : BaseListActivity() {
         private const val ID_CALLS = "calls"
         private const val ID_MESSAGES = "messages"
         private const val ID_OTHER = "other"
+        private const val ID_HIDE_TEXT = "hide_text"
         private const val ID_DOTS = "dots"
     }
 }

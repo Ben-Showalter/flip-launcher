@@ -66,19 +66,20 @@ class NotificationCountService : NotificationListenerService() {
             // Group summaries and our own posted-by-system rows aren't real, user-facing
             // notifications, so they're skipped to avoid inflating the "other" count.
             if (sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0) continue
-            when (NotificationCategorizer.kindOf(sbn.notification.category)) {
+            val kind = NotificationCategorizer.kindOf(sbn.notification.category)
+            when (kind) {
                 NotificationKind.CALL -> calls++
                 NotificationKind.MESSAGE -> messages++
                 NotificationKind.OTHER -> other++
             }
             packages.add(sbn.packageName)
-            notices.add(toNoticeItem(sbn))
+            notices.add(toNoticeItem(sbn, kind))
         }
         NotificationCounts.update(calls, messages, other, packages)
         NotificationStore.update(notices.sortedByDescending { it.postTime })
     }
 
-    private fun toNoticeItem(sbn: StatusBarNotification): NoticeItem {
+    private fun toNoticeItem(sbn: StatusBarNotification, kind: NotificationKind): NoticeItem {
         val extras = sbn.notification.extras
         val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
         return NoticeItem(
@@ -88,6 +89,7 @@ class NotificationCountService : NotificationListenerService() {
             text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty(),
             postTime = sbn.postTime,
             icon = loadSmallIcon(sbn),
+            kind = kind,
         )
     }
 

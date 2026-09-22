@@ -8,6 +8,7 @@
     <!-- Big clock + date, right-aligned. Every line is single-line and auto-sizes
          so it never wraps, regardless of screen width / aspect ratio. -->
     <LinearLayout
+        android:id="@+id/clock_column"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="18dp"
@@ -94,99 +95,63 @@
             android:textSize="20sp"
             android:textStyle="bold" />
 
+    </LinearLayout>
+
+    <!-- Big notification banner: replaces the old small icon+count badges with a
+         bold, hard-to-miss bar showing the most recent active call/message/other
+         notification. Purely passive - this hardware has no touchscreen and every
+         D-pad/soft key is already claimed as a user-assignable shortcut, so the
+         bar is never focusable or tappable (see MainActivity.updateNotifBanner). -->
+    <LinearLayout
+        android:id="@+id/notif_banner"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="18dp"
+        android:layout_marginTop="18dp"
+        android:layout_marginEnd="18dp"
+        android:background="@drawable/bg_notif_banner"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="14dp"
+        android:paddingVertical="12dp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/clock_column">
+
+        <ImageView
+            android:id="@+id/notif_banner_icon"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginEnd="12dp"
+            android:contentDescription="@null"
+            android:scaleType="fitCenter" />
+
         <LinearLayout
-            android:id="@+id/notif_row"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:gravity="end|center_vertical"
-            android:orientation="horizontal">
+            android:layout_weight="1"
+            android:orientation="vertical">
 
-            <LinearLayout
-                android:id="@+id/notif_calls_group"
-                android:layout_width="wrap_content"
+            <TextView
+                android:id="@+id/notif_banner_app"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="16dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:visibility="gone">
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="?attr/flipOnAccent"
+                android:textSize="15sp"
+                android:textStyle="bold" />
 
-                <ImageView
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
-                    android:contentDescription="@string/cd_notif_calls"
-                    android:src="@drawable/ic_call" />
-
-                <TextView
-                    android:id="@+id/notif_calls_count"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="5dp"
-                    android:shadowColor="#80000000"
-                    android:shadowDx="0"
-                    android:shadowDy="1"
-                    android:shadowRadius="6"
-                    android:textColor="@color/kai_text"
-                    android:textSize="15sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/notif_messages_group"
-                android:layout_width="wrap_content"
+            <TextView
+                android:id="@+id/notif_banner_text"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="16dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:visibility="gone">
-
-                <ImageView
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
-                    android:contentDescription="@string/cd_notif_messages"
-                    android:src="@drawable/ic_message" />
-
-                <TextView
-                    android:id="@+id/notif_messages_count"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="5dp"
-                    android:shadowColor="#80000000"
-                    android:shadowDx="0"
-                    android:shadowDy="1"
-                    android:shadowRadius="6"
-                    android:textColor="@color/kai_text"
-                    android:textSize="15sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/notif_other_group"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:visibility="gone">
-
-                <ImageView
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
-                    android:contentDescription="@string/cd_notif_other"
-                    android:src="@drawable/ic_notification" />
-
-                <TextView
-                    android:id="@+id/notif_other_count"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="5dp"
-                    android:shadowColor="#80000000"
-                    android:shadowDx="0"
-                    android:shadowDy="1"
-                    android:shadowRadius="6"
-                    android:textColor="@color/kai_text"
-                    android:textSize="15sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
+                android:layout_marginTop="2dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="?attr/flipOnAccent"
+                android:textSize="14sp" />
         </LinearLayout>
     </LinearLayout>
 

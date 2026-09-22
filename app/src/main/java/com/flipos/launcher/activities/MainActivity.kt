@@ -29,7 +29,8 @@ import androidx.core.content.ContextCompat
 import com.flipos.launcher.data.AppRepository
 import com.flipos.launcher.data.IconShapeRenderer
 import com.flipos.launcher.data.LauncherPrefs
-import com.flipos.launcher.data.NotificationCounts
+import com.flipos.launcher.data.NotificationKind
+import com.flipos.launcher.data.NotificationStore
 import com.flipos.launcher.util.BackgroundLoader
 import com.flipos.launcher.util.CategoryApps
 import com.flipos.launcher.util.PermissionGate
@@ -67,12 +68,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var ampm: TextView
     private lateinit var weekday: TextView
     private lateinit var dateLine: TextView
-    private lateinit var notifCallsGroup: View
-    private lateinit var notifCallsCount: TextView
-    private lateinit var notifMessagesGroup: View
-    private lateinit var notifMessagesCount: TextView
-    private lateinit var notifOtherGroup: View
-    private lateinit var notifOtherCount: TextView
+    private lateinit var notifBanner: View
+    private lateinit var notifBannerIcon: ImageView
+    private lateinit var notifBannerApp: TextView
+    private lateinit var notifBannerText: TextView
     private lateinit var dpadIconUp: ImageView
     private lateinit var dpadIconDown: ImageView
     private lateinit var dpadIconLeft: ImageView
@@ -180,7 +179,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val notifListener: () -> Unit = {
-        runOnUiThread { updateNotifSummary() }
+        runOnUiThread { updateNotifBanner() }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -198,12 +197,12 @@ class MainActivity : AppCompatActivity() {
         ampm = findViewById(R.id.ampm)
         weekday = findViewById(R.id.weekday)
         dateLine = findViewById(R.id.date_line)
-        notifCallsGroup = findViewById(R.id.notif_calls_group)
-        notifCallsCount = findViewById(R.id.notif_calls_count)
-        notifMessagesGroup = findViewById(R.id.notif_messages_group)
-        notifMessagesCount = findViewById(R.id.notif_messages_count)
-        notifOtherGroup = findViewById(R.id.notif_other_group)
-        notifOtherCount = findViewById(R.id.notif_other_count)
+        notifBanner = findViewById<View>(R.id.notif_banner).apply {
+            backgroundTintList = ColorStateList.valueOf(accentColorAlpha(0xE6))
+        }
+        notifBannerIcon = findViewById(R.id.notif_banner_icon)
+        notifBannerApp = findViewById(R.id.notif_banner_app)
+        notifBannerText = findViewById(R.id.notif_banner_text)
         dpadIconUp = findViewById(R.id.dpad_icon_up)
         dpadIconDown = findViewById(R.id.dpad_icon_down)
         dpadIconLeft = findViewById(R.id.dpad_icon_left)
@@ -256,8 +255,8 @@ class MainActivity : AppCompatActivity() {
         refreshRightKeyLabel()
         refreshDirectionalPod()
         focusAppMenu()
-        NotificationCounts.addListener(notifListener)
-        updateNotifSummary()
+        NotificationStore.addListener(notifListener)
+        updateNotifBanner()
         maybePromptDefaultLauncher()
         // The accent color may have changed in Settings while Home was backgrounded;
         // theme overlays only apply at onCreate, so recreate to pick it up. Done last
@@ -270,7 +269,7 @@ class MainActivity : AppCompatActivity() {
         super.onPause()
         unregisterReceiver(timeReceiver)
         unregisterReceiver(packageReceiver)
-        NotificationCounts.removeListener(notifListener)
+        NotificationStore.removeListener(notifListener)
         // A key hold that's interrupted mid-press (screen off, app switch) may
         // never deliver a matching key-up; drop any scheduled assign timers so
         // they don't fire into the background.
@@ -355,21 +354,52 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateNotifSummary() {
-        bindNotifBadge(notifCallsGroup, notifCallsCount, prefs.isCallBadgeEnabled(), NotificationCounts.calls, R.string.cd_notif_calls)
-        bindNotifBadge(notifMessagesGroup, notifMessagesCount, prefs.isMessageBadgeEnabled(), NotificationCounts.messages, R.string.cd_notif_messages)
-        bindNotifBadge(notifOtherGroup, notifOtherCount, prefs.isOtherBadgeEnabled(), NotificationCounts.other, R.string.cd_notif_other)
+    /** Shows the single most recent active notification (across the enabled categories) as a big, hard-to-miss bar. */
+    private fun updateNotifBanner() {
+        val item = NotificationStore.items.firstOrNull { isShownOnHome(it.kind) }
+        if (item == null) {
+            notifBanner.visibility = View.GONE
+            return
+        }
+        val (iconRes, cdRes) = when (item.kind) {
+            NotificationKind.CALL -> R.drawable.ic_call to R.string.cd_notif_calls
+            NotificationKind.MESSAGE -> R.drawable.ic_message to R.string.cd_notif_messages
+            NotificationKind.OTHER -> R.drawable.ic_notification to R.string.cd_notif_other
+        }
+        val hideText = prefs.isNotificationTextHidden()
+        val appName = if (hideText) appLabel(item.packageName) else item.title
+        notifBanner.visibility = View.VISIBLE
+        notifBannerIcon.setImageResource(iconRes)
+        notifBannerApp.text = appName
+        if (!hideText && item.text.isNotEmpty()) {
+            notifBannerText.text = item.text
+            notifBannerText.visibility = View.VISIBLE
+        } else {
+            notifBannerText.visibility = View.GONE
+        }
+        notifBanner.contentDescription = if (notifBannerText.visibility == View.VISIBLE) {
+            "$appName: ${item.text}"
+        } else {
+            "$appName, ${getString(cdRes)}"
+        }
     }
 
-    private fun bindNotifBadge(group: View, countView: TextView, enabled: Boolean, count: Int, cdRes: Int) {
-        if (enabled && count > 0) {
-            countView.text = if (count > 99) "99+" else count.toString()
-            group.visibility = View.VISIBLE
-            // Digits alone aren't meaningful to a screen reader; announce the category.
-            group.contentDescription = "$count ${getString(cdRes)}"
-        } else {
-            group.visibility = View.GONE
-        }
+    private fun isShownOnHome(kind: NotificationKind): Boolean = when (kind) {
+        NotificationKind.CALL -> prefs.isCallBadgeEnabled()
+        NotificationKind.MESSAGE -> prefs.isMessageBadgeEnabled()
+        NotificationKind.OTHER -> prefs.isOtherBadgeEnabled()
+    }
+
+    /**
+     * Resolves [packageName]'s own installed label - deliberately not
+     * NoticeItem.title, which is often a sender's name rather than the
+     * app's, so the "hide message text" privacy toggle's promise to keep
+     * only the app name actually holds.
+     */
+    private fun appLabel(packageName: String): String = try {
+        packageManager.getApplicationLabel(packageManager.getApplicationInfo(packageName, 0)).toString()
+    } catch (e: PackageManager.NameNotFoundException) {
+        packageName
     }
 
     private fun refreshRightKeyLabel() {

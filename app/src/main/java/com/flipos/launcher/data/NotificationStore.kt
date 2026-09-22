@@ -13,6 +13,7 @@ data class NoticeItem(
     val text: String,
     val postTime: Long,
     val icon: Drawable?,
+    val kind: NotificationKind,
 )
 
 /**
