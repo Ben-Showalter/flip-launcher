@@ -133,16 +133,28 @@ object AppRepository {
      * swaps that one stored entry in place (same position), preserving any
      * manual reordering the user has done since, rather than re-seeding
      * everything from scratch.
+     *
+     * [LauncherPrefs.setSettingsSeedFixed] is only persisted once a
+     * correction genuinely happens, or once it's confirmed there's
+     * genuinely nothing to fix (our own Settings key isn't in the stored
+     * order at all) - every other early return (our own Settings activity
+     * isn't in the current app list; [CategoryApps.systemSettingsPackage]
+     * can't resolve on this device yet) leaves the flag unset so a future
+     * call retries automatically, instead of a resolution failure
+     * permanently giving up after a single attempt.
      */
     private fun fixSettingsSeed(context: Context, prefs: LauncherPrefs, apps: List<AppInfo>) {
-        prefs.setSettingsSeedFixed()
         val ownSettingsKey = apps.firstOrNull { it.activityName == SETTINGS_ACTIVITY }?.key ?: return
         val order = prefs.getAppOrder()
         val position = order.indexOf(ownSettingsKey)
-        if (position < 0) return
+        if (position < 0) {
+            prefs.setSettingsSeedFixed()
+            return
+        }
         val systemSettingsKey = packageNameKey(apps, CategoryApps.systemSettingsPackage(context)) ?: return
         if (systemSettingsKey in order) return
         prefs.setAppOrder(order.toMutableList().apply { set(position, systemSettingsKey) })
+        prefs.setSettingsSeedFixed()
     }
 
     /** Apps shown to the user (hidden ones removed). */

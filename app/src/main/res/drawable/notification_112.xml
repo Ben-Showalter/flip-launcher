@@ -1,19 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The Notices app-drawer/app-list icon: same dark background as
-     ic_launcher.xml/settings_112.xml, with a large orange bell (the app's
-     existing "Orange" accent color, @color/kai_accent_orange) so it reads
-     clearly against the grid instead of the plain white glyph
-     ic_notification.xml is when shown with no background of its own. -->
+<!-- The Notices app-drawer/app-list icon: a large orange bell (the app's
+     existing "Orange" accent color, @color/kai_accent_orange) on a
+     transparent canvas so it reads clearly against the grid instead of the
+     default-tinted glyph ic_notification.xml is on its own. No baked-in
+     background - shape/background is the shared IconShapeRenderer
+     pipeline's job (icon shape + optional legacy background disc), same as
+     every other app's icon. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-
-    <!-- Background, matching ic_launcher.xml. -->
-    <path
-        android:fillColor="#0F1117"
-        android:pathData="M0,0h108v108h-108z" />
 
     <!-- ic_notification.xml's bell path (24x24 viewport), scaled 3x and
          centered: (108 - 24*3) / 2 = 18 on each axis. -->

@@ -731,6 +731,30 @@ class MainActivity : AppCompatActivity() {
     /** D-pad Right's default: the Quick Settings panel, or the real Settings app if that fails. */
     private fun openQuickSettingsOrSystemSettings() {
         if (openQuickSettingsPanel()) return
+        openSystemSettings()
+    }
+
+    /**
+     * Opens this hardware's own Kyocera-branded Settings app first
+     * (confirmed via logcat -
+     * `jp.kyocera.settings.nfp/.core.Settings$MainSettingsActivity` - the
+     * actual launcher-visible "Settings" entry on this device, since
+     * `Intent(Settings.ACTION_SETTINGS)` alone resolves ambiguously here,
+     * the same Kyocera "Kc"/vendor-front pattern as [openCallLog]'s call
+     * log component), falling back to the standard action for any other
+     * device.
+     */
+    private fun openSystemSettings() {
+        try {
+            startActivity(
+                Intent(Intent.ACTION_MAIN).setComponent(
+                    ComponentName("jp.kyocera.settings.nfp", "jp.kyocera.settings.nfp.core.Settings\$MainSettingsActivity"),
+                ),
+            )
+            return
+        } catch (e: Exception) {
+            // Fall through to the generic action below.
+        }
         try {
             startActivity(Intent(Settings.ACTION_SETTINGS))
         } catch (e: Exception) {

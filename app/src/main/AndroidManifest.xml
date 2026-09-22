@@ -74,6 +74,12 @@
         <intent>
             <action android:name="android.settings.SETTINGS" />
         </intent>
+        <!-- This Kyocera hardware's own Settings app (see
+             util/CategoryApps.kt#systemSettingsPackage and
+             MainActivity#openSystemSettings) - explicit insurance for the
+             getPackageInfo() visibility check, though it's very likely
+             already visible via the generic LAUNCHER query above. -->
+        <package android:name="jp.kyocera.settings.nfp" />
     </queries>
 
     <application

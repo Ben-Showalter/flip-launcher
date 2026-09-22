@@ -3,6 +3,7 @@ package com.flipos.launcher.util
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.AlarmClock
 import android.provider.Settings
@@ -38,8 +39,32 @@ object CategoryApps {
     fun calendarKey(context: Context): String? = categoryKey(context, Intent.CATEGORY_APP_CALENDAR)
     fun calculatorKey(context: Context): String? = categoryKey(context, Intent.CATEGORY_APP_CALCULATOR)
 
-    /** The real Android Settings app's package, or null. Not a launch component key like the other resolvers - callers that need one should look it up by package in their own app list, since this can resolve to a deep settings activity rather than the app's main launcher entry. */
-    fun systemSettingsPackage(context: Context): String? = resolvePackage(context, Intent(Settings.ACTION_SETTINGS))
+    /**
+     * The real Android Settings app's package, or null. Not a launch
+     * component key like the other resolvers - callers that need one should
+     * look it up by package in their own app list, since this can resolve
+     * to a deep settings activity rather than the app's main launcher
+     * entry. Tries this hardware's own Kyocera-branded Settings app first
+     * (`jp.kyocera.settings.nfp` - confirmed via logcat as the actual
+     * launcher-visible "Settings" entry on this device;
+     * `Intent(Settings.ACTION_SETTINGS)` alone resolves ambiguously here
+     * since both it and `com.android.settings` can handle that action, and
+     * `com.android.settings` isn't itself launcher-visible on this build),
+     * falling back to the standard resolution for any other device.
+     */
+    fun systemSettingsPackage(context: Context): String? {
+        if (isPackageVisible(context, KYOCERA_SETTINGS_PACKAGE)) return KYOCERA_SETTINGS_PACKAGE
+        return resolvePackage(context, Intent(Settings.ACTION_SETTINGS))
+    }
+
+    private const val KYOCERA_SETTINGS_PACKAGE = "jp.kyocera.settings.nfp"
+
+    private fun isPackageVisible(context: Context, packageName: String): Boolean = try {
+        context.packageManager.getPackageInfo(packageName, 0)
+        true
+    } catch (e: PackageManager.NameNotFoundException) {
+        false
+    }
 
     /** File manager, only resolvable from API 29 (when CATEGORY_APP_FILES was added). */
     fun filesKey(context: Context): String? {
