@@ -84,6 +84,9 @@ object AppRepository {
         if (!prefs.isAppOrderSeeded()) {
             prefs.setAppOrder(seedAppOrder(context, apps))
             prefs.setAppOrderSeeded()
+            prefs.setSettingsSeedFixed()
+        } else if (!prefs.isSettingsSeedFixed()) {
+            fixSettingsSeed(context, prefs, apps)
         }
         val order = prefs.getAppOrder()
         if (order.isEmpty()) return apps
@@ -95,30 +98,51 @@ object AppRepository {
     /**
      * One-time starting order (see [LauncherPrefs.isAppOrderSeeded]): call
      * history, default SMS app, contacts, gallery, file manager, calendar,
-     * notices, settings - in that order, first on the grid; everything else
-     * stays alphabetical after them. A category with no resolvable app on
-     * this device (or "media center"/notepad, which have no reliable
-     * automatic detection at all) is simply skipped, not left as a gap. This
-     * only ever runs once - afterward the order is just whatever's stored,
-     * fully freeform.
+     * notices, the real Settings app - in that order, first on the grid;
+     * everything else stays alphabetical after them. A category with no
+     * resolvable app on this device (or "media center"/notepad, which have
+     * no reliable automatic detection at all) is simply skipped, not left as
+     * a gap. This only ever runs once - afterward the order is just
+     * whatever's stored, fully freeform.
      */
     private fun seedAppOrder(context: Context, apps: List<AppInfo>): List<String> {
-        fun packageKey(componentKey: String?): String? {
-            val packageName = componentKey?.let { ComponentName.unflattenFromString(it)?.packageName } ?: return null
-            return apps.firstOrNull { it.packageName == packageName }?.key
-        }
         fun activityKey(activityName: String): String? = apps.firstOrNull { it.activityName == activityName }?.key
+        fun componentPackageKey(componentKey: String?): String? =
+            packageNameKey(apps, componentKey?.let { ComponentName.unflattenFromString(it)?.packageName })
 
         return listOfNotNull(
-            packageKey(CategoryApps.dialerKey(context)),
-            packageKey(CategoryApps.smsKey(context)),
-            packageKey(CategoryApps.contactsKey(context)),
-            packageKey(CategoryApps.galleryKey(context)),
-            packageKey(CategoryApps.filesKey(context)),
-            packageKey(CategoryApps.calendarKey(context)),
+            componentPackageKey(CategoryApps.dialerKey(context)),
+            componentPackageKey(CategoryApps.smsKey(context)),
+            componentPackageKey(CategoryApps.contactsKey(context)),
+            componentPackageKey(CategoryApps.galleryKey(context)),
+            componentPackageKey(CategoryApps.filesKey(context)),
+            componentPackageKey(CategoryApps.calendarKey(context)),
             activityKey(NOTICES_ACTIVITY),
-            activityKey(SETTINGS_ACTIVITY),
+            packageNameKey(apps, CategoryApps.systemSettingsPackage(context)),
         ).distinct()
+    }
+
+    /** Matches [packageName] against [apps] by package, resolving a category resolver's result to a real entry's component key. */
+    private fun packageNameKey(apps: List<AppInfo>, packageName: String?): String? =
+        packageName?.let { pkg -> apps.firstOrNull { it.packageName == pkg }?.key }
+
+    /**
+     * One-time correction for a device that already seeded (see
+     * [LauncherPrefs.isSettingsSeedFixed]) before the app grid's seeded slot
+     * switched from our own Settings hub to the real system Settings app:
+     * swaps that one stored entry in place (same position), preserving any
+     * manual reordering the user has done since, rather than re-seeding
+     * everything from scratch.
+     */
+    private fun fixSettingsSeed(context: Context, prefs: LauncherPrefs, apps: List<AppInfo>) {
+        prefs.setSettingsSeedFixed()
+        val ownSettingsKey = apps.firstOrNull { it.activityName == SETTINGS_ACTIVITY }?.key ?: return
+        val order = prefs.getAppOrder()
+        val position = order.indexOf(ownSettingsKey)
+        if (position < 0) return
+        val systemSettingsKey = packageNameKey(apps, CategoryApps.systemSettingsPackage(context)) ?: return
+        if (systemSettingsKey in order) return
+        prefs.setAppOrder(order.toMutableList().apply { set(position, systemSettingsKey) })
     }
 
     /** Apps shown to the user (hidden ones removed). */

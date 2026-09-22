@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.provider.AlarmClock
+import android.provider.Settings
 import android.provider.Telephony
 import android.telecom.TelecomManager
 
@@ -36,6 +37,9 @@ object CategoryApps {
     fun galleryKey(context: Context): String? = categoryKey(context, Intent.CATEGORY_APP_GALLERY)
     fun calendarKey(context: Context): String? = categoryKey(context, Intent.CATEGORY_APP_CALENDAR)
     fun calculatorKey(context: Context): String? = categoryKey(context, Intent.CATEGORY_APP_CALCULATOR)
+
+    /** The real Android Settings app's package, or null. Not a launch component key like the other resolvers - callers that need one should look it up by package in their own app list, since this can resolve to a deep settings activity rather than the app's main launcher entry. */
+    fun systemSettingsPackage(context: Context): String? = resolvePackage(context, Intent(Settings.ACTION_SETTINGS))
 
     /** File manager, only resolvable from API 29 (when CATEGORY_APP_FILES was added). */
     fun filesKey(context: Context): String? {

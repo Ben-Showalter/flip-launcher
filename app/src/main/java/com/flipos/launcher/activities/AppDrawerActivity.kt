@@ -478,9 +478,10 @@ class AppDrawerActivity : AppCompatActivity() {
     /**
      * Swaps the moving app's position with whichever neighbor D-pad
      * navigation would normally move focus to - live, so the moving icon's
-     * slot follows the D-pad. Bounded to the current page in grid mode
-     * (moving across a page boundary is a follow-up, not this round);
-     * unbounded within the full list in list mode, which has no pages.
+     * slot follows the D-pad, crossing into an adjacent grid page (see
+     * [rowMoveTargetIndex]/[columnMoveTargetIndex]) exactly like plain
+     * navigation already does. List mode is unbounded within the full list,
+     * which has no pages to cross.
      */
     private fun moveMovingItem(rowDelta: Int, colDelta: Int) {
         val key = movingKey ?: return
@@ -496,23 +497,79 @@ class AppDrawerActivity : AppCompatActivity() {
         }
         val localIndex = currentPageItems.indexOfFirst { it.key == key }
         if (localIndex < 0) return
-        val targetLocal = when {
-            rowDelta != 0 -> {
-                val row = localIndex / gridColumns
-                val column = localIndex % gridColumns
-                val targetRow = row + rowDelta
-                val candidate = targetRow * gridColumns + column
-                if (targetRow < 0 || candidate >= currentPageItems.size) null else candidate
+        val globalCurrent = currentPage * pageSize + localIndex
+        val globalTarget = (if (rowDelta != 0) rowMoveTargetIndex(rowDelta) else columnMoveTargetIndex(colDelta))
+            ?.takeIf { it != globalCurrent } ?: return
+        swapAllApps(globalCurrent, globalTarget)
+        bindPage(globalTarget / pageSize, focusPosition = globalTarget % pageSize, forceRebind = true)
+    }
+
+    /**
+     * Global (allApps-indexed) swap destination for a Move row step - same
+     * column on the previous page's last row when [rowDelta] carries the
+     * moving item up past the current page's top row, same column on the
+     * next page's first row when it carries past the bottom row, otherwise
+     * just the target row on the current page. Mirrors [moveFocusByRow]'s
+     * page-crossing behavior, but returns a swap destination rather than a
+     * focus target. Null at the very first/last page (nothing to move into).
+     */
+    private fun rowMoveTargetIndex(rowDelta: Int): Int? {
+        val localIndex = currentPageItems.indexOfFirst { it.key == movingKey }
+        if (localIndex < 0) return null
+        val row = localIndex / gridColumns
+        val column = localIndex % gridColumns
+        val lastRow = (currentPageItems.size - 1) / gridColumns
+        val targetRow = row + rowDelta
+        return when {
+            targetRow < 0 -> {
+                val prevPage = currentPage - 1
+                if (prevPage < 0) return null
+                val prevCount = min(pageSize, allApps.size - prevPage * pageSize)
+                if (prevCount <= 0) return null
+                prevPage * pageSize + (lastRowStartForPage(prevPage) + column).coerceAtMost(prevCount - 1)
             }
-            colDelta != 0 -> {
-                val candidate = localIndex + colDelta
-                if (candidate < 0 || candidate >= currentPageItems.size) null else candidate
+            targetRow > lastRow -> {
+                val nextPage = currentPage + 1
+                if (nextPage >= totalPages()) return null
+                val nextStart = nextPage * pageSize
+                val nextCount = min(pageSize, allApps.size - nextStart)
+                if (nextCount <= 0) return null
+                nextStart + column.coerceAtMost(nextCount - 1)
             }
-            else -> null
-        } ?: return
-        val pageStart = currentPage * pageSize
-        swapAllApps(pageStart + localIndex, pageStart + targetLocal)
-        bindPage(currentPage, focusPosition = targetLocal, forceRebind = true)
+            else -> currentPage * pageSize + (targetRow * gridColumns + column).coerceAtMost(currentPageItems.size - 1)
+        }
+    }
+
+    /**
+     * Global (allApps-indexed) swap destination for a Move column step - the
+     * previous page's last item when [delta] carries the moving item left
+     * off the current page's start, the next page's first item when it
+     * carries right off the end, otherwise just the target cell on the
+     * current page. Mirrors [moveFocusByColumn]'s page-crossing behavior,
+     * but returns a swap destination rather than a focus target. Null at the
+     * very first/last item overall.
+     */
+    private fun columnMoveTargetIndex(delta: Int): Int? {
+        val localIndex = currentPageItems.indexOfFirst { it.key == movingKey }
+        if (localIndex < 0) return null
+        val target = localIndex + delta
+        return when {
+            target < 0 -> {
+                val prevPage = currentPage - 1
+                if (prevPage < 0) return null
+                val prevCount = min(pageSize, allApps.size - prevPage * pageSize)
+                if (prevCount <= 0) return null
+                prevPage * pageSize + (prevCount - 1)
+            }
+            target >= currentPageItems.size -> {
+                val nextPage = currentPage + 1
+                if (nextPage >= totalPages()) return null
+                val nextStart = nextPage * pageSize
+                if (min(pageSize, allApps.size - nextStart) <= 0) return null
+                nextStart
+            }
+            else -> currentPage * pageSize + target
+        }
     }
 
     private fun swapAllApps(indexA: Int, indexB: Int) {

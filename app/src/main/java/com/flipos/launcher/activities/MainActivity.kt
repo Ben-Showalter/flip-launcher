@@ -15,6 +15,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
+import android.provider.Settings
 import android.util.Log
 import android.view.KeyEvent
 import android.view.View
@@ -677,9 +678,8 @@ class MainActivity : AppCompatActivity() {
     /**
      * Launches [keyCode]'s bound app immediately, or - if unset - falls back to
      * the default camera app for Camera, a category-based default for
-     * Up/Down/Left (see [CategoryApps]), or toasts and jumps to Home
-     * Shortcuts settings for every other key (including D-pad Right, which
-     * has no fallback).
+     * Up/Down/Left (see [CategoryApps]), the Quick Settings panel for Right,
+     * or toasts and jumps to Home Shortcuts settings for every other key.
      */
     private fun launchDirectionalKeyApp(keyCode: Int) {
         val key = when (keyCode) {
@@ -702,6 +702,10 @@ class MainActivity : AppCompatActivity() {
             openDefaultCamera()
             return
         }
+        if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
+            openQuickSettingsOrSystemSettings()
+            return
+        }
         val fallback = when (keyCode) {
             KeyEvent.KEYCODE_DPAD_UP -> CategoryApps.calculatorKey(this)
             KeyEvent.KEYCODE_DPAD_DOWN -> CategoryApps.calendarKey(this)
@@ -722,6 +726,31 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             Toast.makeText(this, R.string.toast_not_available, Toast.LENGTH_SHORT).show()
         }
+    }
+
+    /** D-pad Right's default: the Quick Settings panel, or the real Settings app if that fails. */
+    private fun openQuickSettingsOrSystemSettings() {
+        if (openQuickSettingsPanel()) return
+        try {
+            startActivity(Intent(Settings.ACTION_SETTINGS))
+        } catch (e: Exception) {
+            Toast.makeText(this, R.string.toast_not_available, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /**
+     * Expands the system Quick Settings panel via reflection on the hidden
+     * [android.app.StatusBarManager.expandSettingsPanel] - there's no public
+     * SDK method for this. Best-effort: returns whether it actually worked,
+     * since this can fail on some Android versions/OEM lockdowns.
+     */
+    private fun openQuickSettingsPanel(): Boolean = try {
+        val manager = getSystemService("statusbar")
+        val expand = manager?.javaClass?.getMethod("expandSettingsPanel")
+        expand?.invoke(manager)
+        manager != null && expand != null
+    } catch (e: Exception) {
+        false
     }
 
     /** Refreshes the D-pad shortcut pod's four icons; the pod itself always stays visible (it also houses the OK button). */

@@ -162,6 +162,17 @@ class LauncherPrefs(context: Context) {
         prefs.edit().putBoolean(KEY_APP_ORDER_SEEDED, true).apply()
     }
 
+    /**
+     * Whether the one-time correction that swaps our own Settings hub for the
+     * real system Settings app in an already-seeded order ([AppRepository])
+     * has already run.
+     */
+    fun isSettingsSeedFixed(): Boolean = prefs.getBoolean(KEY_SETTINGS_SEED_FIXED, false)
+
+    fun setSettingsSeedFixed() {
+        prefs.edit().putBoolean(KEY_SETTINGS_SEED_FIXED, true).apply()
+    }
+
     // ----------------------------------------------------- App drawer layout
 
     /** Whether the app drawer shows a single-column list instead of an icon grid. */
@@ -378,6 +389,7 @@ class LauncherPrefs(context: Context) {
         private const val KEY_ANIMATIONS = "animations_enabled"
         private const val KEY_APP_ORDER = "app_order"
         private const val KEY_APP_ORDER_SEEDED = "app_order_seeded"
+        private const val KEY_SETTINGS_SEED_FIXED = "app_order_settings_seed_fixed"
         private const val APP_ORDER_SEPARATOR = "\n"
     }
 }
