@@ -4,6 +4,7 @@ import com.flipos.launcher.R
 
 import android.Manifest
 import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -17,6 +18,7 @@ import android.provider.ContactsContract
 import android.provider.MediaStore
 import android.view.KeyEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
@@ -99,6 +101,9 @@ class MainActivity : AppCompatActivity() {
 
     /** Scheduled 5-second assign runnables, keyed by keyCode, so a release can cancel them. */
     private val assignRunnables = HashMap<Int, Runnable>()
+
+    /** Scheduled digit-long-press (speed dial / voicemail) runnables, keyed by keyCode. */
+    private val digitHoldRunnables = HashMap<Int, Runnable>()
 
     /** Keycodes whose 5-second assign menu already fired for the current press. */
     private val assignFired = HashSet<Int>()
@@ -256,6 +261,7 @@ class MainActivity : AppCompatActivity() {
         // they don't fire into the background.
         assignHandler.removeCallbacksAndMessages(null)
         assignRunnables.clear()
+        digitHoldRunnables.clear()
     }
 
     override fun onDestroy() {
@@ -352,8 +358,25 @@ class MainActivity : AppCompatActivity() {
         bindKeyIcon(findViewById(R.id.softkey_left_icon), key)
     }
 
-    /** The KaiOS "Notices" action: our own list screen, not the system shade. */
-    private fun openNotifications() = startActivity(Intent(this, NoticesActivity::class.java))
+    /**
+     * The KaiOS "Notices" action. Tries this Kyocera hardware's own
+     * notification screen first (built for keypad/flip devices, unlike the
+     * generic touch-driven system shade) since NotificationListenerService
+     * access has proven unreliable to bind on some Kyocera builds; falls
+     * back to our own [NoticesActivity] if that component isn't
+     * present/launchable (any other device).
+     */
+    private fun openNotifications() {
+        try {
+            startActivity(
+                Intent(Intent.ACTION_MAIN).setComponent(
+                    ComponentName("com.android.systemui", "com.android.systemui.kc.notification.NotificationActivity"),
+                ),
+            )
+        } catch (e: Exception) {
+            startActivity(Intent(this, NoticesActivity::class.java))
+        }
+    }
 
     private fun openCallLog() = startActivity(Intent(this, CallLogActivity::class.java))
 
@@ -408,10 +431,9 @@ class MainActivity : AppCompatActivity() {
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         when (keyCode) {
             in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> {
-                beginPressTracking(keyCode, event)
-                if (event.isLongPress && keyCode !in longPressFired) {
-                    longPressFired.add(keyCode)
-                    if (keyCode == KeyEvent.KEYCODE_1) callVoicemail() else dialSpeedDial(keyCode - KeyEvent.KEYCODE_0)
+                if (event.repeatCount == 0) {
+                    longPressFired.remove(keyCode)
+                    scheduleDigitHold(keyCode)
                 }
                 return true
             }
@@ -457,7 +479,8 @@ class MainActivity : AppCompatActivity() {
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
         when (keyCode) {
             in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> {
-                // The long-press action (if any) already fired in onKeyDown.
+                cancelDigitHold(keyCode)
+                // The long-press action (if any) already fired from the scheduled runnable.
                 if (longPressFired.remove(keyCode)) return true
                 startDial((keyCode - KeyEvent.KEYCODE_0).toString())
                 return true
@@ -533,6 +556,27 @@ class MainActivity : AppCompatActivity() {
 
     private fun cancelAssign(keyCode: Int) {
         assignRunnables.remove(keyCode)?.let { assignHandler.removeCallbacks(it) }
+    }
+
+    /**
+     * Schedules [keyCode]'s speed-dial/voicemail action to fire after a
+     * long-press hold; cancelled by [cancelDigitHold] on release. Timed
+     * ourselves (rather than trusting [KeyEvent.isLongPress]) since that
+     * flag's delivery has proven unreliable on some hardware, firing both
+     * the short-tap dial and the long-press action for the same press.
+     */
+    private fun scheduleDigitHold(keyCode: Int) {
+        cancelDigitHold(keyCode)
+        val runnable = Runnable {
+            longPressFired.add(keyCode)
+            if (keyCode == KeyEvent.KEYCODE_1) callVoicemail() else dialSpeedDial(keyCode - KeyEvent.KEYCODE_0)
+        }
+        digitHoldRunnables[keyCode] = runnable
+        assignHandler.postDelayed(runnable, DIGIT_HOLD_MS)
+    }
+
+    private fun cancelDigitHold(keyCode: Int) {
+        digitHoldRunnables.remove(keyCode)?.let { assignHandler.removeCallbacks(it) }
     }
 
     /** Opens the app picker to assign [keyCode] (MENU/BACK/soft-key/D-pad/Camera/extra-key - digits are Settings-only, see [dialSpeedDial]). */
@@ -673,6 +717,13 @@ class MainActivity : AppCompatActivity() {
 
         /** How long an assignable key must be held to open its assign menu. */
         private const val ASSIGN_HOLD_MS = 5000L
+
+        /**
+         * How long a digit must be held before its long-press action (speed
+         * dial / voicemail) fires - mirrors the framework's own long-press
+         * threshold, just timed by us (see [scheduleDigitHold]).
+         */
+        private val DIGIT_HOLD_MS = ViewConfiguration.getLongPressTimeout().toLong()
 
         /** Captured in [dispatchKeyEvent], before default focus-search can consume them. */
         private val DIRECTIONAL_KEYS = setOf(
