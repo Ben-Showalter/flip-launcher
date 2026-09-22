@@ -5,6 +5,7 @@
     <!-- Soft key labels -->
     <string name="softkey_notifications">Notices</string>
     <string name="softkey_contacts">Contacts</string>
+    <string name="softkey_messages">Messages</string>
     <string name="softkey_options">Options</string>
     <string name="softkey_open">Open</string>
     <string name="softkey_back">Back</string>
@@ -28,6 +29,7 @@
 
     <!-- App drawer context options -->
     <string name="ctx_open">Open</string>
+    <string name="ctx_move">Move</string>
     <string name="ctx_hide">Hide App</string>
     <string name="ctx_change_icon">Change Icon</string>
     <string name="ctx_reset_icon">Reset Icon</string>
@@ -69,8 +71,11 @@
     <!-- D-pad / Camera Home shortcuts -->
     <string name="sec_dpad_keys">D-pad &amp; Camera</string>
     <string name="opt_dpad_up">D-pad Up</string>
+    <string name="opt_dpad_up_default">Calculator (default)</string>
     <string name="opt_dpad_down">D-pad Down</string>
+    <string name="opt_dpad_down_default">Calendar (default)</string>
     <string name="opt_dpad_left">D-pad Left</string>
+    <string name="opt_dpad_left_default">Timer (default)</string>
     <string name="opt_dpad_right">D-pad Right</string>
     <string name="opt_camera_key">Camera Button</string>
     <string name="opt_camera_key_default">Camera app (default)</string>
@@ -111,7 +116,7 @@
     <string name="cat_appearance_sub">Wallpaper, colors, icons</string>
     <string name="cat_notifications">Notifications</string>
     <string name="cat_notifications_sub">Badges and access</string>
-    <string name="cat_home_keys">Home Screen &amp; Keys</string>
+    <string name="cat_home_keys">Home Shortcuts</string>
     <string name="cat_home_keys_sub">Soft keys and shortcuts</string>
     <string name="cat_apps_drawer">Apps &amp; Drawer</string>
     <string name="cat_apps_drawer_sub">Drawer layout, hidden apps</string>
@@ -148,13 +153,13 @@
     <string name="settings_icon_large">Large</string>
     <string name="settings_icon_current">%1$s (%2$d%%)</string>
     <string name="settings_right_key">Home Right Key</string>
-    <string name="settings_right_key_contacts">Contacts (default)</string>
+    <string name="settings_right_key_sms">Messaging app (default)</string>
     <string name="settings_right_key_set">Right key will open %1$s</string>
-    <string name="settings_right_key_cleared">Right key reset to Contacts</string>
+    <string name="settings_right_key_cleared">Right key reset to the default messaging app</string>
     <string name="settings_left_key">Home Left Key</string>
-    <string name="settings_left_key_notices">Notices (default)</string>
+    <string name="settings_left_key_contacts">Contacts (default)</string>
     <string name="settings_left_key_set">Left key will open %1$s</string>
-    <string name="settings_left_key_cleared">Left key reset to Notices</string>
+    <string name="settings_left_key_cleared">Left key reset to Contacts</string>
     <string name="settings_icon_size_set">Icon size set to %1$s</string>
     <string name="settings_icon_pack">Icon Pack</string>
     <string name="settings_drawer_view">App Drawer View</string>

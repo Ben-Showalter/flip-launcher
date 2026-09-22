@@ -32,6 +32,16 @@ class NoticesActivity : BaseListActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Some Kyocera builds report notification access as "granted" but the
+        // listener never actually binds; on those, fall back to this
+        // hardware's own notification screen (built for keypad/flip devices,
+        // unlike the generic touch-driven system shade) instead of showing an
+        // empty/non-functional list.
+        if (NotificationCountService.instance == null && tryOpenKyoceraNotificationScreen()) {
+            finish()
+            return
+        }
+
         adapter = NoticeRowAdapter(onClick = { openNotice(it) })
         listView.adapter = adapter
         emptyView = findViewById(R.id.empty_view)
@@ -125,6 +135,18 @@ class NoticesActivity : BaseListActivity() {
         } catch (e: Exception) {
             Toast.makeText(this, R.string.toast_not_available, Toast.LENGTH_SHORT).show()
         }
+    }
+
+    /** Returns whether the Kyocera notification screen was actually launched. */
+    private fun tryOpenKyoceraNotificationScreen(): Boolean = try {
+        startActivity(
+            Intent(Intent.ACTION_MAIN).setComponent(
+                ComponentName("com.android.systemui", "com.android.systemui.kc.notification.NotificationActivity"),
+            ),
+        )
+        true
+    } catch (e: Exception) {
+        false
     }
 
     private fun openNotice(item: NoticeItem) {

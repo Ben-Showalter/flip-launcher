@@ -14,7 +14,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.provider.ContactsContract
 import android.provider.MediaStore
 import android.util.Log
 import android.view.KeyEvent
@@ -31,8 +30,8 @@ import com.flipos.launcher.data.AppRepository
 import com.flipos.launcher.data.IconShapeRenderer
 import com.flipos.launcher.data.LauncherPrefs
 import com.flipos.launcher.data.NotificationCounts
-import com.flipos.launcher.service.NotificationCountService
 import com.flipos.launcher.util.BackgroundLoader
+import com.flipos.launcher.util.CategoryApps
 import com.flipos.launcher.util.PermissionGate
 import com.flipos.launcher.util.accentColorAlpha
 import com.flipos.launcher.util.launchAppByKey
@@ -44,7 +43,8 @@ import java.util.Locale
 /**
  * The KaiOS-style home screen:
  *  - a large clock + date, and
- *  - "Notifications · apps · Contacts" soft keys along the bottom, with a
+ *  - soft keys along the bottom (Contacts on the left, the default messaging
+ *    app on the right, unless overridden in Home Shortcuts settings), with a
  *    D-pad/Camera shortcut icon pod nested between the two labels and the
  *    App-Drawer/OK button sitting in its center.
  *
@@ -143,7 +143,7 @@ class MainActivity : AppCompatActivity() {
                 KeyEvent.KEYCODE_DPAD_DOWN -> prefs.setDpadDownApp(key)
                 KeyEvent.KEYCODE_DPAD_LEFT -> prefs.setDpadLeftApp(key)
                 KeyEvent.KEYCODE_DPAD_RIGHT -> prefs.setDpadRightApp(key)
-                KeyEvent.KEYCODE_CAMERA, LauncherPrefs.KEYCODE_CAMERA_ALT -> prefs.setCameraKeyApp(key)
+                KeyEvent.KEYCODE_CAMERA, LauncherPrefs.KEYCODE_CAMERA_ALT, LauncherPrefs.KEYCODE_CAMERA_ALT2 -> prefs.setCameraKeyApp(key)
                 LauncherPrefs.KEYCODE_EXTRA_1 -> prefs.setExtraKey1App(key)
                 LauncherPrefs.KEYCODE_EXTRA_2 -> prefs.setExtraKey2App(key)
                 LauncherPrefs.KEYCODE_EXTRA_3 -> prefs.setExtraKey3App(key)
@@ -325,7 +325,17 @@ class MainActivity : AppCompatActivity() {
 
     private fun openLeftKeyApp() {
         val key = prefs.getLeftKeyApp()
-        if (key != null) launchAppByKey(key) else openNotifications()
+        if (key != null) {
+            launchAppByKey(key)
+            return
+        }
+        val fallback = CategoryApps.contactsKey(this)
+        if (fallback != null) {
+            launchAppByKey(fallback)
+        } else {
+            Toast.makeText(this, R.string.directional_key_unset_toast, Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this, HomeKeysSettingsActivity::class.java))
+        }
     }
 
     private fun openOptions() = startActivity(Intent(this, SettingsActivity::class.java))
@@ -336,14 +346,12 @@ class MainActivity : AppCompatActivity() {
             launchAppByKey(key)
             return
         }
-        try {
-            startActivity(Intent(Intent.ACTION_VIEW, ContactsContract.Contacts.CONTENT_URI))
-        } catch (e: Exception) {
-            try {
-                startActivity(Intent(Intent.ACTION_DIAL))
-            } catch (ignored: Exception) {
-                Toast.makeText(this, R.string.toast_no_contacts, Toast.LENGTH_SHORT).show()
-            }
+        val fallback = CategoryApps.smsKey(this)
+        if (fallback != null) {
+            launchAppByKey(fallback)
+        } else {
+            Toast.makeText(this, R.string.directional_key_unset_toast, Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this, HomeKeysSettingsActivity::class.java))
         }
     }
 
@@ -367,7 +375,7 @@ class MainActivity : AppCompatActivity() {
     private fun refreshRightKeyLabel() {
         val key = prefs.getRightKeyApp()
         val label = key?.let { AppRepository.resolveComponent(this, it)?.label }
-            ?: getString(R.string.softkey_contacts)
+            ?: getString(R.string.softkey_messages)
         findViewById<TextView>(R.id.softkey_right).text = label
         bindKeyIcon(findViewById(R.id.softkey_right_icon), key)
     }
@@ -375,33 +383,9 @@ class MainActivity : AppCompatActivity() {
     private fun refreshLeftKeyLabel() {
         val key = prefs.getLeftKeyApp()
         val label = key?.let { AppRepository.resolveComponent(this, it)?.label }
-            ?: getString(R.string.softkey_notifications)
+            ?: getString(R.string.softkey_contacts)
         findViewById<TextView>(R.id.softkey_left).text = label
         bindKeyIcon(findViewById(R.id.softkey_left_icon), key)
-    }
-
-    /**
-     * The KaiOS "Notices" action: our own list screen by default. Falls back
-     * to this Kyocera hardware's own notification screen (built for
-     * keypad/flip devices, unlike the generic touch-driven system shade)
-     * when our own [NotificationCountService] isn't actually connected -
-     * seen on some Kyocera builds where access shows "granted" but the
-     * listener never binds.
-     */
-    private fun openNotifications() {
-        if (NotificationCountService.instance != null) {
-            startActivity(Intent(this, NoticesActivity::class.java))
-            return
-        }
-        try {
-            startActivity(
-                Intent(Intent.ACTION_MAIN).setComponent(
-                    ComponentName("com.android.systemui", "com.android.systemui.kc.notification.NotificationActivity"),
-                ),
-            )
-        } catch (e: Exception) {
-            startActivity(Intent(this, NoticesActivity::class.java))
-        }
     }
 
     /**
@@ -491,7 +475,7 @@ class MainActivity : AppCompatActivity() {
             KeyEvent.KEYCODE_SOFT_LEFT, KeyEvent.KEYCODE_SOFT_RIGHT,
             KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
             KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
-            KeyEvent.KEYCODE_CAMERA, LauncherPrefs.KEYCODE_CAMERA_ALT,
+            KeyEvent.KEYCODE_CAMERA, LauncherPrefs.KEYCODE_CAMERA_ALT, LauncherPrefs.KEYCODE_CAMERA_ALT2,
             LauncherPrefs.KEYCODE_EXTRA_1, LauncherPrefs.KEYCODE_EXTRA_2,
             LauncherPrefs.KEYCODE_EXTRA_3, LauncherPrefs.KEYCODE_EXTRA_4 -> {
                 beginPressTracking(keyCode, event)
@@ -564,7 +548,7 @@ class MainActivity : AppCompatActivity() {
             }
             KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
             KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
-            KeyEvent.KEYCODE_CAMERA, LauncherPrefs.KEYCODE_CAMERA_ALT,
+            KeyEvent.KEYCODE_CAMERA, LauncherPrefs.KEYCODE_CAMERA_ALT, LauncherPrefs.KEYCODE_CAMERA_ALT2,
             LauncherPrefs.KEYCODE_EXTRA_1, LauncherPrefs.KEYCODE_EXTRA_2,
             LauncherPrefs.KEYCODE_EXTRA_3, LauncherPrefs.KEYCODE_EXTRA_4 -> {
                 cancelAssign(keyCode)
@@ -692,8 +676,10 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Launches [keyCode]'s bound app immediately, or - if unset - falls back to
-     * the default camera app for Camera, or toasts and jumps to Home Screen &
-     * Keys settings for every other key.
+     * the default camera app for Camera, a category-based default for
+     * Up/Down/Left (see [CategoryApps]), or toasts and jumps to Home
+     * Shortcuts settings for every other key (including D-pad Right, which
+     * has no fallback).
      */
     private fun launchDirectionalKeyApp(keyCode: Int) {
         val key = when (keyCode) {
@@ -701,7 +687,7 @@ class MainActivity : AppCompatActivity() {
             KeyEvent.KEYCODE_DPAD_DOWN -> prefs.getDpadDownApp()
             KeyEvent.KEYCODE_DPAD_LEFT -> prefs.getDpadLeftApp()
             KeyEvent.KEYCODE_DPAD_RIGHT -> prefs.getDpadRightApp()
-            KeyEvent.KEYCODE_CAMERA, LauncherPrefs.KEYCODE_CAMERA_ALT -> prefs.getCameraKeyApp()
+            KeyEvent.KEYCODE_CAMERA, LauncherPrefs.KEYCODE_CAMERA_ALT, LauncherPrefs.KEYCODE_CAMERA_ALT2 -> prefs.getCameraKeyApp()
             LauncherPrefs.KEYCODE_EXTRA_1 -> prefs.getExtraKey1App()
             LauncherPrefs.KEYCODE_EXTRA_2 -> prefs.getExtraKey2App()
             LauncherPrefs.KEYCODE_EXTRA_3 -> prefs.getExtraKey3App()
@@ -712,8 +698,18 @@ class MainActivity : AppCompatActivity() {
             launchAppByKey(key)
             return
         }
-        if (keyCode == KeyEvent.KEYCODE_CAMERA || keyCode == LauncherPrefs.KEYCODE_CAMERA_ALT) {
+        if (keyCode == KeyEvent.KEYCODE_CAMERA || keyCode == LauncherPrefs.KEYCODE_CAMERA_ALT || keyCode == LauncherPrefs.KEYCODE_CAMERA_ALT2) {
             openDefaultCamera()
+            return
+        }
+        val fallback = when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_UP -> CategoryApps.calculatorKey(this)
+            KeyEvent.KEYCODE_DPAD_DOWN -> CategoryApps.calendarKey(this)
+            KeyEvent.KEYCODE_DPAD_LEFT -> CategoryApps.timerKey(this)
+            else -> null
+        }
+        if (fallback != null) {
+            launchAppByKey(fallback)
             return
         }
         Toast.makeText(this, R.string.directional_key_unset_toast, Toast.LENGTH_SHORT).show()
@@ -836,18 +832,24 @@ class MainActivity : AppCompatActivity() {
             KeyEvent.KEYCODE_DPAD_RIGHT,
             KeyEvent.KEYCODE_CAMERA,
             LauncherPrefs.KEYCODE_CAMERA_ALT,
+            LauncherPrefs.KEYCODE_CAMERA_ALT2,
         )
 
         /**
          * Four vendor-specific buttons with no reliable KeyEvent.KEYCODE_* of
          * their own, identified instead by raw scan code and remapped to an
-         * app-defined synthetic keycode in [dispatchKeyEvent].
+         * app-defined synthetic keycode in [dispatchKeyEvent]. Each maps two
+         * scan codes - the E4810's and the E4610's - to the same synthetic
+         * keycode, since they're the same logical button on both devices.
          */
         private val EXTRA_KEY_SCAN_CODES = mapOf(
             763 to LauncherPrefs.KEYCODE_EXTRA_1,
             764 to LauncherPrefs.KEYCODE_EXTRA_2,
             765 to LauncherPrefs.KEYCODE_EXTRA_3,
             766 to LauncherPrefs.KEYCODE_EXTRA_4,
+            172 to LauncherPrefs.KEYCODE_EXTRA_2,
+            213 to LauncherPrefs.KEYCODE_EXTRA_3,
+            231 to LauncherPrefs.KEYCODE_EXTRA_4,
         )
 
         /** Keys that should never trigger the unrecognized-key diagnostic toast. */

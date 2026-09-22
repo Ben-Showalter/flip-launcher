@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.util.LruCache
+import com.flipos.launcher.util.CategoryApps
 
 /**
  * Reads launchable apps and individual activities from [PackageManager] and
@@ -16,6 +17,7 @@ import android.util.LruCache
 object AppRepository {
 
     private const val SETTINGS_ACTIVITY = "com.flipos.launcher.activities.SettingsActivity"
+    private const val NOTICES_ACTIVITY = "com.flipos.launcher.activities.NoticesActivity"
 
     /**
      * Memoizes the shaped/wrapped icon bitmap per (component + override + pack +
@@ -39,21 +41,26 @@ object AppRepository {
         IconPackRepository.clearCaches()
     }
 
-    /** Every launchable app except this launcher itself, sorted by label. */
+    /**
+     * Every launchable app except this launcher itself, alphabetical order
+     * broken by the user's custom app-grid position (see
+     * [LauncherPrefs.getAppOrder]) where one is set - positioned apps sort by
+     * that position, everything else falls alphabetically after them.
+     */
     @Suppress("DEPRECATION") // int-flags overload kept for minSdk 21 compatibility
     fun getAllApps(context: Context): List<AppInfo> {
         val pm = context.packageManager
         val prefs = LauncherPrefs(context)
         val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
         val self = context.packageName
-        return pm.queryIntentActivities(intent, 0)
+        val apps = pm.queryIntentActivities(intent, 0)
             .asSequence()
             .mapNotNull { ri ->
                 val ai = ri.activityInfo ?: return@mapNotNull null
-                // Exclude our own activities except Settings, which is
-                // deliberately exported with a LAUNCHER category so it shows up
-                // here like a regular app.
-                if (ai.packageName == self && ai.name != SETTINGS_ACTIVITY) return@mapNotNull null
+                // Exclude our own activities except Settings and Notices, which
+                // are deliberately exported with a LAUNCHER category so they show
+                // up here like a regular app.
+                if (ai.packageName == self && ai.name != SETTINGS_ACTIVITY && ai.name != NOTICES_ACTIVITY) return@mapNotNull null
                 val key = ComponentName(ai.packageName, ai.name).flattenToString()
                 AppInfo(
                     label = ri.loadLabel(pm).toString(),
@@ -64,6 +71,54 @@ object AppRepository {
             }
             .sortedBy { it.label.lowercase() }
             .toList()
+        return applyAppOrder(context, prefs, apps)
+    }
+
+    /**
+     * Applies (and, on the very first call ever, seeds) the user's custom
+     * app-grid ordering on top of [apps]' alphabetical order. A stable sort
+     * keyed by stored position keeps unpositioned apps in their existing
+     * (alphabetical) relative order, appended after every positioned one.
+     */
+    private fun applyAppOrder(context: Context, prefs: LauncherPrefs, apps: List<AppInfo>): List<AppInfo> {
+        if (!prefs.isAppOrderSeeded()) {
+            prefs.setAppOrder(seedAppOrder(context, apps))
+            prefs.setAppOrderSeeded()
+        }
+        val order = prefs.getAppOrder()
+        if (order.isEmpty()) return apps
+        val position = HashMap<String, Int>(order.size)
+        order.forEachIndexed { index, key -> position[key] = index }
+        return apps.sortedBy { position[it.key] ?: Int.MAX_VALUE }
+    }
+
+    /**
+     * One-time starting order (see [LauncherPrefs.isAppOrderSeeded]): call
+     * history, default SMS app, contacts, gallery, file manager, calendar,
+     * notices, settings - in that order, first on the grid; everything else
+     * stays alphabetical after them. A category with no resolvable app on
+     * this device (or "media center"/notepad, which have no reliable
+     * automatic detection at all) is simply skipped, not left as a gap. This
+     * only ever runs once - afterward the order is just whatever's stored,
+     * fully freeform.
+     */
+    private fun seedAppOrder(context: Context, apps: List<AppInfo>): List<String> {
+        fun packageKey(componentKey: String?): String? {
+            val packageName = componentKey?.let { ComponentName.unflattenFromString(it)?.packageName } ?: return null
+            return apps.firstOrNull { it.packageName == packageName }?.key
+        }
+        fun activityKey(activityName: String): String? = apps.firstOrNull { it.activityName == activityName }?.key
+
+        return listOfNotNull(
+            packageKey(CategoryApps.dialerKey(context)),
+            packageKey(CategoryApps.smsKey(context)),
+            packageKey(CategoryApps.contactsKey(context)),
+            packageKey(CategoryApps.galleryKey(context)),
+            packageKey(CategoryApps.filesKey(context)),
+            packageKey(CategoryApps.calendarKey(context)),
+            activityKey(NOTICES_ACTIVITY),
+            activityKey(SETTINGS_ACTIVITY),
+        ).distinct()
     }
 
     /** Apps shown to the user (hidden ones removed). */

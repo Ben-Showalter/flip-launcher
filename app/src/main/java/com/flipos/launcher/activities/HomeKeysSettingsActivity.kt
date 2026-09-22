@@ -127,15 +127,21 @@ class HomeKeysSettingsActivity : BaseListActivity() {
 
     private fun refreshRows() {
         val leftLabel = prefs.getLeftKeyApp()?.let { AppRepository.resolveComponent(this, it)?.label }
-            ?: getString(R.string.settings_left_key_notices)
+            ?: getString(R.string.settings_left_key_contacts)
         val rightLabel = prefs.getRightKeyApp()?.let { AppRepository.resolveComponent(this, it)?.label }
-            ?: getString(R.string.settings_right_key_contacts)
+            ?: getString(R.string.settings_right_key_sms)
         val backLabel = prefs.getBackLongPressApp()?.let { AppRepository.resolveComponent(this, it)?.label }
             ?: getString(R.string.back_longpress_not_set)
         val menuLabel = prefs.getMenuKeyApp()?.let { AppRepository.resolveComponent(this, it)?.label }
             ?: getString(R.string.back_longpress_not_set)
+        fun directionalDefaultLabel(keyCode: Int) = when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_UP -> getString(R.string.opt_dpad_up_default)
+            KeyEvent.KEYCODE_DPAD_DOWN -> getString(R.string.opt_dpad_down_default)
+            KeyEvent.KEYCODE_DPAD_LEFT -> getString(R.string.opt_dpad_left_default)
+            else -> getString(R.string.back_longpress_not_set)
+        }
         fun directionalLabel(keyCode: Int) = getDirectionalKeyApp(keyCode)?.let { AppRepository.resolveComponent(this, it)?.label }
-            ?: getString(R.string.back_longpress_not_set)
+            ?: directionalDefaultLabel(keyCode)
         val cameraLabel = prefs.getCameraKeyApp()?.let { AppRepository.resolveComponent(this, it)?.label }
             ?: getString(R.string.opt_camera_key_default)
 
@@ -170,7 +176,7 @@ class HomeKeysSettingsActivity : BaseListActivity() {
 
     private fun chooseRightKey() {
         val items = mutableListOf(getString(R.string.back_longpress_choose))
-        if (prefs.getRightKeyApp() != null) items.add(getString(R.string.settings_right_key_contacts))
+        if (prefs.getRightKeyApp() != null) items.add(getString(R.string.settings_right_key_sms))
         AlertDialog.Builder(this)
             .setTitle(R.string.settings_right_key)
             .setItems(items.toTypedArray()) { _, which ->
@@ -188,7 +194,7 @@ class HomeKeysSettingsActivity : BaseListActivity() {
 
     private fun chooseLeftKey() {
         val items = mutableListOf(getString(R.string.back_longpress_choose))
-        if (prefs.getLeftKeyApp() != null) items.add(getString(R.string.settings_left_key_notices))
+        if (prefs.getLeftKeyApp() != null) items.add(getString(R.string.settings_left_key_contacts))
         AlertDialog.Builder(this)
             .setTitle(R.string.settings_left_key)
             .setItems(items.toTypedArray()) { _, which ->

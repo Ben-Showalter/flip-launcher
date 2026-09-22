@@ -138,6 +138,30 @@ class LauncherPrefs(context: Context) {
         prefs.edit().putString(KEY_LEFT_KEY_APP, key).apply()
     }
 
+    // ----------------------------------------------------------- App order
+
+    /**
+     * The user's custom app-grid ordering, as a list of component keys - apps
+     * not in this list simply fall alphabetically after the ones that are
+     * (see [AppRepository.getAllApps]). Empty until the app grid's one-time
+     * seeding runs (or the user reorders manually), never afterward.
+     */
+    fun getAppOrder(): List<String> {
+        val raw = prefs.getString(KEY_APP_ORDER, null) ?: return emptyList()
+        return raw.split(APP_ORDER_SEPARATOR).filter { it.isNotEmpty() }
+    }
+
+    fun setAppOrder(order: List<String>) {
+        prefs.edit().putString(KEY_APP_ORDER, order.joinToString(APP_ORDER_SEPARATOR)).apply()
+    }
+
+    /** Whether the one-time app-order seeding ([AppRepository]) has already run. */
+    fun isAppOrderSeeded(): Boolean = prefs.getBoolean(KEY_APP_ORDER_SEEDED, false)
+
+    fun setAppOrderSeeded() {
+        prefs.edit().putBoolean(KEY_APP_ORDER_SEEDED, true).apply()
+    }
+
     // ----------------------------------------------------- App drawer layout
 
     /** Whether the app drawer shows a single-column list instead of an icon grid. */
@@ -298,6 +322,12 @@ class LauncherPrefs(context: Context) {
         const val KEYCODE_CAMERA_ALT = 133
 
         /**
+         * The E4610's Camera button reports this keyCode instead - a second,
+         * device-specific alternate alongside [KEYCODE_CAMERA_ALT].
+         */
+        const val KEYCODE_CAMERA_ALT2 = 288
+
+        /**
          * Four physical buttons with no real [android.view.KeyEvent.KEYCODE_*]
          * mapping, identified only by raw scan code (763-766) - see
          * [MainActivity.dispatchKeyEvent]'s scan-code detection path. Negative so
@@ -346,5 +376,8 @@ class LauncherPrefs(context: Context) {
         private const val KEY_LEGACY_ICON_BG = "legacy_icon_background"
         private const val KEY_WRAP_DISABLED = "wrap_disabled_apps"
         private const val KEY_ANIMATIONS = "animations_enabled"
+        private const val KEY_APP_ORDER = "app_order"
+        private const val KEY_APP_ORDER_SEEDED = "app_order_seeded"
+        private const val APP_ORDER_SEPARATOR = "\n"
     }
 }

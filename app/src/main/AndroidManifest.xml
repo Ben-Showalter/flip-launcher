@@ -39,6 +39,33 @@
             <action android:name="android.intent.action.SENDTO" />
             <data android:scheme="smsto" />
         </intent>
+        <!-- Category-based default-app resolution (Home key/app-grid fallbacks,
+             see util/CategoryApps.kt) needs each of these declared explicitly -
+             plain package-visibility exemptions don't cover ACTION_MAIN queries
+             filtered by an app category. -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.APP_CONTACTS" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.APP_CALENDAR" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.APP_GALLERY" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.APP_CALCULATOR" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.APP_FILES" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SHOW_TIMERS" />
+        </intent>
     </queries>
 
     <application
@@ -164,11 +191,20 @@
             android:screenOrientation="portrait"
             android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize" />
 
+        <!-- Exported with a LAUNCHER category so it also appears in the app
+             drawer like a regular app, mirroring SettingsActivity below. -->
         <activity
             android:name=".activities.NoticesActivity"
-            android:exported="false"
+            android:exported="true"
+            android:icon="@drawable/ic_notification"
+            android:label="@string/softkey_notifications"
             android:screenOrientation="portrait"
-            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize" />
+            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
 
         <!-- Feeds the Home notification summary (calls/messages/other) and the
              custom Notices screen. Requires the user to grant Notification
