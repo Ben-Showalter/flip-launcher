@@ -60,6 +60,14 @@
             <category android:name="android.intent.category.APP_FILES" />
         </intent>
         <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.APP_EMAIL" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.APP_MUSIC" />
+        </intent>
+        <intent>
             <action android:name="android.settings.SETTINGS" />
         </intent>
         <!-- This Kyocera hardware's own Settings app (see

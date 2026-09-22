@@ -4,6 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.pm.ResolveInfo
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.util.LruCache
@@ -53,14 +54,25 @@ object AppRepository {
         val prefs = LauncherPrefs(context)
         val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
         val self = context.packageName
-        val apps = pm.queryIntentActivities(intent, 0)
-            .asSequence()
+        // Exclude our own activities except Settings and Notices, which are
+        // deliberately exported with a LAUNCHER category so they show up
+        // here like a regular app.
+        val resolveInfos = pm.queryIntentActivities(intent, 0).filter { ri ->
+            val ai = ri.activityInfo ?: return@filter false
+            ai.packageName != self || ai.name == SETTINGS_ACTIVITY || ai.name == NOTICES_ACTIVITY
+        }
+        // Must run before icons are resolved below, not after (unlike
+        // applyAppOrder, which only re-sorts an already-built list) - an
+        // icon override written after the fact wouldn't show up until the
+        // next query, leaving the very first drawer render on a fresh
+        // install with the old icon.
+        if (!prefs.isBuiltInIconsApplied()) {
+            applyBuiltInIconDefaults(context, prefs, resolveInfos)
+            prefs.setBuiltInIconsApplied()
+        }
+        val apps = resolveInfos.asSequence()
             .mapNotNull { ri ->
                 val ai = ri.activityInfo ?: return@mapNotNull null
-                // Exclude our own activities except Settings and Notices, which
-                // are deliberately exported with a LAUNCHER category so they show
-                // up here like a regular app.
-                if (ai.packageName == self && ai.name != SETTINGS_ACTIVITY && ai.name != NOTICES_ACTIVITY) return@mapNotNull null
                 val key = ComponentName(ai.packageName, ai.name).flattenToString()
                 AppInfo(
                     label = ri.loadLabel(pm).toString(),
@@ -72,6 +84,41 @@ object AppRepository {
             .sortedBy { it.label.lowercase() }
             .toList()
         return applyAppOrder(context, prefs, apps)
+    }
+
+    /**
+     * One-time (see [LauncherPrefs.isBuiltInIconsApplied]) best-effort pass
+     * that applies our own colorful [BuiltInIcons] to a handful of common
+     * apps whose own stock icons render flat/monochrome on some hardware
+     * (the E4610), wherever they can be resolved with confidence via
+     * standard Android category intents - the same [CategoryApps] resolvers
+     * already used for Home key defaults and app-grid seeding. Never touches
+     * an app the user already picked a custom icon for. Anything
+     * unresolvable is simply skipped, not left as a gap - this only covers
+     * the categories Android exposes a reliable intent for; the rest of the
+     * built-in set stays available for manual Change Icon selection.
+     */
+    private fun applyBuiltInIconDefaults(context: Context, prefs: LauncherPrefs, resolveInfos: List<ResolveInfo>) {
+        fun keyForPackage(packageName: String?): String? {
+            val pkg = packageName ?: return null
+            val ai = resolveInfos.firstOrNull { it.activityInfo?.packageName == pkg }?.activityInfo ?: return null
+            return ComponentName(ai.packageName, ai.name).flattenToString()
+        }
+        fun applyDefault(componentKey: String?, iconName: String) {
+            val packageName = componentKey?.let { ComponentName.unflattenFromString(it)?.packageName }
+            val key = keyForPackage(packageName) ?: return
+            if (prefs.getIconOverride(key) != null) return
+            prefs.setIconOverride(key, BuiltInIcons.PACK_ID, iconName)
+        }
+
+        applyDefault(CategoryApps.dialerKey(context), "call_log_112")
+        applyDefault(CategoryApps.smsKey(context), "sms_112")
+        applyDefault(CategoryApps.contactsKey(context), "contact_112")
+        applyDefault(CategoryApps.galleryKey(context), "gallery_84")
+        applyDefault(CategoryApps.calendarKey(context), "calendar_112")
+        applyDefault(CategoryApps.cameraKey(context), "camera_112")
+        applyDefault(CategoryApps.emailKey(context), "email_112")
+        applyDefault(CategoryApps.musicKey(context), "music_112")
     }
 
     /**

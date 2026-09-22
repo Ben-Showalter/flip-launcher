@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.provider.MediaStore
 import android.provider.Settings
 import android.provider.Telephony
 import android.telecom.TelecomManager
@@ -36,6 +37,12 @@ object CategoryApps {
     fun contactsKey(context: Context): String? = categoryKey(context, Intent.CATEGORY_APP_CONTACTS)
     fun galleryKey(context: Context): String? = categoryKey(context, Intent.CATEGORY_APP_GALLERY)
     fun calendarKey(context: Context): String? = categoryKey(context, Intent.CATEGORY_APP_CALENDAR)
+    fun emailKey(context: Context): String? = categoryKey(context, Intent.CATEGORY_APP_EMAIL)
+    fun musicKey(context: Context): String? = categoryKey(context, Intent.CATEGORY_APP_MUSIC)
+
+    /** The default camera app's main launch component, or null. */
+    fun cameraKey(context: Context): String? =
+        resolvePackage(context, Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA))?.let { launchKeyFor(context, it) }
 
     /**
      * The real Android Settings app's package, or null. Not a launch

@@ -173,6 +173,17 @@ class LauncherPrefs(context: Context) {
         prefs.edit().putBoolean(KEY_SETTINGS_SEED_FIXED, true).apply()
     }
 
+    /**
+     * Whether the one-time pass that applies our own colorful built-in
+     * icons ([BuiltInIcons]) to a handful of common apps ([AppRepository])
+     * has already run.
+     */
+    fun isBuiltInIconsApplied(): Boolean = prefs.getBoolean(KEY_BUILT_IN_ICONS_APPLIED, false)
+
+    fun setBuiltInIconsApplied() {
+        prefs.edit().putBoolean(KEY_BUILT_IN_ICONS_APPLIED, true).apply()
+    }
+
     // ----------------------------------------------------- App drawer layout
 
     /** Whether the app drawer shows a single-column list instead of an icon grid. */
@@ -390,6 +401,7 @@ class LauncherPrefs(context: Context) {
         private const val KEY_APP_ORDER = "app_order"
         private const val KEY_APP_ORDER_SEEDED = "app_order_seeded"
         private const val KEY_SETTINGS_SEED_FIXED = "app_order_settings_seed_fixed"
+        private const val KEY_BUILT_IN_ICONS_APPLIED = "built_in_icons_applied"
         private const val APP_ORDER_SEPARATOR = "\n"
     }
 }
