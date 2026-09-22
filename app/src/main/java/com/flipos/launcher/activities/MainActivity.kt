@@ -30,6 +30,7 @@ import com.flipos.launcher.data.AppRepository
 import com.flipos.launcher.data.IconShapeRenderer
 import com.flipos.launcher.data.LauncherPrefs
 import com.flipos.launcher.data.NotificationCounts
+import com.flipos.launcher.service.NotificationCountService
 import com.flipos.launcher.util.BackgroundLoader
 import com.flipos.launcher.util.PermissionGate
 import com.flipos.launcher.util.accentColorAlpha
@@ -104,6 +105,9 @@ class MainActivity : AppCompatActivity() {
 
     /** Scheduled digit-long-press (speed dial / voicemail) runnables, keyed by keyCode. */
     private val digitHoldRunnables = HashMap<Int, Runnable>()
+
+    /** Scheduled digit short-tap dial runnables (debounced against a same-key re-press), keyed by keyCode. */
+    private val digitTapRunnables = HashMap<Int, Runnable>()
 
     /** Keycodes whose 5-second assign menu already fired for the current press. */
     private val assignFired = HashSet<Int>()
@@ -262,6 +266,7 @@ class MainActivity : AppCompatActivity() {
         assignHandler.removeCallbacksAndMessages(null)
         assignRunnables.clear()
         digitHoldRunnables.clear()
+        digitTapRunnables.clear()
     }
 
     override fun onDestroy() {
@@ -359,14 +364,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * The KaiOS "Notices" action. Tries this Kyocera hardware's own
-     * notification screen first (built for keypad/flip devices, unlike the
-     * generic touch-driven system shade) since NotificationListenerService
-     * access has proven unreliable to bind on some Kyocera builds; falls
-     * back to our own [NoticesActivity] if that component isn't
-     * present/launchable (any other device).
+     * The KaiOS "Notices" action: our own list screen by default. Falls back
+     * to this Kyocera hardware's own notification screen (built for
+     * keypad/flip devices, unlike the generic touch-driven system shade)
+     * when our own [NotificationCountService] isn't actually connected -
+     * seen on some Kyocera builds where access shows "granted" but the
+     * listener never binds.
      */
     private fun openNotifications() {
+        if (NotificationCountService.instance != null) {
+            startActivity(Intent(this, NoticesActivity::class.java))
+            return
+        }
         try {
             startActivity(
                 Intent(Intent.ACTION_MAIN).setComponent(
@@ -378,7 +387,24 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun openCallLog() = startActivity(Intent(this, CallLogActivity::class.java))
+    /**
+     * The KaiOS "Recent Calls" action for the Send/Call key. Tries this
+     * hardware's own call log screen first (confirmed via logcat -
+     * `com.android.dialer/.app.calllog.CallLogActivityKc`, the same Kyocera
+     * "Kc" pattern as the notification screen), falling back to our own
+     * [CallLogActivity] if that component isn't present (any other device).
+     */
+    private fun openCallLog() {
+        try {
+            startActivity(
+                Intent(Intent.ACTION_MAIN).setComponent(
+                    ComponentName("com.android.dialer", "com.android.dialer.app.calllog.CallLogActivityKc"),
+                ),
+            )
+        } catch (e: Exception) {
+            startActivity(Intent(this, CallLogActivity::class.java))
+        }
+    }
 
     // ----------------------------------------------------------- Key handling
     //
@@ -432,6 +458,7 @@ class MainActivity : AppCompatActivity() {
         when (keyCode) {
             in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> {
                 if (event.repeatCount == 0) {
+                    cancelDigitTap(keyCode)
                     longPressFired.remove(keyCode)
                     scheduleDigitHold(keyCode)
                 }
@@ -482,7 +509,7 @@ class MainActivity : AppCompatActivity() {
                 cancelDigitHold(keyCode)
                 // The long-press action (if any) already fired from the scheduled runnable.
                 if (longPressFired.remove(keyCode)) return true
-                startDial((keyCode - KeyEvent.KEYCODE_0).toString())
+                scheduleDigitTap(keyCode)
                 return true
             }
             KeyEvent.KEYCODE_STAR -> { startDial("*"); return true }
@@ -577,6 +604,24 @@ class MainActivity : AppCompatActivity() {
 
     private fun cancelDigitHold(keyCode: Int) {
         digitHoldRunnables.remove(keyCode)?.let { assignHandler.removeCallbacks(it) }
+    }
+
+    /**
+     * Schedules [keyCode]'s short-tap dial to fire after a brief debounce
+     * window, cancelled by [cancelDigitTap] if a new press for the same key
+     * arrives first - this hardware appears to deliver one long hold as two
+     * separate press/release cycles, so an immediate release-fires-dial
+     * would double-dial (tap action + the real long-press action both firing).
+     */
+    private fun scheduleDigitTap(keyCode: Int) {
+        cancelDigitTap(keyCode)
+        val runnable = Runnable { startDial((keyCode - KeyEvent.KEYCODE_0).toString()) }
+        digitTapRunnables[keyCode] = runnable
+        assignHandler.postDelayed(runnable, DIGIT_TAP_DEBOUNCE_MS)
+    }
+
+    private fun cancelDigitTap(keyCode: Int) {
+        digitTapRunnables.remove(keyCode)?.let { assignHandler.removeCallbacks(it) }
     }
 
     /** Opens the app picker to assign [keyCode] (MENU/BACK/soft-key/D-pad/Camera/extra-key - digits are Settings-only, see [dialSpeedDial]). */
@@ -724,6 +769,15 @@ class MainActivity : AppCompatActivity() {
          * threshold, just timed by us (see [scheduleDigitHold]).
          */
         private val DIGIT_HOLD_MS = ViewConfiguration.getLongPressTimeout().toLong()
+
+        /**
+         * Grace window after a digit's release before its short-tap dial
+         * actually fires; long enough to bridge the gap between this
+         * hardware's two synthetic press/release cycles for one long hold
+         * (see [scheduleDigitTap]), short enough to be imperceptible for a
+         * genuine single tap.
+         */
+        private const val DIGIT_TAP_DEBOUNCE_MS = 200L
 
         /** Captured in [dispatchKeyEvent], before default focus-search can consume them. */
         private val DIRECTIONAL_KEYS = setOf(
