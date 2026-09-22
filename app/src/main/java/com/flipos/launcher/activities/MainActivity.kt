@@ -16,6 +16,7 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.ContactsContract
 import android.provider.MediaStore
+import android.util.Log
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewConfiguration
@@ -457,6 +458,11 @@ class MainActivity : AppCompatActivity() {
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         when (keyCode) {
             in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> {
+                // TEMP diagnostic logging for the digit-double-dial hardware investigation.
+                Log.d(
+                    TAG,
+                    "DOWN key=$keyCode repeat=${event.repeatCount} down=${event.downTime} time=${event.eventTime} scan=${event.scanCode}",
+                )
                 if (event.repeatCount == 0) {
                     cancelDigitTap(keyCode)
                     longPressFired.remove(keyCode)
@@ -506,6 +512,11 @@ class MainActivity : AppCompatActivity() {
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
         when (keyCode) {
             in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> {
+                // TEMP diagnostic logging for the digit-double-dial hardware investigation.
+                Log.d(
+                    TAG,
+                    "UP key=$keyCode repeat=${event.repeatCount} down=${event.downTime} time=${event.eventTime} scan=${event.scanCode}",
+                )
                 cancelDigitHold(keyCode)
                 // The long-press action (if any) already fired from the scheduled runnable.
                 if (longPressFired.remove(keyCode)) return true
@@ -595,6 +606,7 @@ class MainActivity : AppCompatActivity() {
     private fun scheduleDigitHold(keyCode: Int) {
         cancelDigitHold(keyCode)
         val runnable = Runnable {
+            Log.d(TAG, "HOLD FIRED key=$keyCode") // TEMP diagnostic logging.
             longPressFired.add(keyCode)
             if (keyCode == KeyEvent.KEYCODE_1) callVoicemail() else dialSpeedDial(keyCode - KeyEvent.KEYCODE_0)
         }
@@ -603,7 +615,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun cancelDigitHold(keyCode: Int) {
-        digitHoldRunnables.remove(keyCode)?.let { assignHandler.removeCallbacks(it) }
+        digitHoldRunnables.remove(keyCode)?.let {
+            Log.d(TAG, "HOLD CANCELLED key=$keyCode") // TEMP diagnostic logging.
+            assignHandler.removeCallbacks(it)
+        }
     }
 
     /**
@@ -615,13 +630,19 @@ class MainActivity : AppCompatActivity() {
      */
     private fun scheduleDigitTap(keyCode: Int) {
         cancelDigitTap(keyCode)
-        val runnable = Runnable { startDial((keyCode - KeyEvent.KEYCODE_0).toString()) }
+        val runnable = Runnable {
+            Log.d(TAG, "TAP FIRED key=$keyCode") // TEMP diagnostic logging.
+            startDial((keyCode - KeyEvent.KEYCODE_0).toString())
+        }
         digitTapRunnables[keyCode] = runnable
         assignHandler.postDelayed(runnable, DIGIT_TAP_DEBOUNCE_MS)
     }
 
     private fun cancelDigitTap(keyCode: Int) {
-        digitTapRunnables.remove(keyCode)?.let { assignHandler.removeCallbacks(it) }
+        digitTapRunnables.remove(keyCode)?.let {
+            Log.d(TAG, "TAP CANCELLED key=$keyCode") // TEMP diagnostic logging.
+            assignHandler.removeCallbacks(it)
+        }
     }
 
     /** Opens the app picker to assign [keyCode] (MENU/BACK/soft-key/D-pad/Camera/extra-key - digits are Settings-only, see [dialSpeedDial]). */
@@ -759,6 +780,9 @@ class MainActivity : AppCompatActivity() {
     companion object {
         // Shown at most once per process so we don't nag on every resume.
         private var defaultPromptShown = false
+
+        /** TEMP: diagnostic logging tag for the digit-double-dial hardware investigation. */
+        private const val TAG = "FlipDigitKey"
 
         /** How long an assignable key must be held to open its assign menu. */
         private const val ASSIGN_HOLD_MS = 5000L
