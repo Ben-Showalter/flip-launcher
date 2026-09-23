@@ -187,7 +187,7 @@ class LauncherPrefs(context: Context) {
     // ----------------------------------------------------- App drawer layout
 
     /** Whether the app drawer shows a single-column list instead of an icon grid. */
-    fun isDrawerListViewEnabled(): Boolean = prefs.getBoolean(KEY_DRAWER_LIST_VIEW, false)
+    fun isDrawerListViewEnabled(): Boolean = prefs.getBoolean(KEY_DRAWER_LIST_VIEW, true)
 
     fun setDrawerListViewEnabled(enabled: Boolean) =
         prefs.edit().putBoolean(KEY_DRAWER_LIST_VIEW, enabled).apply()
