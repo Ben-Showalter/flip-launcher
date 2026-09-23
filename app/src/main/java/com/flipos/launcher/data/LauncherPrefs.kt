@@ -200,7 +200,7 @@ class LauncherPrefs(context: Context) {
     fun isMessageBadgeEnabled(): Boolean = prefs.getBoolean(KEY_BADGE_MESSAGES, true)
     fun setMessageBadgeEnabled(enabled: Boolean) = prefs.edit().putBoolean(KEY_BADGE_MESSAGES, enabled).apply()
 
-    fun isOtherBadgeEnabled(): Boolean = prefs.getBoolean(KEY_BADGE_OTHER, true)
+    fun isOtherBadgeEnabled(): Boolean = prefs.getBoolean(KEY_BADGE_OTHER, false)
     fun setOtherBadgeEnabled(enabled: Boolean) = prefs.edit().putBoolean(KEY_BADGE_OTHER, enabled).apply()
 
     /** Whether app icons in the drawer/Home show a small notification dot. */
