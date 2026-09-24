@@ -21,12 +21,19 @@ data class SystemSpeedDialEntry(val number: String, val label: String)
  * names outright (IllegalArgumentException: Invalid column data1), even
  * though the very same names come back fine as columns in an unrestricted
  * query - confirmed both via adb and via a real on-device crash log.
+ *
+ * The selection column is qualified as "speed_table._id" (the exact alias
+ * the provider's own internal query uses for its base speed_dial table,
+ * also seen in that same crash log) rather than a bare "_id" - the
+ * provider's query joins five tables, several of which have their own
+ * _id column, so an unqualified "_id = ?" fails with
+ * "ambiguous column name: _id".
  */
 fun systemSpeedDial(context: Context, digit: Int): SystemSpeedDialEntry? = try {
     context.contentResolver.query(
         Uri.parse("content://speed_dial/speed_dial"),
         null,
-        "_id = ?",
+        "speed_table._id = ?",
         arrayOf(digit.toString()),
         null,
     )?.use { cursor ->
