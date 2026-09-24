@@ -3,6 +3,7 @@ package com.flipos.launcher.data
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.graphics.drawable.BitmapDrawable
@@ -70,6 +71,10 @@ object AppRepository {
             applyBuiltInIconDefaults(context, prefs, resolveInfos)
             prefs.setBuiltInIconsApplied()
         }
+        if (!prefs.isUnlistedAppsHidden()) {
+            applyDefaultHiddenApps(context, prefs, resolveInfos)
+            prefs.setUnlistedAppsHidden()
+        }
         val apps = resolveInfos.asSequence()
             .mapNotNull { ri ->
                 val ai = ri.activityInfo ?: return@mapNotNull null
@@ -119,6 +124,47 @@ object AppRepository {
         applyDefault(CategoryApps.cameraKey(context), "camera_112")
         applyDefault(CategoryApps.emailKey(context), "email_112")
         applyDefault(CategoryApps.musicKey(context), "music_112")
+    }
+
+    /**
+     * Fixed whitelist of built-in/OEM app packages that stay visible by
+     * default (see [applyDefaultHiddenApps]) - ordered exactly as the user
+     * confirmed them, one at a time, from a logcat of themselves opening
+     * every app on the device.
+     */
+    private val DEFAULT_VISIBLE_PACKAGES = setOf(
+        "jp.kyocera.settings.nfp", "com.android.calendar", "jp.kyocera.filemanager.launcher",
+        "jp.kyocera.gallery.launcher", "com.kyocera.calculator2", "com.android.dialer",
+        "com.android.contacts", "com.flipweather.app", "jp.kyocera.camera", "com.kyocera.alarm",
+        "com.kyocera.musicplayer", "jp.kyocera.memo", "com.kyocera.stopwatch", "com.kyocera.timer",
+        "jp.kyocera.kc_soundrecorder", "com.kyocera.flashlight", "com.turbotranslate.app",
+        "com.turbotext.app", "org.matchat.client", "com.kyocera.worldclock",
+    )
+
+    /**
+     * One-time (see [LauncherPrefs.isUnlistedAppsHidden]) default that hides
+     * every app not on [DEFAULT_VISIBLE_PACKAGES], not the device's own
+     * dialer/SMS/contacts apps, and not user-installed (i.e. not a system
+     * app) - a direct request to declutter the drawer down to a known-good
+     * set on an already-set-up device. Purely a one-time write into the same
+     * [LauncherPrefs.setHidden] store the manual Hide Apps screen already
+     * uses, so it never re-runs and never overrides anything the user
+     * un-hides afterward.
+     */
+    private fun applyDefaultHiddenApps(context: Context, prefs: LauncherPrefs, resolveInfos: List<ResolveInfo>) {
+        val alwaysVisible = DEFAULT_VISIBLE_PACKAGES + context.packageName +
+            listOfNotNull(CategoryApps.dialerKey(context), CategoryApps.smsKey(context), CategoryApps.contactsKey(context))
+                .mapNotNull { ComponentName.unflattenFromString(it)?.packageName }
+        for (ri in resolveInfos) {
+            val ai = ri.activityInfo ?: continue
+            val packageName = ai.packageName
+            if (packageName in alwaysVisible) continue
+            val appFlags = ai.applicationInfo.flags
+            val isSystemApp = appFlags and ApplicationInfo.FLAG_SYSTEM != 0 ||
+                appFlags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP != 0
+            if (!isSystemApp) continue // user-installed - always stays visible
+            prefs.setHidden(ComponentName(packageName, ai.name).flattenToString(), true)
+        }
     }
 
     /**

@@ -53,6 +53,9 @@ class CallLogActivity : BaseListActivity() {
         super.onResume()
         if (isRecreatingForAccent) return
         refresh()
+        if (!readCallLogPermission.isGranted()) {
+            requestCallLogAccess()
+        }
     }
 
     override fun onDestroy() {

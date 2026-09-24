@@ -398,6 +398,7 @@ class AppDrawerActivity : AppCompatActivity() {
             },
         )
         items.add(ContextItem(getString(R.string.ctx_uninstall)) { uninstallApp(app) })
+        items.add(ContextItem(getString(R.string.ctx_settings)) { startActivity(Intent(this, SettingsActivity::class.java)) })
 
         val titleView = layoutInflater.inflate(R.layout.dialog_app_context_title, null).apply {
             findViewById<TextView>(R.id.dialog_title_label).text = app.label

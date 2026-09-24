@@ -35,6 +35,7 @@
     <string name="ctx_disable_wrap">Don\'t Wrap Icon</string>
     <string name="ctx_enable_wrap">Wrap Icon</string>
     <string name="ctx_uninstall">Uninstall</string>
+    <string name="ctx_settings">Settings</string>
 
     <!-- Screen titles -->
     <string name="title_all_apps">All Apps</string>
