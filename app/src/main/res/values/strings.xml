@@ -222,6 +222,9 @@
     <string name="settings_notif_access">Notification Access</string>
     <string name="settings_calllog_access">Call Log Access</string>
     <string name="settings_calllog_access_sub">Let Flip Launcher read your call history for Recent Calls</string>
+    <string name="settings_notif_accessibility_access">Accessibility Fallback Access</string>
+    <string name="settings_notif_accessibility_access_sub">Backup way to show notifications on Home when standard Notification Access doesn\'t work on this device</string>
+    <string name="accessibility_service_description">Lets Flip Launcher show incoming notifications on the Home screen on devices where standard Notification Access is restricted.</string>
     <string name="settings_notif_access_granted">Granted</string>
     <string name="settings_notif_access_denied">Not granted — tap to enable</string>
     <string name="settings_notif_calls">Show Missed Calls</string>

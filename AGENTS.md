@@ -53,6 +53,23 @@ person's laptop.
   state (stale/non-monotonic). Prefer `exec-out screencap -p` with ~0.5-0.8s
   settle time after the triggering input, or cross-check
   `dumpsys window | grep mCurrentFocus` for the foregrounded Activity.
+- **Notification listener access is non-functional on Kyocera Android 9+
+  builds** (confirmed on the E4810 and E4811). `Settings.Secure` and
+  `adb shell cmd notification allow_listener` both appear to succeed - our
+  component shows up in `settings get secure enabled_notification_listeners`
+  - but `adb shell dumpsys notification | grep -i listener` shows the
+  "Allowed"/"Live" listener registry never actually includes us, with zero
+  log trace even during an explicit grant attempt; only the OEM's own two
+  listener components (`jp.kyocera.server.sublcd.NotificationListener`,
+  `jp.kyocera.kyocerahome.notification.NotificationListener`) ever bind. The
+  same app code works fine on the older Kyocera 4610 (Android 7), so this is
+  a platform-level restriction on the newer device lineage, not a bug in our
+  manifest/service/grant flow - don't re-diagnose it from scratch.
+  `service/NotificationAccessibilityService.kt` is the fallback (a separate
+  OS subsystem, `AccessibilityService`'s notification events, not gated by
+  the same allowlist) - it only feeds the Home banner, not Notices/icon
+  dots, since accessibility has no "list active notifications" or removal
+  event.
 
 ## Project structure
 

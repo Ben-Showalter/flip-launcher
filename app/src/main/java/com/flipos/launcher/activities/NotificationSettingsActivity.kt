@@ -11,6 +11,7 @@ import android.provider.Settings
 import android.service.notification.NotificationListenerService
 import android.view.KeyEvent
 import com.flipos.launcher.data.LauncherPrefs
+import com.flipos.launcher.service.NotificationAccessibilityService
 import com.flipos.launcher.service.NotificationCountService
 import com.flipos.launcher.ui.ListRowAdapter
 import com.flipos.launcher.ui.Row
@@ -33,6 +34,7 @@ class NotificationSettingsActivity : BaseListActivity() {
 
         actions[ID_ACCESS] = { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }
         actions[ID_CALL_LOG_ACCESS] = { requestCallLogAccess() }
+        actions[ID_ACCESSIBILITY_ACCESS] = { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
         actions[ID_CALLS] = {
             prefs.setCallBadgeEnabled(!prefs.isCallBadgeEnabled()); refreshRows()
         }
@@ -103,6 +105,11 @@ class NotificationSettingsActivity : BaseListActivity() {
         } else {
             getString(R.string.settings_notif_access_denied)
         }
+        val accessibilityTrailing = if (isAccessibilityFallbackGranted()) {
+            getString(R.string.settings_notif_access_granted)
+        } else {
+            getString(R.string.settings_notif_access_denied)
+        }
         adapter.submit(
             listOf(
                 Row.section(getString(R.string.sec_notif_access)),
@@ -118,6 +125,13 @@ class NotificationSettingsActivity : BaseListActivity() {
                     title = getString(R.string.settings_calllog_access),
                     subtitle = getString(R.string.settings_calllog_access_sub),
                     trailing = callLogTrailing,
+                    chevron = true,
+                ),
+                Row(
+                    id = ID_ACCESSIBILITY_ACCESS,
+                    title = getString(R.string.settings_notif_accessibility_access),
+                    subtitle = getString(R.string.settings_notif_accessibility_access_sub),
+                    trailing = accessibilityTrailing,
                     chevron = true,
                 ),
                 Row.section(getString(R.string.sec_notif_home)),
@@ -147,6 +161,12 @@ class NotificationSettingsActivity : BaseListActivity() {
         }
     }
 
+    private fun isAccessibilityFallbackGranted(): Boolean {
+        val target = ComponentName(this, NotificationAccessibilityService::class.java)
+        val flat = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: return false
+        return flat.split(':').any { ComponentName.unflattenFromString(it) == target }
+    }
+
     private fun requestCallLogAccess() {
         readCallLogPermission.run(
             onDenied = {
@@ -174,6 +194,7 @@ class NotificationSettingsActivity : BaseListActivity() {
     companion object {
         private const val ID_ACCESS = "access"
         private const val ID_CALL_LOG_ACCESS = "call_log_access"
+        private const val ID_ACCESSIBILITY_ACCESS = "accessibility_access"
         private const val ID_CALLS = "calls"
         private const val ID_MESSAGES = "messages"
         private const val ID_OTHER = "other"
