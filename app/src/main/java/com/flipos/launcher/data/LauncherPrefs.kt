@@ -282,7 +282,7 @@ class LauncherPrefs(context: Context) {
     }
 
     /** Whether non-adaptive icons get a pale color-matched background, or sit on a transparent one. */
-    fun isLegacyIconBackgroundEnabled(): Boolean = prefs.getBoolean(KEY_LEGACY_ICON_BG, true)
+    fun isLegacyIconBackgroundEnabled(): Boolean = prefs.getBoolean(KEY_LEGACY_ICON_BG, false)
 
     fun setLegacyIconBackgroundEnabled(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_LEGACY_ICON_BG, enabled).apply()
