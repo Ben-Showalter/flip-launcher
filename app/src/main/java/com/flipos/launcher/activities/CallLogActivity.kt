@@ -7,9 +7,7 @@ import android.os.Bundle
 import android.provider.CallLog
 import android.view.KeyEvent
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
-import com.flipos.launcher.data.LauncherPrefs
 import com.flipos.launcher.ui.CallLogItem
 import com.flipos.launcher.ui.CallLogRowAdapter
 import com.flipos.launcher.util.BackgroundLoader
@@ -26,7 +24,6 @@ import com.flipos.launcher.util.sendMessage
  */
 class CallLogActivity : BaseListActivity() {
 
-    private lateinit var prefs: LauncherPrefs
     private lateinit var adapter: CallLogRowAdapter
     private lateinit var emptyView: TextView
     private val loader = BackgroundLoader()
@@ -36,7 +33,6 @@ class CallLogActivity : BaseListActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        prefs = LauncherPrefs(this)
         titleView.text = getString(R.string.title_call_log)
         emptyView = findViewById(R.id.empty_view)
 
@@ -159,26 +155,11 @@ class CallLogActivity : BaseListActivity() {
         if (item.number.isBlank()) return
         AlertDialog.Builder(this)
             .setItems(
-                arrayOf(getString(R.string.calllog_send_message), getString(R.string.calllog_add_to_speed_dial)),
+                arrayOf(getString(R.string.calllog_send_message)),
             ) { _, which ->
                 when (which) {
                     0 -> sendMessage(item.number)
-                    1 -> pickSpeedDialSlot(item)
                 }
-            }
-            .show()
-    }
-
-    private fun pickSpeedDialSlot(item: CallLogItem) {
-        val digits = LauncherPrefs.SPEED_DIAL_DIGITS
-        val labels = digits.map { getString(R.string.shortcut_slot_label, it) }.toTypedArray()
-        AlertDialog.Builder(this)
-            .setTitle(R.string.calllog_add_to_speed_dial)
-            .setItems(labels) { _, which ->
-                val digit = digits[which]
-                val label = item.displayName ?: item.number
-                prefs.setSpeedDial(digit, item.number, label)
-                Toast.makeText(this, getString(R.string.speed_dial_set, label), Toast.LENGTH_SHORT).show()
             }
             .show()
     }

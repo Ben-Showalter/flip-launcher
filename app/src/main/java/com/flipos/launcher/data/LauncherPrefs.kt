@@ -85,28 +85,6 @@ class LauncherPrefs(context: Context) {
     fun getExtraKey4App(): String? = prefs.getString(KEY_EXTRA_KEY_4_APP, null)
     fun setExtraKey4App(key: String?) = prefs.edit().putString(KEY_EXTRA_KEY_4_APP, key).apply()
 
-    // ------------------------------------------------------------ Speed dial
-
-    /** The phone number + display label long-press-dialed by a digit key, or null if unset. */
-    data class SpeedDialEntry(val number: String, val label: String)
-
-    /** Speed dial entry bound to [digit] (one of [SPEED_DIAL_DIGITS]), or null if unset. */
-    fun getSpeedDial(digit: Int): SpeedDialEntry? {
-        val raw = prefs.getString(speedDialKey(digit), null) ?: return null
-        val parts = raw.split(SPEED_DIAL_SEPARATOR, limit = 2)
-        return if (parts.size == 2) SpeedDialEntry(parts[0], parts[1]) else null
-    }
-
-    fun setSpeedDial(digit: Int, number: String, label: String) {
-        prefs.edit().putString(speedDialKey(digit), "$number$SPEED_DIAL_SEPARATOR$label").apply()
-    }
-
-    fun clearSpeedDial(digit: Int) {
-        prefs.edit().remove(speedDialKey(digit)).apply()
-    }
-
-    private fun speedDialKey(digit: Int) = "$KEY_SPEED_DIAL_PREFIX$digit"
-
     // ---------------------------------------------------------- Icon size
 
     /** App drawer icon size as a percentage of the size that exactly fills a
@@ -363,9 +341,6 @@ class LauncherPrefs(context: Context) {
     }
 
     companion object {
-        /** Digits that can carry a speed dial assignment. 1 is reserved for voicemail. */
-        val SPEED_DIAL_DIGITS = listOf(0, 2, 3, 4, 5, 6, 7, 8, 9)
-
         /**
          * This device's actual Camera button reports this keyCode instead of the
          * standard [android.view.KeyEvent.KEYCODE_CAMERA] (27) - treated as the
@@ -410,8 +385,6 @@ class LauncherPrefs(context: Context) {
         private const val KEY_EXTRA_KEY_2_APP = "extra_key_2_app"
         private const val KEY_EXTRA_KEY_3_APP = "extra_key_3_app"
         private const val KEY_EXTRA_KEY_4_APP = "extra_key_4_app"
-        private const val KEY_SPEED_DIAL_PREFIX = "speed_dial_"
-        private const val SPEED_DIAL_SEPARATOR = "::"
         private const val KEY_ICON_SIZE_PERCENT = "icon_size_percent"
         private const val KEY_RIGHT_KEY_APP = "right_key_app"
         private const val KEY_LEFT_KEY_APP = "left_key_app"

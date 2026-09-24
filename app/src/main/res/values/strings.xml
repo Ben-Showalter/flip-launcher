@@ -25,7 +25,6 @@
     <string name="opt_system_settings">System Settings</string>
     <string name="opt_back_longpress">Back Button (Long-Press)</string>
     <string name="opt_menu_key">Menu Key (Long-Press)</string>
-    <string name="opt_speed_dial">Speed Dial</string>
 
     <!-- App drawer context options -->
     <string name="ctx_open">Open</string>
@@ -44,7 +43,6 @@
     <string name="title_pick_app">Choose an App</string>
     <string name="title_pick_activity">Pick Activity</string>
     <string name="title_notices">%1$d Notices</string>
-    <string name="title_speed_dial">Speed Dial</string>
     <string name="title_call_log">Recent Calls</string>
 
     <!-- Notices screen -->
@@ -53,7 +51,6 @@
 
     <!-- Misc -->
     <string name="empty_slot">Empty</string>
-    <string name="shortcut_slot_label">Key %1$d</string>
     <string name="content_apps">Open apps menu</string>
     <string name="hidden_badge">Hidden</string>
     <string name="choose_home_app">Choose this app as your Home screen to finish setup.</string>
@@ -84,23 +81,14 @@
     <string name="opt_extra_key_3">Outer Speaker Key</string>
     <string name="opt_extra_key_4">PTT</string>
 
-    <!-- Speed dial (long-press digit keys 0, 2-9) -->
-    <string name="speed_dial_not_set">Not set</string>
-    <string name="speed_dial_voicemail">Voicemail</string>
-    <string name="speed_dial_locked">Locked</string>
-    <string name="speed_dial_voicemail_locked_toast">Key 1 is reserved for voicemail</string>
-    <string name="speed_dial_change">Change Number</string>
-    <string name="speed_dial_pick_contact">Pick Contact</string>
-    <string name="speed_dial_enter_number">Enter Number Manually</string>
-    <string name="speed_dial_save">Save</string>
-    <string name="speed_dial_set">Speed dial set to %1$s</string>
+    <!-- Speed dial (long-press digit keys 0, 2-9) - read from the phone's own
+         system speed dial data; see util/SystemSpeedDial.kt. -->
     <string name="speed_dial_unset_shortcut_toast">Key %1$d isn\'t set — opening Speed Dial settings</string>
 
     <!-- Recent Calls (Send key) -->
     <string name="calllog_access_required">Turn on Call Log access to see recent calls here — press Select</string>
     <string name="calllog_empty">No recent calls</string>
     <string name="calllog_send_message">Send Message</string>
-    <string name="calllog_add_to_speed_dial">Add to Speed Dial</string>
     <string name="calllog_incoming">Incoming</string>
     <string name="calllog_outgoing">Outgoing</string>
     <string name="calllog_missed">Missed</string>
@@ -128,7 +116,6 @@
     <string name="sec_notif_home">Show on Home</string>
     <string name="sec_soft_keys">Soft Keys</string>
     <string name="sec_buttons">Buttons</string>
-    <string name="sec_shortcuts">Shortcuts</string>
     <string name="sec_app_drawer">App Drawer</string>
     <string name="sec_motion">Motion</string>
 
@@ -199,7 +186,6 @@
     <string name="toast_launch_unavailable">App is no longer available</string>
     <string name="toast_launch_denied">Can\'t open this app</string>
     <string name="toast_no_dialer">No dialer available</string>
-    <string name="toast_no_contacts">No contacts app</string>
     <string name="toast_no_messaging_app">No messaging app available</string>
 
     <!-- Notices empty state / confirmations -->

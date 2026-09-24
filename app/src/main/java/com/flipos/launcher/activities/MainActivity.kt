@@ -37,6 +37,7 @@ import com.flipos.launcher.util.PermissionGate
 import com.flipos.launcher.util.accentColorAlpha
 import com.flipos.launcher.util.launchAppByKey
 import com.flipos.launcher.util.placeCall
+import com.flipos.launcher.util.systemSpeedDial
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -126,6 +127,7 @@ class MainActivity : AppCompatActivity() {
     private val longPressFired = HashSet<Int>()
 
     private val callPermission = PermissionGate(this, Manifest.permission.CALL_PHONE)
+    private val contactsPermission = PermissionGate(this, Manifest.permission.READ_CONTACTS)
 
     /** App picker for MENU/BACK/soft-key/D-pad/Camera/extra-key assignment, writing back based on [pendingAssignAppKey]. */
     private val assignAppLauncher = registerForActivityResult(StartActivityForResult()) { result ->
@@ -442,8 +444,9 @@ class MainActivity : AppCompatActivity() {
     // Digits 1-9/0 fire their long-press action (dial a speed-dial number,
     // dial voicemail) the instant the framework's long-press threshold
     // crosses, like a real feature phone - see the digit branches below.
-    // Assignment for digits is Settings-only now (SpeedDialSettingsActivity);
-    // there's no in-place hold for them.
+    // Digit assignment is handled entirely by the phone's own Speed Dial
+    // settings (see dialSpeedDial), not this app; there's no in-place hold
+    // for them.
     //
     // Every other assignable key (MENU, BACK, the soft keys, D-pad, Camera,
     // the four extra buttons) keeps the original model: swallowed on key-down, resolved on key-up -
@@ -684,23 +687,39 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** Opens the app picker to assign [keyCode] (MENU/BACK/soft-key/D-pad/Camera/extra-key - digits are Settings-only, see [dialSpeedDial]). */
+    /** Opens the app picker to assign [keyCode] (MENU/BACK/soft-key/D-pad/Camera/extra-key - digits are handled by the phone's own Speed Dial settings, see [dialSpeedDial]). */
     private fun openAssignMenu(keyCode: Int) {
         pendingAssignAppKey = keyCode
         assignAppLauncher.launch(Intent(this, AppPickerActivity::class.java))
     }
 
-    /** Dials [digit]'s speed-dial number immediately, or - if unset - jumps straight to Speed Dial settings on that row. */
+    /** Dials [digit]'s speed-dial number from the phone's own dialer data, or - if unset - opens the phone's own Speed Dial settings. */
     private fun dialSpeedDial(digit: Int) {
-        val entry = prefs.getSpeedDial(digit)
-        if (entry == null) {
-            Toast.makeText(this, getString(R.string.speed_dial_unset_shortcut_toast, digit), Toast.LENGTH_SHORT).show()
+        contactsPermission.run(onDenied = { openSystemSpeedDial() }) {
+            val entry = systemSpeedDial(this, digit)
+            if (entry == null) {
+                Toast.makeText(this, getString(R.string.speed_dial_unset_shortcut_toast, digit), Toast.LENGTH_SHORT).show()
+                openSystemSpeedDial()
+            } else {
+                placeCall(callPermission, entry.number)
+            }
+        }
+    }
+
+    /**
+     * Opens the phone's own Speed Dial settings screen, mirroring
+     * [openCallLog]'s exact component-targeting/fallback pattern for this
+     * same Kyocera/AOSP dialer.
+     */
+    private fun openSystemSpeedDial() {
+        try {
             startActivity(
-                Intent(this, SpeedDialSettingsActivity::class.java)
-                    .putExtra(SpeedDialSettingsActivity.EXTRA_FOCUS_DIGIT, digit),
+                Intent(Intent.ACTION_MAIN).setComponent(
+                    ComponentName("com.android.dialer", "com.android.dialer.app.speeddial.SpeedDialActivity"),
+                ),
             )
-        } else {
-            placeCall(callPermission, entry.number)
+        } catch (e: Exception) {
+            Toast.makeText(this, R.string.toast_not_available, Toast.LENGTH_SHORT).show()
         }
     }
 

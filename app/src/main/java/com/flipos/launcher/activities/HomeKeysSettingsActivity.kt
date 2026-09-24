@@ -103,7 +103,6 @@ class HomeKeysSettingsActivity : BaseListActivity() {
         actions[ID_EXTRA_2] = { configureDirectionalKey(LauncherPrefs.KEYCODE_EXTRA_2) }
         actions[ID_EXTRA_3] = { configureDirectionalKey(LauncherPrefs.KEYCODE_EXTRA_3) }
         actions[ID_EXTRA_4] = { configureDirectionalKey(LauncherPrefs.KEYCODE_EXTRA_4) }
-        actions[ID_SPEED_DIAL] = { startActivity(Intent(this, SpeedDialSettingsActivity::class.java)) }
 
         adapter = ListRowAdapter(onClick = { dispatch(it) })
         listView.adapter = adapter
@@ -158,8 +157,6 @@ class HomeKeysSettingsActivity : BaseListActivity() {
                 Row(id = ID_EXTRA_2, title = getString(R.string.opt_extra_key_2), trailing = directionalLabel(LauncherPrefs.KEYCODE_EXTRA_2), chevron = true),
                 Row(id = ID_EXTRA_3, title = getString(R.string.opt_extra_key_3), trailing = directionalLabel(LauncherPrefs.KEYCODE_EXTRA_3), chevron = true),
                 Row(id = ID_EXTRA_4, title = getString(R.string.opt_extra_key_4), trailing = directionalLabel(LauncherPrefs.KEYCODE_EXTRA_4), chevron = true),
-                Row.section(getString(R.string.sec_shortcuts)),
-                Row(id = ID_SPEED_DIAL, title = getString(R.string.opt_speed_dial), chevron = true),
             ),
         )
     }
@@ -318,6 +315,5 @@ class HomeKeysSettingsActivity : BaseListActivity() {
         private const val ID_EXTRA_2 = "extra_key_2"
         private const val ID_EXTRA_3 = "extra_key_3"
         private const val ID_EXTRA_4 = "extra_key_4"
-        private const val ID_SPEED_DIAL = "speed_dial"
     }
 }
