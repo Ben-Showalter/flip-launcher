@@ -47,6 +47,12 @@ object NotificationStore {
         notifyListeners()
     }
 
+    /** Drops any pending items for [packageName] - e.g. once the user opens that app. */
+    fun removeItemsForPackage(packageName: String) {
+        val filtered = items.filterNot { it.packageName == packageName }
+        if (filtered.size != items.size) update(filtered)
+    }
+
     private fun notifyListeners() {
         if (Looper.myLooper() == Looper.getMainLooper()) {
             listeners.forEach { it() }

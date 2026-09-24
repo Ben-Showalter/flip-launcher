@@ -19,9 +19,11 @@ import com.flipos.launcher.data.NotificationStore
  * NotificationListenerService.getActiveNotifications(), there's no
  * accessibility equivalent of "list everything currently active," and no
  * removal event either - just a stream of "this was just posted" events. So
- * this only ever remembers the single most recent notification, replacing it
- * as new ones arrive, and never clears itself when the underlying
- * notification is dismissed/read elsewhere.
+ * this keeps a small stack of the most recent pending notification per app
+ * (see MAX_PENDING), rather than one global "currently active" set; an app's
+ * own entry clears when the user opens that app (see
+ * Context.launchAppByKey in util/Launch.kt), not when the underlying
+ * notification is actually dismissed/read elsewhere.
  */
 class NotificationAccessibilityService : AccessibilityService() {
 
@@ -37,19 +39,21 @@ class NotificationAccessibilityService : AccessibilityService() {
         val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
         val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty()
         if (title.isEmpty() && text.isEmpty()) return
-        NotificationStore.update(
-            listOf(
-                NoticeItem(
-                    key = "$packageName:${event.eventTime}",
-                    packageName = packageName,
-                    title = title.ifEmpty { appLabel(packageName) },
-                    text = text,
-                    postTime = System.currentTimeMillis(),
-                    icon = null,
-                    kind = NotificationCategorizer.kindOf(notification.category),
-                ),
-            ),
+        val newItem = NoticeItem(
+            key = "$packageName:${event.eventTime}",
+            packageName = packageName,
+            title = title.ifEmpty { appLabel(packageName) },
+            text = text,
+            postTime = System.currentTimeMillis(),
+            icon = null,
+            kind = NotificationCategorizer.kindOf(notification.category),
         )
+        // Replace this app's own prior pending entry, but keep every other app's -
+        // a notification from one app shouldn't silently erase another's.
+        val merged = (NotificationStore.items.filterNot { it.packageName == packageName } + newItem)
+            .sortedByDescending { it.postTime }
+            .take(MAX_PENDING)
+        NotificationStore.update(merged)
     }
 
     override fun onInterrupt() {}
@@ -58,5 +62,10 @@ class NotificationAccessibilityService : AccessibilityService() {
         packageManager.getApplicationLabel(packageManager.getApplicationInfo(packageName, 0)).toString()
     } catch (e: PackageManager.NameNotFoundException) {
         packageName
+    }
+
+    companion object {
+        /** Defensive cap on how many distinct apps' pending notifications this stacks. */
+        private const val MAX_PENDING = 10
     }
 }
