@@ -14,18 +14,27 @@ data class SystemSpeedDialEntry(val number: String, val label: String)
  * READ_CONTACTS; returns null on any failure (permission denied, provider
  * unavailable/different on another OEM, slot unassigned) - callers treat
  * that uniformly as "not set."
+ *
+ * Projection is deliberately null (select everything) rather than naming
+ * "data1"/"display_name" up front: SpeedDialProvider's internal
+ * SQLiteQueryBuilder has a projection allowlist that rejects those column
+ * names outright (IllegalArgumentException: Invalid column data1), even
+ * though the very same names come back fine as columns in an unrestricted
+ * query - confirmed both via adb and via a real on-device crash log.
  */
 fun systemSpeedDial(context: Context, digit: Int): SystemSpeedDialEntry? = try {
     context.contentResolver.query(
         Uri.parse("content://speed_dial/speed_dial"),
-        arrayOf("data1", "display_name"),
+        null,
         "_id = ?",
         arrayOf(digit.toString()),
         null,
     )?.use { cursor ->
         if (cursor.moveToFirst()) {
-            val number = cursor.getString(0)
-            val name = cursor.getString(1)
+            val numberCol = cursor.getColumnIndex("data1")
+            val nameCol = cursor.getColumnIndex("display_name")
+            val number = if (numberCol >= 0) cursor.getString(numberCol) else null
+            val name = if (nameCol >= 0) cursor.getString(nameCol) else null
             if (number.isNullOrBlank()) null else SystemSpeedDialEntry(number, name ?: number)
         } else {
             null
