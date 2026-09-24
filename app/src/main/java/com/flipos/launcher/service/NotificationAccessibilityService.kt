@@ -20,21 +20,51 @@ import com.flipos.launcher.data.NotificationStore
  * accessibility equivalent of "list everything currently active," and no
  * removal event either - just a stream of "this was just posted" events. So
  * this keeps a small stack of the most recent pending notification per app
- * (see MAX_PENDING), rather than one global "currently active" set; an app's
- * own entry clears when the user opens that app (see
- * Context.launchAppByKey in util/Launch.kt), not when the underlying
- * notification is actually dismissed/read elsewhere.
+ * (see MAX_PENDING), rather than one global "currently active" set.
+ *
+ * An app's own entry also clears whenever the user opens it via the launcher
+ * (see Context.launchAppByKey in util/Launch.kt) - but that only catches
+ * launcher-mediated opens. This service additionally tracks the actual
+ * foreground app itself via TYPE_WINDOW_STATE_CHANGED, so an app opened any
+ * other way (a notification tap, task switcher, etc.) still gets its pending
+ * entry cleared: never shown at all while the app is the one in front (a
+ * banner for an app you're already looking at is just noise), and cleared on
+ * exit as a safety net for anything the app posted about itself while still
+ * in front (e.g. "download complete") that a background-only check would
+ * otherwise leave stranded until the next unrelated notification event.
  */
 class NotificationAccessibilityService : AccessibilityService() {
 
+    private var foregroundPackage: String? = null
+
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
-        if (event.eventType != AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED) return
         // NotificationCountService already owns NotificationStore with richer,
         // accurately-active data whenever it's actually bound - don't fight over it.
         if (NotificationCountService.instance != null) return
+        when (event.eventType) {
+            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> handleForegroundChange(event)
+            AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED -> handleNotificationPosted(event)
+        }
+    }
+
+    private fun handleForegroundChange(event: AccessibilityEvent) {
+        val packageName = event.packageName?.toString() ?: return
+        if (packageName == foregroundPackage) return
+        // Leaving the previous foreground app - drop anything it posted about
+        // itself while it had the user's attention.
+        foregroundPackage?.let { NotificationStore.removeItemsForPackage(it) }
+        foregroundPackage = packageName
+        // Entering this app - it shouldn't be showing its own stale banner.
+        NotificationStore.removeItemsForPackage(packageName)
+    }
+
+    private fun handleNotificationPosted(event: AccessibilityEvent) {
         val notification = event.parcelableData as? Notification ?: return
         if (notification.flags and Notification.FLAG_GROUP_SUMMARY != 0) return
         val packageName = event.packageName?.toString() ?: return
+        // Already in front - no point banner-ing a notification for the app
+        // the user is currently looking at.
+        if (packageName == foregroundPackage) return
         val extras = notification.extras
         val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
         val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty()
