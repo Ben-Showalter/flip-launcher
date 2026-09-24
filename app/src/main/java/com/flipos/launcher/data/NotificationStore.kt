@@ -47,7 +47,12 @@ object NotificationStore {
         notifyListeners()
     }
 
-    /** Drops any pending items for [packageName] - e.g. once the user opens that app. */
+    /**
+     * Drops any pending items for [packageName] - called by
+     * [com.flipos.launcher.service.NotificationAccessibilityService] as it
+     * tracks which app is currently in the foreground, both when leaving the
+     * previous one and entering the next.
+     */
     fun removeItemsForPackage(packageName: String) {
         val filtered = items.filterNot { it.packageName == packageName }
         if (filtered.size != items.size) update(filtered)

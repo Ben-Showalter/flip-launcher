@@ -101,6 +101,10 @@ class MainActivity : AppCompatActivity() {
 
     private val assignHandler = Handler(Looper.getMainLooper())
 
+    /** Auto-hides a low-priority ("Other") banner item after a short delay - see [updateNotifBanner]. */
+    private val notifBannerHandler = Handler(Looper.getMainLooper())
+    private val hideNotifBannerRunnable = Runnable { notifBanner.visibility = View.GONE }
+
     /** Scheduled 5-second assign runnables, keyed by keyCode, so a release can cancel them. */
     private val assignRunnables = HashMap<Int, Runnable>()
 
@@ -272,6 +276,7 @@ class MainActivity : AppCompatActivity() {
         unregisterReceiver(timeReceiver)
         unregisterReceiver(packageReceiver)
         NotificationStore.removeListener(notifListener)
+        notifBannerHandler.removeCallbacksAndMessages(null)
         // A key hold that's interrupted mid-press (screen off, app switch) may
         // never deliver a matching key-up; drop any scheduled assign timers so
         // they don't fire into the background.
@@ -356,8 +361,14 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** Shows the single most recent active notification (across the enabled categories) as a big, hard-to-miss bar. */
+    /**
+     * Shows the single most recent active notification (across the enabled
+     * categories) as a big, hard-to-miss bar. A low-priority ("Other")
+     * notification auto-hides itself after [OTHER_NOTIF_AUTO_HIDE_MS] - calls
+     * and messages persist until something else replaces or clears them.
+     */
     private fun updateNotifBanner() {
+        notifBannerHandler.removeCallbacks(hideNotifBannerRunnable)
         val item = NotificationStore.items.firstOrNull { isShownOnHome(it.kind) }
         if (item == null) {
             notifBanner.visibility = View.GONE
@@ -383,6 +394,9 @@ class MainActivity : AppCompatActivity() {
             "$appName: ${item.text}"
         } else {
             "$appName, ${getString(cdRes)}"
+        }
+        if (item.kind == NotificationKind.OTHER) {
+            notifBannerHandler.postDelayed(hideNotifBannerRunnable, OTHER_NOTIF_AUTO_HIDE_MS)
         }
     }
 
@@ -844,6 +858,9 @@ class MainActivity : AppCompatActivity() {
 
         /** How long an assignable key must be held to open its assign menu. */
         private const val ASSIGN_HOLD_MS = 5000L
+
+        /** How long a low-priority ("Other") notification banner stays up before auto-hiding itself. */
+        private const val OTHER_NOTIF_AUTO_HIDE_MS = 6000L
 
         /**
          * How long a digit must be held before its long-press action (speed
