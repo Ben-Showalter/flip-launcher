@@ -5,7 +5,7 @@ import com.flipos.launcher.R
 
 /**
  * Persists the launcher's user customization: hidden app keys, per-physical-key
- * app bindings (soft keys, MENU, BACK, D-pad, Camera, the extra buttons), speed
+ * app bindings (soft keys, MENU, BACK, D-pad, Camera), speed
  * dial numbers, and appearance/notification preferences.
  */
 class LauncherPrefs(context: Context) {
@@ -66,24 +66,6 @@ class LauncherPrefs(context: Context) {
     /** App key launched by pressing the Camera button on Home, or null if unconfigured. */
     fun getCameraKeyApp(): String? = prefs.getString(KEY_CAMERA_KEY_APP, null)
     fun setCameraKeyApp(key: String?) = prefs.edit().putString(KEY_CAMERA_KEY_APP, key).apply()
-
-    // ------------------------------------------------------------ Extra keys
-
-    /** App key launched by pressing Extra Key 1 (scan code 763) on Home, or null if unconfigured. */
-    fun getExtraKey1App(): String? = prefs.getString(KEY_EXTRA_KEY_1_APP, null)
-    fun setExtraKey1App(key: String?) = prefs.edit().putString(KEY_EXTRA_KEY_1_APP, key).apply()
-
-    /** App key launched by pressing Extra Key 2 (scan code 764) on Home, or null if unconfigured. */
-    fun getExtraKey2App(): String? = prefs.getString(KEY_EXTRA_KEY_2_APP, null)
-    fun setExtraKey2App(key: String?) = prefs.edit().putString(KEY_EXTRA_KEY_2_APP, key).apply()
-
-    /** App key launched by pressing Extra Key 3 (scan code 765) on Home, or null if unconfigured. */
-    fun getExtraKey3App(): String? = prefs.getString(KEY_EXTRA_KEY_3_APP, null)
-    fun setExtraKey3App(key: String?) = prefs.edit().putString(KEY_EXTRA_KEY_3_APP, key).apply()
-
-    /** App key launched by pressing Extra Key 4 (scan code 766) on Home, or null if unconfigured. */
-    fun getExtraKey4App(): String? = prefs.getString(KEY_EXTRA_KEY_4_APP, null)
-    fun setExtraKey4App(key: String?) = prefs.edit().putString(KEY_EXTRA_KEY_4_APP, key).apply()
 
     // ---------------------------------------------------------- Icon size
 
@@ -198,6 +180,26 @@ class LauncherPrefs(context: Context) {
     /** Whether the Home notification banner hides message text, keeping only the app name. */
     fun isNotificationTextHidden(): Boolean = prefs.getBoolean(KEY_NOTIF_TEXT_HIDDEN, false)
     fun setNotificationTextHidden(hidden: Boolean) = prefs.edit().putBoolean(KEY_NOTIF_TEXT_HIDDEN, hidden).apply()
+
+    /** Whether notifications of [kind] appear in the Home banner - shared by the banner and [com.flipos.launcher.util.ReadAloud]. */
+    fun isShownOnHome(kind: NotificationKind): Boolean = when (kind) {
+        NotificationKind.CALL -> isCallBadgeEnabled()
+        NotificationKind.MESSAGE -> isMessageBadgeEnabled()
+        NotificationKind.OTHER -> isOtherBadgeEnabled()
+    }
+
+    // ------------------------------------------------------------- Read aloud
+
+    /** When the Home banner's message is spoken aloud: one of [READ_ALOUD_NEVER]/[READ_ALOUD_ALWAYS]/[READ_ALOUD_BLUETOOTH]. */
+    fun getReadAloudMode(): String = prefs.getString(KEY_READ_ALOUD_MODE, READ_ALOUD_NEVER) ?: READ_ALOUD_NEVER
+    fun setReadAloudMode(mode: String) = prefs.edit().putString(KEY_READ_ALOUD_MODE, mode).apply()
+
+    /** The TTS engine voice name to read with, or null for the engine's default. */
+    fun getReadAloudVoice(): String? = prefs.getString(KEY_READ_ALOUD_VOICE, null)
+    fun setReadAloudVoice(name: String?) = prefs.edit().putString(KEY_READ_ALOUD_VOICE, name).apply()
+
+    fun getReadAloudRate(): Float = prefs.getFloat(KEY_READ_ALOUD_RATE, 1.0f)
+    fun setReadAloudRate(rate: Float) = prefs.edit().putFloat(KEY_READ_ALOUD_RATE, rate).apply()
 
     // ------------------------------------------------------------- Icon packs
 
@@ -364,16 +366,9 @@ class LauncherPrefs(context: Context) {
          */
         const val KEYCODE_CAMERA_ALT2 = 288
 
-        /**
-         * Four physical buttons with no real [android.view.KeyEvent.KEYCODE_*]
-         * mapping, identified only by raw scan code (763-766) - see
-         * [MainActivity.dispatchKeyEvent]'s scan-code detection path. Negative so
-         * they can never collide with a real Android keycode (all real ones are >= 0).
-         */
-        const val KEYCODE_EXTRA_1 = -101
-        const val KEYCODE_EXTRA_2 = -102
-        const val KEYCODE_EXTRA_3 = -103
-        const val KEYCODE_EXTRA_4 = -104
+        const val READ_ALOUD_NEVER = "never"
+        const val READ_ALOUD_ALWAYS = "always"
+        const val READ_ALOUD_BLUETOOTH = "bluetooth"
 
         /** Default icon size: exactly fills a 3x3 grid with no scrolling. */
         const val DEFAULT_ICON_SIZE_PERCENT = 100
@@ -391,10 +386,6 @@ class LauncherPrefs(context: Context) {
         private const val KEY_DPAD_LEFT_APP = "dpad_left_app"
         private const val KEY_DPAD_RIGHT_APP = "dpad_right_app"
         private const val KEY_CAMERA_KEY_APP = "camera_key_app"
-        private const val KEY_EXTRA_KEY_1_APP = "extra_key_1_app"
-        private const val KEY_EXTRA_KEY_2_APP = "extra_key_2_app"
-        private const val KEY_EXTRA_KEY_3_APP = "extra_key_3_app"
-        private const val KEY_EXTRA_KEY_4_APP = "extra_key_4_app"
         private const val KEY_ICON_SIZE_PERCENT = "icon_size_percent"
         private const val KEY_RIGHT_KEY_APP = "right_key_app"
         private const val KEY_LEFT_KEY_APP = "left_key_app"
@@ -403,6 +394,9 @@ class LauncherPrefs(context: Context) {
         private const val KEY_BADGE_OTHER = "badge_other"
         private const val KEY_BADGE_ICON_DOT = "badge_icon_dot"
         private const val KEY_NOTIF_TEXT_HIDDEN = "notif_text_hidden"
+        private const val KEY_READ_ALOUD_MODE = "read_aloud_mode"
+        private const val KEY_READ_ALOUD_VOICE = "read_aloud_voice"
+        private const val KEY_READ_ALOUD_RATE = "read_aloud_rate"
         private const val KEY_ACTIVE_ICON_PACK = "active_icon_pack"
         private const val KEY_DRAWER_LIST_VIEW = "drawer_list_view"
         private const val KEY_ICON_OVERRIDE_PREFIX = "icon_override_"

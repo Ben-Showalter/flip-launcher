@@ -75,12 +75,15 @@
     <string name="opt_camera_key">Camera Button</string>
     <string name="opt_camera_key_default">Camera app (default)</string>
 
-    <!-- Extra buttons (identified by scan code, see MainActivity) -->
+    <!-- Outer buttons (identified by scan code, see MainActivity) - bound in
+         the phone's own Settings, not by the launcher. -->
     <string name="sec_extra_keys">Other Buttons</string>
     <string name="opt_extra_key_1">SOS</string>
     <string name="opt_extra_key_2">Outer END Key</string>
     <string name="opt_extra_key_3">Outer Speaker Key</string>
     <string name="opt_extra_key_4">PTT</string>
+    <string name="opt_extra_key_system">System settings</string>
+    <string name="extra_key_system_toast">Set this button in the phone\'s Settings</string>
 
     <!-- Speed dial (long-press digit keys 0, 2-9) - read from the phone's own
          system speed dial data; see util/SystemSpeedDial.kt. -->
@@ -220,6 +223,27 @@
     <string name="settings_notif_hide_text">Hide Message Text</string>
     <string name="settings_notif_hide_text_sub">Show only the app name on Home, not the message content</string>
     <string name="settings_notif_icon_dots">Notification Dots on Icons</string>
+
+    <!-- Read aloud (speaks the Home notification banner, see util/ReadAloud.kt) -->
+    <string name="sec_read_aloud">Read Aloud</string>
+    <string name="settings_read_aloud">Read Home Messages Aloud</string>
+    <string name="settings_read_aloud_sub">Speaks each new message shown on Home. Needs Notification or Accessibility access above.</string>
+    <string name="read_aloud_never">Never</string>
+    <string name="read_aloud_always">Always</string>
+    <string name="read_aloud_bluetooth">Only on Bluetooth</string>
+    <string name="settings_read_aloud_voice">Voice</string>
+    <string name="settings_read_aloud_voice_default">Default</string>
+    <string name="settings_read_aloud_no_voices">This phone\'s text-to-speech engine offers no other voices</string>
+    <string name="settings_read_aloud_voice_preview">This is the selected voice.</string>
+    <string name="settings_read_aloud_rate">Speech Rate</string>
+    <string name="settings_read_aloud_rate_preview">This is the speech rate.</string>
+    <string name="read_aloud_rate_slower">Slower</string>
+    <string name="read_aloud_rate_normal">Normal</string>
+    <string name="read_aloud_rate_faster">Faster</string>
+    <string name="voice_quality_very_high">Very High</string>
+    <string name="voice_quality_high">High</string>
+    <string name="voice_quality_normal">Normal</string>
+    <string name="voice_quality_low">Low</string>
     <string name="settings_toggle_on">On</string>
     <string name="settings_toggle_off">Off</string>
     <string name="cd_notif_calls">Missed calls</string>

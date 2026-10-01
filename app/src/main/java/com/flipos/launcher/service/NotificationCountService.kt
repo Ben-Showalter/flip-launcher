@@ -12,6 +12,7 @@ import com.flipos.launcher.data.NotificationCategorizer
 import com.flipos.launcher.data.NotificationCounts
 import com.flipos.launcher.data.NotificationKind
 import com.flipos.launcher.data.NotificationStore
+import com.flipos.launcher.util.ReadAloud
 
 /**
  * Tracks active notifications for two things Home/Notices need: per-category
@@ -26,6 +27,7 @@ class NotificationCountService : NotificationListenerService() {
 
     override fun onListenerConnected() {
         instance = this
+        ReadAloud.attach(this)
         recompute()
     }
 

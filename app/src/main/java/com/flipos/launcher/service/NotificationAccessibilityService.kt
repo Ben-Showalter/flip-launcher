@@ -7,6 +7,7 @@ import android.view.accessibility.AccessibilityEvent
 import com.flipos.launcher.data.NotificationCategorizer
 import com.flipos.launcher.data.NoticeItem
 import com.flipos.launcher.data.NotificationStore
+import com.flipos.launcher.util.ReadAloud
 
 /**
  * Fallback notification source for devices where NotificationListenerService
@@ -36,6 +37,11 @@ import com.flipos.launcher.data.NotificationStore
 class NotificationAccessibilityService : AccessibilityService() {
 
     private var foregroundPackage: String? = null
+
+    override fun onServiceConnected() {
+        super.onServiceConnected()
+        ReadAloud.attach(this)
+    }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         // NotificationCountService already owns NotificationStore with richer,

@@ -34,6 +34,7 @@ import com.flipos.launcher.data.NotificationStore
 import com.flipos.launcher.util.BackgroundLoader
 import com.flipos.launcher.util.CategoryApps
 import com.flipos.launcher.util.PermissionGate
+import com.flipos.launcher.util.ReadAloud
 import com.flipos.launcher.util.accentColorAlpha
 import com.flipos.launcher.util.launchAppByKey
 import com.flipos.launcher.util.placeCall
@@ -55,11 +56,12 @@ import java.util.Locale
  * touch) opens Settings.
  *
  * Every physical key (digits 0/2-9, MENU, BACK, the soft keys, D-pad
- * Up/Down/Left/Right, Camera, and four vendor-specific extra buttons
- * identified by scan code) also carries a long-press action and a
+ * Up/Down/Left/Right, Camera) also carries a long-press action and a
  * 5-second-hold "assign" menu - see the Key handling section below. Digits
  * are the exception: their long-press (speed dial / voicemail) fires the
- * instant it's detected, and assignment for them is Settings-only.
+ * instant it's detected, and assignment for them is Settings-only. The
+ * phone's outer buttons (SOS, outer END/Speaker, PTT) are left entirely to
+ * the system's own key-assignment settings.
  */
 class MainActivity : AppCompatActivity() {
 
@@ -133,7 +135,7 @@ class MainActivity : AppCompatActivity() {
     private val callPermission = PermissionGate(this, Manifest.permission.CALL_PHONE)
     private val contactsPermission = PermissionGate(this, Manifest.permission.READ_CONTACTS)
 
-    /** App picker for MENU/BACK/soft-key/D-pad/Camera/extra-key assignment, writing back based on [pendingAssignAppKey]. */
+    /** App picker for MENU/BACK/soft-key/D-pad/Camera assignment, writing back based on [pendingAssignAppKey]. */
     private val assignAppLauncher = registerForActivityResult(StartActivityForResult()) { result ->
         val key = result.data?.getStringExtra(AppPickerActivity.EXTRA_APP_KEY)
         val target = pendingAssignAppKey
@@ -149,10 +151,6 @@ class MainActivity : AppCompatActivity() {
                 KeyEvent.KEYCODE_DPAD_LEFT -> prefs.setDpadLeftApp(key)
                 KeyEvent.KEYCODE_DPAD_RIGHT -> prefs.setDpadRightApp(key)
                 KeyEvent.KEYCODE_CAMERA, LauncherPrefs.KEYCODE_CAMERA_ALT, LauncherPrefs.KEYCODE_CAMERA_ALT2 -> prefs.setCameraKeyApp(key)
-                LauncherPrefs.KEYCODE_EXTRA_1 -> prefs.setExtraKey1App(key)
-                LauncherPrefs.KEYCODE_EXTRA_2 -> prefs.setExtraKey2App(key)
-                LauncherPrefs.KEYCODE_EXTRA_3 -> prefs.setExtraKey3App(key)
-                LauncherPrefs.KEYCODE_EXTRA_4 -> prefs.setExtraKey4App(key)
             }
             AppRepository.resolveComponent(this, key)?.label?.let {
                 Toast.makeText(this, getString(R.string.key_assigned_toast, it), Toast.LENGTH_SHORT).show()
@@ -191,6 +189,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = LauncherPrefs(this)
+        ReadAloud.attach(this)
         val accent = prefs.getAccentColor()
         appliedAccentColor = accent
         if (accent.themeOverlayRes != 0) theme.applyStyle(accent.themeOverlayRes, true)
@@ -369,7 +368,7 @@ class MainActivity : AppCompatActivity() {
      */
     private fun updateNotifBanner() {
         notifBannerHandler.removeCallbacks(hideNotifBannerRunnable)
-        val item = NotificationStore.items.firstOrNull { isShownOnHome(it.kind) }
+        val item = NotificationStore.items.firstOrNull { prefs.isShownOnHome(it.kind) }
         if (item == null) {
             notifBanner.visibility = View.GONE
             return
@@ -398,12 +397,6 @@ class MainActivity : AppCompatActivity() {
         if (item.kind == NotificationKind.OTHER) {
             notifBannerHandler.postDelayed(hideNotifBannerRunnable, OTHER_NOTIF_AUTO_HIDE_MS)
         }
-    }
-
-    private fun isShownOnHome(kind: NotificationKind): Boolean = when (kind) {
-        NotificationKind.CALL -> prefs.isCallBadgeEnabled()
-        NotificationKind.MESSAGE -> prefs.isMessageBadgeEnabled()
-        NotificationKind.OTHER -> prefs.isOtherBadgeEnabled()
     }
 
     /**
@@ -462,8 +455,8 @@ class MainActivity : AppCompatActivity() {
     // settings (see dialSpeedDial), not this app; there's no in-place hold
     // for them.
     //
-    // Every other assignable key (MENU, BACK, the soft keys, D-pad, Camera,
-    // the four extra buttons) keeps the original model: swallowed on key-down, resolved on key-up -
+    // Every other assignable key (MENU, BACK, the soft keys, D-pad, Camera)
+    // keeps the original model: swallowed on key-down, resolved on key-up -
     // launching anything on key-down leaves the matching key-up to be
     // delivered to whatever gets focused as a result, which on some devices
     // re-enters the same input. Key-down starts long-press tracking and the
@@ -476,22 +469,13 @@ class MainActivity : AppCompatActivity() {
     // (and Camera, for uniformity) are captured a level higher, in
     // dispatchKeyEvent, before the view hierarchy gets a look at them.
     //
-    // The four "extra" buttons (see EXTRA_KEY_SCAN_CODES) have no reliable
-    // KeyEvent.KEYCODE_* of their own, so they're identified by raw scan code
-    // and remapped to an app-defined synthetic keycode before being dispatched
-    // to onKeyDown/onKeyUp - which otherwise only ever operate on the keyCode
-    // *parameter*, never event.keyCode directly, so a synthetic value flows
-    // through the existing hold-tracking machinery unchanged.
+    // The phone's outer buttons (see SYSTEM_KEY_SCAN_CODES) belong to the
+    // system's own key-assignment settings, not this launcher: they're
+    // reported unhandled so the system's binding (or default) applies, and
+    // never reach onKeyDown, where they'd trip the unrecognized-key toast.
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        val synthetic = EXTRA_KEY_SCAN_CODES[event.scanCode]
-        if (synthetic != null) {
-            return when (event.action) {
-                KeyEvent.ACTION_DOWN -> onKeyDown(synthetic, event)
-                KeyEvent.ACTION_UP -> onKeyUp(synthetic, event)
-                else -> super.dispatchKeyEvent(event)
-            }
-        }
+        if (event.scanCode in SYSTEM_KEY_SCAN_CODES) return false
         if (event.keyCode in DIRECTIONAL_KEYS) {
             return when (event.action) {
                 KeyEvent.ACTION_DOWN -> onKeyDown(event.keyCode, event)
@@ -522,9 +506,7 @@ class MainActivity : AppCompatActivity() {
             KeyEvent.KEYCODE_SOFT_LEFT, KeyEvent.KEYCODE_SOFT_RIGHT,
             KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
             KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
-            KeyEvent.KEYCODE_CAMERA, LauncherPrefs.KEYCODE_CAMERA_ALT, LauncherPrefs.KEYCODE_CAMERA_ALT2,
-            LauncherPrefs.KEYCODE_EXTRA_1, LauncherPrefs.KEYCODE_EXTRA_2,
-            LauncherPrefs.KEYCODE_EXTRA_3, LauncherPrefs.KEYCODE_EXTRA_4 -> {
+            KeyEvent.KEYCODE_CAMERA, LauncherPrefs.KEYCODE_CAMERA_ALT, LauncherPrefs.KEYCODE_CAMERA_ALT2 -> {
                 beginPressTracking(keyCode, event)
                 if (event.repeatCount == 0) scheduleAssign(keyCode)
                 return true
@@ -595,9 +577,7 @@ class MainActivity : AppCompatActivity() {
             }
             KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
             KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
-            KeyEvent.KEYCODE_CAMERA, LauncherPrefs.KEYCODE_CAMERA_ALT, LauncherPrefs.KEYCODE_CAMERA_ALT2,
-            LauncherPrefs.KEYCODE_EXTRA_1, LauncherPrefs.KEYCODE_EXTRA_2,
-            LauncherPrefs.KEYCODE_EXTRA_3, LauncherPrefs.KEYCODE_EXTRA_4 -> {
+            KeyEvent.KEYCODE_CAMERA, LauncherPrefs.KEYCODE_CAMERA_ALT, LauncherPrefs.KEYCODE_CAMERA_ALT2 -> {
                 cancelAssign(keyCode)
                 if (assignFired.remove(keyCode)) return true
                 launchDirectionalKeyApp(keyCode)
@@ -701,7 +681,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** Opens the app picker to assign [keyCode] (MENU/BACK/soft-key/D-pad/Camera/extra-key - digits are handled by the phone's own Speed Dial settings, see [dialSpeedDial]). */
+    /** Opens the app picker to assign [keyCode] (MENU/BACK/soft-key/D-pad/Camera - digits are handled by the phone's own Speed Dial settings, see [dialSpeedDial]). */
     private fun openAssignMenu(keyCode: Int) {
         pendingAssignAppKey = keyCode
         assignAppLauncher.launch(Intent(this, AppPickerActivity::class.java))
@@ -749,10 +729,6 @@ class MainActivity : AppCompatActivity() {
             KeyEvent.KEYCODE_DPAD_LEFT -> prefs.getDpadLeftApp()
             KeyEvent.KEYCODE_DPAD_RIGHT -> prefs.getDpadRightApp()
             KeyEvent.KEYCODE_CAMERA, LauncherPrefs.KEYCODE_CAMERA_ALT, LauncherPrefs.KEYCODE_CAMERA_ALT2 -> prefs.getCameraKeyApp()
-            LauncherPrefs.KEYCODE_EXTRA_1 -> prefs.getExtraKey1App()
-            LauncherPrefs.KEYCODE_EXTRA_2 -> prefs.getExtraKey2App()
-            LauncherPrefs.KEYCODE_EXTRA_3 -> prefs.getExtraKey3App()
-            LauncherPrefs.KEYCODE_EXTRA_4 -> prefs.getExtraKey4App()
             else -> null
         }
         if (key != null) {
@@ -890,21 +866,13 @@ class MainActivity : AppCompatActivity() {
         )
 
         /**
-         * Four vendor-specific buttons with no reliable KeyEvent.KEYCODE_* of
-         * their own, identified instead by raw scan code and remapped to an
-         * app-defined synthetic keycode in [dispatchKeyEvent]. Each maps two
-         * scan codes - the E4810's and the E4610's - to the same synthetic
-         * keycode, since they're the same logical button on both devices.
+         * The phone's outer buttons, identified by raw scan code since they
+         * have no reliable KeyEvent.KEYCODE_* of their own: SOS (763), outer
+         * END (764 on the E4810, 172 on the E4610), outer Speaker (765/213)
+         * and PTT (766/231). Left to the system's key-assignment settings -
+         * see [dispatchKeyEvent].
          */
-        private val EXTRA_KEY_SCAN_CODES = mapOf(
-            763 to LauncherPrefs.KEYCODE_EXTRA_1,
-            764 to LauncherPrefs.KEYCODE_EXTRA_2,
-            765 to LauncherPrefs.KEYCODE_EXTRA_3,
-            766 to LauncherPrefs.KEYCODE_EXTRA_4,
-            172 to LauncherPrefs.KEYCODE_EXTRA_2,
-            213 to LauncherPrefs.KEYCODE_EXTRA_3,
-            231 to LauncherPrefs.KEYCODE_EXTRA_4,
-        )
+        private val SYSTEM_KEY_SCAN_CODES = setOf(763, 764, 765, 766, 172, 213, 231)
 
         /** Keys that should never trigger the unrecognized-key diagnostic toast. */
         private val SILENT_UNKNOWN_KEYS = setOf(

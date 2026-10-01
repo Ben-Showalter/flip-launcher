@@ -12,6 +12,7 @@ import com.flipos.launcher.data.AppRepository
 import com.flipos.launcher.data.LauncherPrefs
 import com.flipos.launcher.ui.ListRowAdapter
 import com.flipos.launcher.ui.Row
+import com.flipos.launcher.util.openSystemSettings
 
 /** Home screen key bindings and shortcut management. */
 class HomeKeysSettingsActivity : BaseListActivity() {
@@ -99,10 +100,10 @@ class HomeKeysSettingsActivity : BaseListActivity() {
         actions[ID_DPAD_LEFT] = { configureDirectionalKey(KeyEvent.KEYCODE_DPAD_LEFT) }
         actions[ID_DPAD_RIGHT] = { configureDirectionalKey(KeyEvent.KEYCODE_DPAD_RIGHT) }
         actions[ID_CAMERA_KEY] = { configureDirectionalKey(KeyEvent.KEYCODE_CAMERA) }
-        actions[ID_EXTRA_1] = { configureDirectionalKey(LauncherPrefs.KEYCODE_EXTRA_1) }
-        actions[ID_EXTRA_2] = { configureDirectionalKey(LauncherPrefs.KEYCODE_EXTRA_2) }
-        actions[ID_EXTRA_3] = { configureDirectionalKey(LauncherPrefs.KEYCODE_EXTRA_3) }
-        actions[ID_EXTRA_4] = { configureDirectionalKey(LauncherPrefs.KEYCODE_EXTRA_4) }
+        // The outer buttons are bound in the phone's own Settings, not here (see MainActivity.dispatchKeyEvent).
+        for (id in listOf(ID_EXTRA_1, ID_EXTRA_2, ID_EXTRA_3, ID_EXTRA_4)) {
+            actions[id] = { openSystemKeySettings() }
+        }
 
         adapter = ListRowAdapter(onClick = { dispatch(it) })
         listView.adapter = adapter
@@ -135,6 +136,7 @@ class HomeKeysSettingsActivity : BaseListActivity() {
             ?: getString(R.string.back_longpress_not_set)
         fun directionalLabel(keyCode: Int) = getDirectionalKeyApp(keyCode)?.let { AppRepository.resolveComponent(this, it)?.label }
             ?: getString(R.string.back_longpress_not_set)
+        val systemLabel = getString(R.string.opt_extra_key_system)
         val cameraLabel = prefs.getCameraKeyApp()?.let { AppRepository.resolveComponent(this, it)?.label }
             ?: getString(R.string.opt_camera_key_default)
 
@@ -153,10 +155,10 @@ class HomeKeysSettingsActivity : BaseListActivity() {
                 Row(id = ID_DPAD_RIGHT, title = getString(R.string.opt_dpad_right), trailing = directionalLabel(KeyEvent.KEYCODE_DPAD_RIGHT), chevron = true),
                 Row(id = ID_CAMERA_KEY, title = getString(R.string.opt_camera_key), trailing = cameraLabel, chevron = true),
                 Row.section(getString(R.string.sec_extra_keys)),
-                Row(id = ID_EXTRA_1, title = getString(R.string.opt_extra_key_1), trailing = directionalLabel(LauncherPrefs.KEYCODE_EXTRA_1), chevron = true),
-                Row(id = ID_EXTRA_2, title = getString(R.string.opt_extra_key_2), trailing = directionalLabel(LauncherPrefs.KEYCODE_EXTRA_2), chevron = true),
-                Row(id = ID_EXTRA_3, title = getString(R.string.opt_extra_key_3), trailing = directionalLabel(LauncherPrefs.KEYCODE_EXTRA_3), chevron = true),
-                Row(id = ID_EXTRA_4, title = getString(R.string.opt_extra_key_4), trailing = directionalLabel(LauncherPrefs.KEYCODE_EXTRA_4), chevron = true),
+                Row(id = ID_EXTRA_1, title = getString(R.string.opt_extra_key_1), trailing = systemLabel, chevron = true),
+                Row(id = ID_EXTRA_2, title = getString(R.string.opt_extra_key_2), trailing = systemLabel, chevron = true),
+                Row(id = ID_EXTRA_3, title = getString(R.string.opt_extra_key_3), trailing = systemLabel, chevron = true),
+                Row(id = ID_EXTRA_4, title = getString(R.string.opt_extra_key_4), trailing = systemLabel, chevron = true),
             ),
         )
     }
@@ -248,10 +250,6 @@ class HomeKeysSettingsActivity : BaseListActivity() {
         KeyEvent.KEYCODE_DPAD_LEFT -> prefs.getDpadLeftApp()
         KeyEvent.KEYCODE_DPAD_RIGHT -> prefs.getDpadRightApp()
         KeyEvent.KEYCODE_CAMERA -> prefs.getCameraKeyApp()
-        LauncherPrefs.KEYCODE_EXTRA_1 -> prefs.getExtraKey1App()
-        LauncherPrefs.KEYCODE_EXTRA_2 -> prefs.getExtraKey2App()
-        LauncherPrefs.KEYCODE_EXTRA_3 -> prefs.getExtraKey3App()
-        LauncherPrefs.KEYCODE_EXTRA_4 -> prefs.getExtraKey4App()
         else -> null
     }
 
@@ -262,10 +260,6 @@ class HomeKeysSettingsActivity : BaseListActivity() {
             KeyEvent.KEYCODE_DPAD_LEFT -> prefs.setDpadLeftApp(key)
             KeyEvent.KEYCODE_DPAD_RIGHT -> prefs.setDpadRightApp(key)
             KeyEvent.KEYCODE_CAMERA -> prefs.setCameraKeyApp(key)
-            LauncherPrefs.KEYCODE_EXTRA_1 -> prefs.setExtraKey1App(key)
-            LauncherPrefs.KEYCODE_EXTRA_2 -> prefs.setExtraKey2App(key)
-            LauncherPrefs.KEYCODE_EXTRA_3 -> prefs.setExtraKey3App(key)
-            LauncherPrefs.KEYCODE_EXTRA_4 -> prefs.setExtraKey4App(key)
         }
     }
 
@@ -291,6 +285,11 @@ class HomeKeysSettingsActivity : BaseListActivity() {
                 }
             }
             .show()
+    }
+
+    private fun openSystemKeySettings() {
+        Toast.makeText(this, R.string.extra_key_system_toast, Toast.LENGTH_LONG).show()
+        openSystemSettings()
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {

@@ -61,7 +61,7 @@ class CallLogRowAdapter(
             } else {
                 null
             }
-            title.text = item.displayName ?: item.number
+            title.text = item.displayName?.takeIf { it.isNotBlank() } ?: item.number
             text.text = callTypeLabel(ctx, item)
             time.text = DateUtils.getRelativeTimeSpanString(
                 item.date,

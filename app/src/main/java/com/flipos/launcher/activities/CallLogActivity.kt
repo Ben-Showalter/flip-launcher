@@ -4,7 +4,9 @@ import com.flipos.launcher.R
 
 import android.Manifest
 import android.os.Bundle
+import android.net.Uri
 import android.provider.CallLog
+import android.provider.ContactsContract
 import android.view.KeyEvent
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
@@ -30,6 +32,10 @@ class CallLogActivity : BaseListActivity() {
 
     private val readCallLogPermission = PermissionGate(this, Manifest.permission.READ_CALL_LOG)
     private val callPermission = PermissionGate(this, Manifest.permission.CALL_PHONE)
+    private val contactsPermission = PermissionGate(this, Manifest.permission.READ_CONTACTS)
+
+    /** Contacts access is asked for at most once per screen visit, never in a loop on denial. */
+    private var contactsRequested = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,6 +61,8 @@ class CallLogActivity : BaseListActivity() {
         refresh()
         if (!readCallLogPermission.isGranted()) {
             requestCallLogAccess()
+        } else {
+            maybeRequestContactsAccess()
         }
     }
 
@@ -96,6 +104,8 @@ class CallLogActivity : BaseListActivity() {
             CallLog.Calls.DURATION,
         )
         val items = ArrayList<CallLogItem>()
+        val lookupContacts = contactsPermission.isGranted()
+        val namesByNumber = HashMap<String, String?>()
         contentResolver.query(
             CallLog.Calls.CONTENT_URI,
             projection,
@@ -110,11 +120,21 @@ class CallLogActivity : BaseListActivity() {
             val dateCol = cursor.getColumnIndexOrThrow(CallLog.Calls.DATE)
             val durationCol = cursor.getColumnIndexOrThrow(CallLog.Calls.DURATION)
             while (cursor.moveToNext()) {
+                val number = cursor.getString(numberCol).orEmpty()
+                // CACHED_NAME is only what the dialer recorded at call time -
+                // often null/blank (contact saved later, OEM dialers that never
+                // fill it, number-format mismatches) - so the live Contacts
+                // match wins whenever there is one.
+                val liveName = if (lookupContacts && number.isNotBlank()) {
+                    namesByNumber.getOrPut(number) { contactName(number) }
+                } else {
+                    null
+                }
                 items.add(
                     CallLogItem(
                         id = cursor.getLong(idCol),
-                        number = cursor.getString(numberCol).orEmpty(),
-                        displayName = cursor.getString(nameCol),
+                        number = number,
+                        displayName = liveName ?: cursor.getString(nameCol)?.takeIf { it.isNotBlank() },
                         type = cursor.getInt(typeCol),
                         date = cursor.getLong(dateCol),
                         duration = cursor.getLong(durationCol),
@@ -123,6 +143,21 @@ class CallLogActivity : BaseListActivity() {
             }
         }
         return items
+    }
+
+    /** The Contacts display name for [number] (PhoneLookup handles formatting differences), or null. */
+    private fun contactName(number: String): String? = try {
+        contentResolver.query(
+            Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(number)),
+            arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME),
+            null,
+            null,
+            null,
+        )?.use { cursor ->
+            if (cursor.moveToFirst()) cursor.getString(0)?.takeIf { it.isNotBlank() } else null
+        }
+    } catch (e: Exception) {
+        null
     }
 
     private fun onCenterPressed() {
@@ -145,8 +180,22 @@ class CallLogActivity : BaseListActivity() {
                     openAppPermissionSettings()
                 }
             },
-            action = { refresh() },
+            action = {
+                refresh()
+                maybeRequestContactsAccess()
+            },
         )
+    }
+
+    /**
+     * Names come from a live Contacts lookup (see [contactName]), which needs
+     * READ_CONTACTS; without it the list still works, just falling back to
+     * the call log's own cached names.
+     */
+    private fun maybeRequestContactsAccess() {
+        if (contactsRequested || contactsPermission.isGranted()) return
+        contactsRequested = true
+        contactsPermission.run(action = { refresh() })
     }
 
     private fun callEntry(item: CallLogItem) {
