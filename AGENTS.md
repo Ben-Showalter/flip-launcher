@@ -162,7 +162,9 @@ Key pieces:
 - `util/WallpaperContrast.kt` measures the wallpaper's brightness (cached
   per wallpaper, off the main thread) and scales Home's and the App
   Drawer's window scrim to it, so text and icons keep their contrast over
-  bright wallpapers without darkening dark ones. The drawer's focused icon
+  bright wallpapers without darkening dark ones. The status bar itself is
+  transparent; the scrim's top fade (`TopFadeScrim`) puts ~98% black behind
+  it and fades out ~48dp below, so there's no hard edge. The drawer's focused icon
   gets a ring in its own color (`SquircleDrawable` ring mode), never a fill
   behind it, which washed out icons drawn in that color.
 - `IconShapeRenderer` masks app icons into a fixed squircle (adaptive icons

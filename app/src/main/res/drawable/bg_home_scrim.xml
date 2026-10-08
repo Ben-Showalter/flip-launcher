@@ -12,4 +12,17 @@
                 android:type="linear" />
         </shape>
     </item>
+    <!-- Near-opaque behind the status bar, fading out below it - shown
+         until WallpaperContrast's measured scrim replaces this. -->
+    <item android:height="72dp" android:gravity="top">
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="270"
+                android:startColor="#FA000000"
+                android:centerColor="#FA000000"
+                android:centerY="0.35"
+                android:endColor="#00000000"
+                android:type="linear" />
+        </shape>
+    </item>
 </layer-list>

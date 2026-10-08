@@ -189,7 +189,7 @@ class AppDrawerActivity : AppCompatActivity() {
         scrimLoader.load(
             produce = { WallpaperContrast.brightness(appContext) },
             consume = { brightness ->
-                if (!isDestroyed) window.setBackgroundDrawable(WallpaperContrast.drawerScrim(brightness))
+                if (!isDestroyed) window.setBackgroundDrawable(WallpaperContrast.drawerScrim(this, brightness))
             },
         )
     }

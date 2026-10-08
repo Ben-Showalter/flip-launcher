@@ -5,6 +5,12 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.ColorFilter
+import android.graphics.LinearGradient
+import android.graphics.Paint
+import android.graphics.PixelFormat
+import android.graphics.Rect
+import android.graphics.Shader
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
@@ -71,17 +77,78 @@ object WallpaperContrast {
      * Home's window background: a top-to-bottom black gradient, heaviest
      * behind the status bar and soft keys, scaled by [brightness].
      */
-    fun homeScrim(brightness: Float): Drawable = GradientDrawable(
-        GradientDrawable.Orientation.TOP_BOTTOM,
-        intArrayOf(
-            black(lerp(0.50f, 0.82f, brightness)),
-            black(lerp(0.12f, 0.40f, brightness)),
-            black(lerp(0.60f, 0.88f, brightness)),
+    fun homeScrim(context: Context, brightness: Float): Drawable = TopFadeScrim(
+        GradientDrawable(
+            GradientDrawable.Orientation.TOP_BOTTOM,
+            intArrayOf(
+                black(lerp(0.50f, 0.82f, brightness)),
+                black(lerp(0.12f, 0.40f, brightness)),
+                black(lerp(0.60f, 0.88f, brightness)),
+            ),
         ),
+        context,
     )
 
     /** The App Drawer's window background: a flat black overlay scaled by [brightness]. */
-    fun drawerScrim(brightness: Float): Drawable = ColorDrawable(black(lerp(0.70f, 0.90f, brightness)))
+    fun drawerScrim(context: Context, brightness: Float): Drawable =
+        TopFadeScrim(ColorDrawable(black(lerp(0.70f, 0.90f, brightness))), context)
+
+    /** How opaque the status bar's backing is, before it fades out. */
+    private const val STATUS_BAR_ALPHA = 0.98f
+
+    /** How far below the status bar its backing fades to nothing. */
+    private const val STATUS_BAR_FADE_DP = 48
+
+    /**
+     * [base] with a top fade over it: [STATUS_BAR_ALPHA] black behind the
+     * (transparent) status bar so its icons read over any wallpaper, then
+     * fading smoothly into [base] over [STATUS_BAR_FADE_DP] - no hard edge.
+     */
+    private class TopFadeScrim(private val base: Drawable, context: Context) : Drawable() {
+
+        private val solidPx: Float = statusBarHeightPx(context).toFloat()
+        private val fadePx: Float = STATUS_BAR_FADE_DP * context.resources.displayMetrics.density
+        private val paint = Paint()
+
+        override fun onBoundsChange(bounds: Rect) {
+            super.onBoundsChange(bounds)
+            base.bounds = bounds
+            val top = bounds.top.toFloat()
+            val end = top + solidPx + fadePx
+            paint.shader = LinearGradient(
+                0f, top, 0f, end,
+                intArrayOf(black(STATUS_BAR_ALPHA), black(STATUS_BAR_ALPHA), Color.TRANSPARENT),
+                floatArrayOf(0f, solidPx / (solidPx + fadePx), 1f),
+                Shader.TileMode.CLAMP,
+            )
+        }
+
+        override fun draw(canvas: Canvas) {
+            base.draw(canvas)
+            val b = bounds
+            canvas.drawRect(b.left.toFloat(), b.top.toFloat(), b.right.toFloat(), b.top + solidPx + fadePx, paint)
+        }
+
+        override fun setAlpha(alpha: Int) {
+            base.alpha = alpha
+            paint.alpha = alpha
+        }
+
+        override fun setColorFilter(colorFilter: ColorFilter?) {
+            base.colorFilter = colorFilter
+            paint.colorFilter = colorFilter
+        }
+
+        @Suppress("OVERRIDE_DEPRECATION")
+        override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
+
+        private fun statusBarHeightPx(context: Context): Int {
+            val res = context.resources
+            val id = res.getIdentifier("status_bar_height", "dimen", "android")
+            val px = if (id != 0) res.getDimensionPixelSize(id) else 0
+            return if (px > 0) px else (24 * res.displayMetrics.density).toInt()
+        }
+    }
 
     private fun black(alpha: Float): Int = Color.argb((alpha.coerceIn(0f, 1f) * 255).toInt(), 0, 0, 0)
 

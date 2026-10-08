@@ -350,7 +350,7 @@ class MainActivity : AppCompatActivity() {
         scrimLoader.load(
             produce = { WallpaperContrast.brightness(appContext) },
             consume = { brightness ->
-                if (!isDestroyed) window.setBackgroundDrawable(WallpaperContrast.homeScrim(brightness))
+                if (!isDestroyed) window.setBackgroundDrawable(WallpaperContrast.homeScrim(this, brightness))
             },
         )
     }
