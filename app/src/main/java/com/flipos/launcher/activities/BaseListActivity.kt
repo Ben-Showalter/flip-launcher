@@ -11,7 +11,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.flipos.launcher.data.LauncherPrefs
 import com.flipos.launcher.ui.SoftKeyBar
-import com.flipos.launcher.ui.listItemAnimator
 import com.flipos.launcher.util.SoftKeyRouter
 import com.flipos.launcher.util.applyFakeBold
 import com.flipos.launcher.util.hideNavigationBar
@@ -65,9 +64,8 @@ abstract class BaseListActivity : AppCompatActivity() {
         val accent = prefs.getAccentColor()
         appliedAccentColor = accent
         if (accent.themeOverlayRes != 0) theme.applyStyle(accent.themeOverlayRes, true)
-        if (!prefs.isAnimationsEnabled()) {
-            theme.applyStyle(R.style.ThemeOverlay_FlipLauncher_NoAnimations, true)
-        }
+        // No motion anywhere: instant navigation is snappier on these phones.
+        theme.applyStyle(R.style.ThemeOverlay_FlipLauncher_NoAnimations, true)
         setContentView(R.layout.activity_list)
         titleView = findViewById(R.id.title)
         listView = findViewById(R.id.list)
@@ -78,9 +76,8 @@ abstract class BaseListActivity : AppCompatActivity() {
         // Only the rows take focus; the container itself never should.
         listView.isFocusable = false
         listView.layoutManager = LinearLayoutManager(this)
-        // Short insert/remove/move animations when enabled; no change cross-fade
-        // (rows rebind often on refresh and it would flicker). Null = instant.
-        listView.itemAnimator = if (prefs.isAnimationsEnabled()) listItemAnimator() else null
+        // No row animations - changes apply instantly.
+        listView.itemAnimator = null
     }
 
     override fun onResume() {

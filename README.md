@@ -82,16 +82,9 @@ categories you drill into:
   - **Accent Color** — cyan (default), red, orange, yellow, green, blue,
     indigo, violet — applied to focus highlights, page dots, toggles, and other
     accents throughout the launcher
-  - **Icon Shape** — squircle, square, rounded square, circle, or none;
-    adaptive icons are masked into the shape, legacy icons get an optional
-    tinted background disc
   - **Icon Pack** — apply any installed icon pack (Nova/ADW/Apex-compatible)
     launcher-wide
   - **App Icon Size** — small / medium / large
-  - **Background for Plain Icons** — toggle the synthesized tint disc for
-    non-adaptive icons
-  - **Animations** (Motion) — fast, lightweight transitions are on by default;
-    turn them off to make navigation instant on the slowest hardware
 - **Notifications**
   - **Notification Access** — grants/checks the permission that powers Notices
     and the Home badges
@@ -161,9 +154,10 @@ their keycode, so you can learn a new phone's buttons without a computer.
   a number pad — no touch required.
 - A shared design-token system (typography, spacing, corner radii) keeps every
   screen consistent and easy to retune.
-- Focus highlights follow the chosen accent color, and animations are kept
-  short and cheap (alpha/scale only) so they stay smooth on weak chipsets — and
-  can be turned off entirely.
+- Focus highlights follow the chosen accent color, and there's no motion:
+  every screen change and list update is instant.
+- Every app icon is a squircle; plain (non-adaptive) icons sit on a solid light
+  gray tile so they stand out from the wallpaper and each other.
 - The phone's own soft-key label bar (the system navigation bar) is hidden on
   every screen in favor of the launcher's own labelled bar.
 

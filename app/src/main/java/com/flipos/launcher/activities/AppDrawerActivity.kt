@@ -94,16 +94,15 @@ class AppDrawerActivity : AppCompatActivity() {
         val accent = prefs.getAccentColor()
         appliedAccentColor = accent
         if (accent.themeOverlayRes != 0) theme.applyStyle(accent.themeOverlayRes, true)
-        if (!prefs.isAnimationsEnabled()) {
-            theme.applyStyle(R.style.ThemeOverlay_FlipLauncher_NoAnimations, true)
-        }
+        // No motion anywhere: instant navigation is snappier on these phones.
+        theme.applyStyle(R.style.ThemeOverlay_FlipLauncher_NoAnimations, true)
         setContentView(R.layout.activity_app_drawer)
 
         grid = findViewById(R.id.apps_grid)
         titleView = findViewById(R.id.title)
         softKeys = findViewById(R.id.soft_keys)
         pageIndicator = findViewById(R.id.page_indicator)
-        pageIndicator.animateChanges = prefs.isAnimationsEnabled()
+        pageIndicator.animateChanges = false
         findViewById<View>(android.R.id.content).applyFakeBold()
 
         // The window shows the wallpaper through a translucent overlay (see

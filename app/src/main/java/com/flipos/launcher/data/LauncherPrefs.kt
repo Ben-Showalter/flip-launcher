@@ -331,36 +331,12 @@ class LauncherPrefs(context: Context) {
 
     // --------------------------------------------------------- Icon wrapping
 
-    /** The shape every wrapped icon is masked into, launcher-wide. */
-    fun getIconShape(): IconShape {
-        val stored = prefs.getString(KEY_ICON_SHAPE, null) ?: return IconShape.CIRCLE
-        return IconShape.entries.find { it.key == stored } ?: IconShape.CIRCLE
-    }
-
-    fun setIconShape(shape: IconShape) {
-        prefs.edit().putString(KEY_ICON_SHAPE, shape.key).apply()
-        AppRepository.invalidateIconCaches()
-    }
-
-    /** Whether non-adaptive icons get a pale color-matched background, or sit on a transparent one. */
-    fun isLegacyIconBackgroundEnabled(): Boolean = prefs.getBoolean(KEY_LEGACY_ICON_BG, false)
-
-    fun setLegacyIconBackgroundEnabled(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_LEGACY_ICON_BG, enabled).apply()
-        AppRepository.invalidateIconCaches()
-    }
-
-    // ------------------------------------------------------------- Animations
-
     /**
-     * Whether UI animations (fast activity fades, list item animations, page
-     * indicator crossfades) are enabled. On by default; users on the slowest
-     * hardware can turn it off for snappier, animation-free navigation.
+     * The shape every wrapped icon is masked into, launcher-wide - fixed to
+     * a squircle (no longer a setting), and every plain (non-adaptive) icon
+     * sits on a solid light gray tile (see IconShapeRenderer).
      */
-    fun isAnimationsEnabled(): Boolean = prefs.getBoolean(KEY_ANIMATIONS, true)
-
-    fun setAnimationsEnabled(enabled: Boolean) =
-        prefs.edit().putBoolean(KEY_ANIMATIONS, enabled).apply()
+    fun getIconShape(): IconShape = IconShape.SQUIRCLE
 
     /** Per-app opt-out: whether [appKey]'s icon gets shape-masked at all. Defaults to on. */
     fun isIconWrapEnabled(appKey: String): Boolean = !getWrapDisabledKeys().contains(appKey)
@@ -482,10 +458,7 @@ class LauncherPrefs(context: Context) {
         private const val KEY_ACCENT_COLOR = "accent_color"
         private const val KEY_THEME_MODE = "theme_mode"
         private const val ICON_OVERRIDE_SEPARATOR = "::"
-        private const val KEY_ICON_SHAPE = "icon_shape"
-        private const val KEY_LEGACY_ICON_BG = "legacy_icon_background"
         private const val KEY_WRAP_DISABLED = "wrap_disabled_apps"
-        private const val KEY_ANIMATIONS = "animations_enabled"
         private const val KEY_APP_ORDER = "app_order"
         private const val KEY_APP_ORDER_SEEDED = "app_order_seeded"
         private const val KEY_SETTINGS_SEED_FIXED = "app_order_settings_seed_fixed"

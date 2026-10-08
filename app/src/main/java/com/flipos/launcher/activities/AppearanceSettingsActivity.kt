@@ -26,17 +26,8 @@ class AppearanceSettingsActivity : BaseListActivity() {
         actions[ID_WALLPAPER] = { startActivity(Intent(this, WallpaperPickerActivity::class.java)) }
         actions[ID_ACCENT] = { chooseAccentColor() }
         actions[ID_THEME] = { chooseTheme() }
-        actions[ID_SHAPE] = { chooseIconShape() }
         actions[ID_PACK] = { startActivity(Intent(this, IconPackActivity::class.java)) }
         actions[ID_SIZE] = { chooseIconSize() }
-        actions[ID_BACKGROUND] = {
-            prefs.setLegacyIconBackgroundEnabled(!prefs.isLegacyIconBackgroundEnabled())
-            refreshRows()
-        }
-        actions[ID_ANIMATIONS] = {
-            prefs.setAnimationsEnabled(!prefs.isAnimationsEnabled())
-            refreshRows()
-        }
 
         adapter = ListRowAdapter(onClick = { dispatch(it) })
         listView.adapter = adapter
@@ -93,12 +84,6 @@ class AppearanceSettingsActivity : BaseListActivity() {
                 ),
                 Row.section(getString(R.string.sec_icons)),
                 Row(
-                    id = ID_SHAPE,
-                    title = getString(R.string.settings_icon_shape),
-                    trailing = getString(prefs.getIconShape().labelRes),
-                    chevron = true,
-                ),
-                Row(
                     id = ID_PACK,
                     title = getString(R.string.settings_icon_pack),
                     trailing = packLabel,
@@ -109,18 +94,6 @@ class AppearanceSettingsActivity : BaseListActivity() {
                     title = getString(R.string.settings_icon_size),
                     trailing = getString(R.string.settings_icon_current, iconSizeLabel, iconPercent),
                     chevron = true,
-                ),
-                Row(
-                    id = ID_BACKGROUND,
-                    title = getString(R.string.settings_icon_background),
-                    toggle = prefs.isLegacyIconBackgroundEnabled(),
-                ),
-                Row.section(getString(R.string.sec_motion)),
-                Row(
-                    id = ID_ANIMATIONS,
-                    title = getString(R.string.settings_animations),
-                    subtitle = getString(R.string.settings_animations_sub),
-                    toggle = prefs.isAnimationsEnabled(),
                 ),
             ),
         )
@@ -180,29 +153,11 @@ class AppearanceSettingsActivity : BaseListActivity() {
             .show()
     }
 
-    private fun chooseIconShape() {
-        val options = LauncherPrefs.IconShape.entries.toTypedArray()
-        val labels = options.map { getString(it.labelRes) }.toTypedArray()
-        val checked = options.indexOf(prefs.getIconShape()).coerceAtLeast(0)
-        AlertDialog.Builder(this)
-            .setTitle(R.string.settings_icon_shape)
-            .setSingleChoiceItems(labels, checked) { dialog, which ->
-                prefs.setIconShape(options[which])
-                Toast.makeText(this, getString(R.string.settings_icon_shape_set, labels[which]), Toast.LENGTH_SHORT).show()
-                refreshRows()
-                dialog.dismiss()
-            }
-            .show()
-    }
-
     companion object {
         private const val ID_WALLPAPER = "wallpaper"
         private const val ID_ACCENT = "accent"
         private const val ID_THEME = "theme"
-        private const val ID_SHAPE = "shape"
         private const val ID_PACK = "pack"
         private const val ID_SIZE = "size"
-        private const val ID_BACKGROUND = "background"
-        private const val ID_ANIMATIONS = "animations"
     }
 }

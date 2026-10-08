@@ -55,9 +55,7 @@ class IconPickerActivity : AppCompatActivity() {
         }
         appKey = key
         prefs.getAccentColor().let { if (it.themeOverlayRes != 0) theme.applyStyle(it.themeOverlayRes, true) }
-        if (!prefs.isAnimationsEnabled()) {
-            theme.applyStyle(R.style.ThemeOverlay_FlipLauncher_NoAnimations, true)
-        }
+        theme.applyStyle(R.style.ThemeOverlay_FlipLauncher_NoAnimations, true)
 
         // Reuses the App Drawer's title/grid/soft-key layout; its page indicator
         // isn't relevant here so it's hidden.

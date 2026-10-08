@@ -424,7 +424,7 @@ object AppRepository {
         if (!wrapEnabled || shape == LauncherPrefs.IconShape.NONE) {
             return rawIcon(context, prefs, componentKey, fallback)
         }
-        val legacyBg = prefs.isLegacyIconBackgroundEnabled()
+        val legacyBg = true
         val cacheKey = iconCacheKey(context, prefs, componentKey, shape, legacyBg)
         renderedIconCache.get(cacheKey)?.let { return BitmapDrawable(context.resources, it) }
 

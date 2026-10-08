@@ -165,9 +165,12 @@ Key pieces:
   bright wallpapers without darkening dark ones. The drawer's focused icon
   gets a ring in its own color (`SquircleDrawable` ring mode), never a fill
   behind it, which washed out icons drawn in that color.
-- `IconShapeRenderer` masks app icons into the user's chosen shape (adaptive
-  icons composite their own fg/bg layers then get clipped; legacy icons get
-  an optional synthesized tinted background disc).
+- `IconShapeRenderer` masks app icons into a fixed squircle (adaptive icons
+  composite their own fg/bg layers then get clipped; legacy icons are drawn
+  on a solid light gray tile). Icon shape, the plain-icon background and
+  animations are deliberately not settings: always squircle, always the gray
+  tile, never any motion (`ThemeOverlay.FlipLauncher.NoAnimations` is always
+  applied, list item animators are off).
 
 ## Bundled icons & wallpapers
 

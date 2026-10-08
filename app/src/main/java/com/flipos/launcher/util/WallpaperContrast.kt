@@ -74,14 +74,14 @@ object WallpaperContrast {
     fun homeScrim(brightness: Float): Drawable = GradientDrawable(
         GradientDrawable.Orientation.TOP_BOTTOM,
         intArrayOf(
-            black(lerp(0.40f, 0.72f, brightness)),
-            black(lerp(0.0f, 0.30f, brightness)),
-            black(lerp(0.50f, 0.80f, brightness)),
+            black(lerp(0.50f, 0.82f, brightness)),
+            black(lerp(0.12f, 0.40f, brightness)),
+            black(lerp(0.60f, 0.88f, brightness)),
         ),
     )
 
     /** The App Drawer's window background: a flat black overlay scaled by [brightness]. */
-    fun drawerScrim(brightness: Float): Drawable = ColorDrawable(black(lerp(0.62f, 0.85f, brightness)))
+    fun drawerScrim(brightness: Float): Drawable = ColorDrawable(black(lerp(0.70f, 0.90f, brightness)))
 
     private fun black(alpha: Float): Int = Color.argb((alpha.coerceIn(0f, 1f) * 255).toInt(), 0, 0, 0)
 

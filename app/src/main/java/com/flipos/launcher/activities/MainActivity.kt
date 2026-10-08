@@ -222,9 +222,8 @@ class MainActivity : AppCompatActivity() {
         val accent = prefs.getAccentColor()
         appliedAccentColor = accent
         if (accent.themeOverlayRes != 0) theme.applyStyle(accent.themeOverlayRes, true)
-        if (!prefs.isAnimationsEnabled()) {
-            theme.applyStyle(R.style.ThemeOverlay_FlipLauncher_NoAnimations, true)
-        }
+        // No motion anywhere: instant navigation is snappier on these phones.
+        theme.applyStyle(R.style.ThemeOverlay_FlipLauncher_NoAnimations, true)
         setContentView(R.layout.activity_main)
         findViewById<View>(android.R.id.content).applyFakeBold()
 
@@ -907,7 +906,7 @@ class MainActivity : AppCompatActivity() {
                 source = icon,
                 shape = LauncherPrefs.IconShape.SQUIRCLE,
                 wrapEnabled = true,
-                legacyBackgroundEnabled = prefs.isLegacyIconBackgroundEnabled(),
+                legacyBackgroundEnabled = true,
             ),
         )
         view.visibility = View.VISIBLE

@@ -137,11 +137,8 @@
     <string name="sec_soft_keys">Soft Keys</string>
     <string name="sec_buttons">Buttons</string>
     <string name="sec_app_drawer">App Drawer</string>
-    <string name="sec_motion">Motion</string>
 
     <!-- Animations -->
-    <string name="settings_animations">Animations</string>
-    <string name="settings_animations_sub">Turn off to speed up older phones</string>
 
     <!-- Settings row subtitles -->
     <string name="settings_wallpaper_sub">Choose a background image</string>
@@ -183,14 +180,11 @@
     <string name="settings_theme_set">Theme set to %1$s</string>
     <string name="theme_mode_dark">Dark (default)</string>
     <string name="theme_mode_light">Light</string>
-    <string name="settings_icon_shape">Icon Shape</string>
-    <string name="settings_icon_shape_set">Icon shape set to %1$s</string>
     <string name="icon_shape_squircle">Squircle</string>
     <string name="icon_shape_square">Square</string>
     <string name="icon_shape_circle">Circle</string>
     <string name="icon_shape_rounded_square">Rounded Square</string>
     <string name="icon_shape_none">None</string>
-    <string name="settings_icon_background">Background for Plain Icons</string>
 
     <!-- Wallpaper picker -->
     <string name="title_wallpaper_picker">Choose Wallpaper</string>
