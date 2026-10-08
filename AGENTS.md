@@ -159,6 +159,12 @@ Key pieces:
 - `LauncherPrefs` is the single SharedPreferences wrapper — all settings
   (icon size/shape/pack, accent color, drawer view mode, badges, shortcuts,
   hidden apps, per-app icon overrides) live there.
+- `util/WallpaperContrast.kt` measures the wallpaper's brightness (cached
+  per wallpaper, off the main thread) and scales Home's and the App
+  Drawer's window scrim to it, so text and icons keep their contrast over
+  bright wallpapers without darkening dark ones. The drawer's focused icon
+  gets a ring in its own color (`SquircleDrawable` ring mode), never a fill
+  behind it, which washed out icons drawn in that color.
 - `IconShapeRenderer` masks app icons into the user's chosen shape (adaptive
   icons composite their own fg/bg layers then get clipped; legacy icons get
   an optional synthesized tinted background disc).

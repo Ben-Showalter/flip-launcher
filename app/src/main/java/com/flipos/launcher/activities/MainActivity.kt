@@ -39,6 +39,7 @@ import com.flipos.launcher.util.KEYCODE_ASSISTANT_RAW
 import com.flipos.launcher.util.KyoceraShortcuts
 import com.flipos.launcher.util.PermissionGate
 import com.flipos.launcher.util.ReadAloud
+import com.flipos.launcher.util.WallpaperContrast
 import com.flipos.launcher.util.accentColorAlpha
 import com.flipos.launcher.util.applyFakeBold
 import com.flipos.launcher.util.hideNavigationBar
@@ -187,6 +188,9 @@ class MainActivity : AppCompatActivity() {
 
     private val loader = BackgroundLoader()
 
+    /** Measures the wallpaper for [applyWallpaperScrim]; separate from [loader] so neither cancels the other. */
+    private val scrimLoader = BackgroundLoader()
+
     private val timeReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) = updateClock()
     }
@@ -260,6 +264,7 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         window.hideNavigationBar()
+        applyWallpaperScrim()
         ContextCompat.registerReceiver(
             this,
             timeReceiver,
@@ -335,8 +340,25 @@ class MainActivity : AppCompatActivity() {
         pressedTapKeys.clear()
     }
 
+    /**
+     * Darkens the window behind this screen more over a bright wallpaper
+     * and less over a dark one, so text and icons keep their contrast -
+     * see [WallpaperContrast]. The theme's fixed scrim shows until the
+     * (cached-per-wallpaper) measurement arrives.
+     */
+    private fun applyWallpaperScrim() {
+        val appContext = applicationContext
+        scrimLoader.load(
+            produce = { WallpaperContrast.brightness(appContext) },
+            consume = { brightness ->
+                if (!isDestroyed) window.setBackgroundDrawable(WallpaperContrast.homeScrim(brightness))
+            },
+        )
+    }
+
     override fun onDestroy() {
         loader.cancel()
+        scrimLoader.cancel()
         super.onDestroy()
     }
 

@@ -27,6 +27,7 @@ import com.flipos.launcher.ui.Row
 import com.flipos.launcher.ui.SoftKeyBar
 import com.flipos.launcher.util.BackgroundLoader
 import com.flipos.launcher.util.SoftKeyRouter
+import com.flipos.launcher.util.WallpaperContrast
 import com.flipos.launcher.util.applyFakeBold
 import com.flipos.launcher.util.hideNavigationBar
 import com.flipos.launcher.util.launchAppByKey
@@ -74,6 +75,9 @@ class AppDrawerActivity : AppCompatActivity() {
     private var appliedAccentColor: LauncherPrefs.AccentColor? = null
 
     private val loader = BackgroundLoader()
+
+    /** Measures the wallpaper for [applyWallpaperScrim]; separate from [loader] so neither cancels the other. */
+    private val scrimLoader = BackgroundLoader()
 
     /**
      * Left soft key has no action here (Back leaves the drawer); Right/MENU
@@ -156,6 +160,7 @@ class AppDrawerActivity : AppCompatActivity() {
         updatePageSize()
         refresh()
         window.hideNavigationBar()
+        applyWallpaperScrim()
     }
 
     override fun onPause() {
@@ -174,8 +179,25 @@ class AppDrawerActivity : AppCompatActivity() {
         pressedDigits.clear()
     }
 
+    /**
+     * Darkens the window behind this screen more over a bright wallpaper
+     * and less over a dark one, so text and icons keep their contrast -
+     * see [WallpaperContrast]. The theme's fixed scrim shows until the
+     * (cached-per-wallpaper) measurement arrives.
+     */
+    private fun applyWallpaperScrim() {
+        val appContext = applicationContext
+        scrimLoader.load(
+            produce = { WallpaperContrast.brightness(appContext) },
+            consume = { brightness ->
+                if (!isDestroyed) window.setBackgroundDrawable(WallpaperContrast.drawerScrim(brightness))
+            },
+        )
+    }
+
     override fun onDestroy() {
         loader.cancel()
+        scrimLoader.cancel()
         super.onDestroy()
     }
 

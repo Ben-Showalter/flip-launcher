@@ -78,7 +78,9 @@ class AppGridAdapter(
     inner class VH(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val icon: ImageView = itemView.findViewById(R.id.icon)
         private val notifDot: View = itemView.findViewById(R.id.notif_dot)
-        private val highlight = SquircleDrawable().also {
+        private val highlight = SquircleDrawable(
+            ringWidthPx = FOCUS_RING_DP * itemView.resources.displayMetrics.density,
+        ).also {
             itemView.findViewById<View>(R.id.icon_frame).background = it
         }
 
@@ -132,6 +134,10 @@ class AppGridAdapter(
          * each on every side: (4 + 2 + 4) * 2. Kept small so icons stay large
          * on tiny QVGA screens where cell height is the binding constraint. */
         const val ITEM_OVERHEAD_DP = 20
+
+        /** Width of the focused icon's ring - it sits in icon_frame's 4dp
+         * padding, around the icon rather than behind it. */
+        private const val FOCUS_RING_DP = 4f
 
         /** The grid always guarantees at least this many rows fit with no
          * scrolling - the 100% icon-size baseline is pinned to this, not to
