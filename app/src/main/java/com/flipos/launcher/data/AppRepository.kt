@@ -10,6 +10,7 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.util.LruCache
 import com.flipos.launcher.util.CategoryApps
+import com.flipos.launcher.util.KyoceraShortcuts
 
 /**
  * Reads launchable apps and individual activities from [PackageManager] and
@@ -55,12 +56,13 @@ object AppRepository {
         val prefs = LauncherPrefs(context)
         val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
         val self = context.packageName
-        // Exclude our own activities except Settings and Notices, which are
-        // deliberately exported with a LAUNCHER category so they show up
-        // here like a regular app.
+        // Exclude our own activities except Settings, Notices and the Kyocera
+        // menu shortcuts, which are deliberately exported with a LAUNCHER
+        // category so they show up here like a regular app.
         val resolveInfos = pm.queryIntentActivities(intent, 0).filter { ri ->
             val ai = ri.activityInfo ?: return@filter false
-            ai.packageName != self || ai.name == SETTINGS_ACTIVITY || ai.name == NOTICES_ACTIVITY
+            ai.packageName != self || ai.name == SETTINGS_ACTIVITY || ai.name == NOTICES_ACTIVITY ||
+                ai.name in KyoceraShortcuts.ALIASES
         }
         // Must run before icons are resolved below, not after (unlike
         // applyAppOrder, which only re-sorts an already-built list) - an

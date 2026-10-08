@@ -88,6 +88,16 @@
              getPackageInfo() visibility check, though it's very likely
              already visible via the generic LAUNCHER query above. -->
         <package android:name="jp.kyocera.settings.nfp" />
+        <!-- Kyocera's own Home app, whose Media Center / Tools / Quick
+             Settings menus get drawer shortcuts (util/KyoceraShortcuts.kt). -->
+        <package android:name="jp.kyocera.kyocerahome" />
+        <!-- Default action for the Mic/Assistant key when no app is assigned. -->
+        <intent>
+            <action android:name="android.intent.action.VOICE_COMMAND" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.ASSIST" />
+        </intent>
     </queries>
 
     <application
@@ -221,6 +231,58 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Drawer shortcuts into Kyocera's own Home menus. Each alias names
+             its target in meta-data; KyoceraShortcutActivity opens it and
+             finishes. Disabled at runtime on phones without Kyocera's Home
+             app (util/KyoceraShortcuts.kt), and listed in the drawer via
+             AppRepository like Settings/Notices. Component names captured on
+             the E4610. -->
+        <activity
+            android:name=".activities.KyoceraShortcutActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.NoDisplay" />
+
+        <activity-alias
+            android:name=".activities.MediaCenterShortcut"
+            android:exported="true"
+            android:icon="@drawable/media_112"
+            android:label="@string/shortcut_media_center"
+            android:targetActivity=".activities.KyoceraShortcutActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="target" android:value="jp.kyocera.kyocerahome/.MediaCenterMenuActivity" />
+        </activity-alias>
+
+        <activity-alias
+            android:name=".activities.ToolsShortcut"
+            android:exported="true"
+            android:icon="@drawable/tools_112"
+            android:label="@string/shortcut_tools"
+            android:targetActivity=".activities.KyoceraShortcutActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="target" android:value="jp.kyocera.kyocerahome/.ToolsMenuActivity" />
+        </activity-alias>
+
+        <activity-alias
+            android:name=".activities.QuickSettingsShortcut"
+            android:exported="true"
+            android:icon="@drawable/quick_settings_112"
+            android:label="@string/shortcut_quick_settings"
+            android:targetActivity=".activities.KyoceraShortcutActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="target" android:value="jp.kyocera.kyocerahome/.QuickSettingsActivity" />
+        </activity-alias>
 
         <!-- Feeds the Home notification summary (calls/messages/other) and the
              custom Notices screen. Requires the user to grant Notification

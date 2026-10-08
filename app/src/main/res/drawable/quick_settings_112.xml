@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Quick Settings app-drawer icon (Kyocera shortcut, see
+     util/KyoceraShortcuts.kt): two green toggle switches, one on and one
+     off. No baked-in background - shape/background is the shared
+     IconShapeRenderer pipeline's job, same as every other icon. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Top switch: on (filled track, knob cut out on the right). -->
+    <path
+        android:fillColor="#3FD17A"
+        android:fillType="evenOdd"
+        android:pathData="M30,20h48a14,14 0 0,1 0,28h-48a14,14 0 0,1 0,-28zM78,26a8,8 0 1,0 0.01,0z" />
+
+    <!-- Bottom switch: off (grey track, green knob on the left). -->
+    <path
+        android:fillColor="#B8C2CC"
+        android:pathData="M30,60h48a14,14 0 0,1 0,28h-48a14,14 0 0,1 0,-28z" />
+    <path
+        android:fillColor="#3FD17A"
+        android:pathData="M30,66a8,8 0 1,0 0.01,0z" />
+
+</vector>

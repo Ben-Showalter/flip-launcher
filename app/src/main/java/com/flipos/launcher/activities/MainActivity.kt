@@ -15,6 +15,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
+import android.speech.RecognizerIntent
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewConfiguration
@@ -33,6 +34,7 @@ import com.flipos.launcher.data.NotificationStore
 import com.flipos.launcher.util.BackgroundLoader
 import com.flipos.launcher.util.CategoryApps
 import com.flipos.launcher.util.KEYCODE_ASSISTANT_RAW
+import com.flipos.launcher.util.KyoceraShortcuts
 import com.flipos.launcher.util.PermissionGate
 import com.flipos.launcher.util.ReadAloud
 import com.flipos.launcher.util.accentColorAlpha
@@ -202,6 +204,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         prefs = LauncherPrefs(this)
         ReadAloud.attach(this)
+        KyoceraShortcuts.syncEnabled(this)
         val accent = prefs.getAccentColor()
         appliedAccentColor = accent
         if (accent.themeOverlayRes != 0) theme.applyStyle(accent.themeOverlayRes, true)
@@ -460,21 +463,25 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * The KaiOS "Recent Calls" action for the Send/Call key. Tries this
-     * hardware's own call log screen first (confirmed via logcat -
-     * `com.android.dialer/.app.calllog.CallLogActivityKc`, the same Kyocera
-     * "Kc" pattern as the notification screen), falling back to our own
-     * [CallLogActivity] if that component isn't present (any other device).
+     * hardware's own call log screen first - the Kyocera "Kc" dialer
+     * activity, whose package path differs by model (see
+     * [SYSTEM_CALL_LOG_COMPONENTS]) - falling back to our own
+     * [CallLogActivity] if none is present (any other device).
      */
     private fun openCallLog() {
-        try {
-            startActivity(
-                Intent(Intent.ACTION_MAIN).setComponent(
-                    ComponentName("com.android.dialer", "com.android.dialer.app.calllog.CallLogActivityKc"),
-                ),
-            )
-        } catch (e: Exception) {
-            startActivity(Intent(this, CallLogActivity::class.java))
+        for (component in SYSTEM_CALL_LOG_COMPONENTS) {
+            try {
+                startActivity(
+                    Intent(Intent.ACTION_MAIN)
+                        .setComponent(component)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+                return
+            } catch (e: Exception) {
+                // Not on this model (or not exported); try the next one.
+            }
         }
+        startActivity(Intent(this, CallLogActivity::class.java))
     }
 
     // ----------------------------------------------------------- Key handling
@@ -738,8 +745,9 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Launches [keyCode]'s bound app immediately, or - if unset - falls back to
-     * the default camera app for Camera, or toasts and jumps to Home
-     * Shortcuts settings for every other key.
+     * the default camera app for Camera or the voice assistant for
+     * Mic/Assistant, or toasts and jumps to Home Shortcuts settings for
+     * every other key (and for Mic when no assistant is installed).
      */
     private fun launchDirectionalKeyApp(keyCode: Int) {
         val key = when (keyCode) {
@@ -759,8 +767,31 @@ class MainActivity : AppCompatActivity() {
             openDefaultCamera()
             return
         }
+        if ((keyCode == KeyEvent.KEYCODE_F4 || keyCode == KEYCODE_ASSISTANT_RAW) && openVoiceAssistant()) return
         Toast.makeText(this, R.string.directional_key_unset_toast, Toast.LENGTH_SHORT).show()
         startActivity(Intent(this, HomeKeysSettingsActivity::class.java))
+    }
+
+    /**
+     * Opens the phone's voice assistant / voice command app for an
+     * unassigned Mic/Assistant key. Returns false when nothing handles any
+     * of the usual intents, so the caller can fall back.
+     */
+    private fun openVoiceAssistant(): Boolean {
+        val intents = listOf(
+            Intent(Intent.ACTION_VOICE_COMMAND),
+            Intent(Intent.ACTION_ASSIST),
+            Intent(RecognizerIntent.ACTION_VOICE_SEARCH_HANDS_FREE),
+        )
+        for (intent in intents) {
+            try {
+                startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                return true
+            } catch (e: Exception) {
+                // Try the next one.
+            }
+        }
+        return false
     }
 
     private fun openDefaultCamera() {
@@ -890,5 +921,15 @@ class MainActivity : AppCompatActivity() {
          * see [dispatchKeyEvent].
          */
         private val SYSTEM_KEY_SCAN_CODES = setOf(763, 764, 765, 766, 172, 213, 231)
+
+        /**
+         * The Kyocera dialer's own call log, tried in order by [openCallLog]:
+         * `.calllog.CallLogActivityKc` is the E4610's (confirmed via logcat),
+         * `.app.calllog.CallLogActivityKc` the newer models'.
+         */
+        private val SYSTEM_CALL_LOG_COMPONENTS = listOf(
+            ComponentName("com.android.dialer", "com.android.dialer.calllog.CallLogActivityKc"),
+            ComponentName("com.android.dialer", "com.android.dialer.app.calllog.CallLogActivityKc"),
+        )
     }
 }

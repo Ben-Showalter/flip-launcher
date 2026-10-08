@@ -71,6 +71,18 @@ person's laptop.
   dots, since accessibility has no "list active notifications" or removal
   event.
 
+- **Kyocera component names** (captured from logcat on the E4610; not yet
+  verified on the E4810/E4811 - every launch falls back or toasts, never
+  crashes): the dialer's call log is `com.android.dialer/.calllog.CallLogActivityKc`
+  on the E4610 and `.app.calllog.CallLogActivityKc` on newer models (both are
+  tried, see `MainActivity.openCallLog`). Kyocera's Home menus are
+  `jp.kyocera.kyocerahome/.MediaCenterMenuActivity`, `.ToolsMenuActivity` and
+  `.QuickSettingsActivity`, exposed as drawer shortcuts via `<activity-alias>`
+  entries of `KyoceraShortcutActivity` (see `util/KyoceraShortcuts.kt`; add a
+  new one there and in the manifest). The Mic/Assistant key reports keycode
+  287 (scan 171) on the E4610, even with the launcher focused; other builds
+  send `KEYCODE_F4`, so both are handled.
+
 ## Flip-DumbPhoneGuide conventions
 
 This app follows the house rules in

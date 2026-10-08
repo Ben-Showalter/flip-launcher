@@ -139,6 +139,8 @@ class HomeKeysSettingsActivity : BaseListActivity() {
         val systemLabel = getString(R.string.opt_extra_key_system)
         val cameraLabel = prefs.getCameraKeyApp()?.let { AppRepository.resolveComponent(this, it)?.label }
             ?: getString(R.string.opt_camera_key_default)
+        val assistantLabel = prefs.getAssistantKeyApp()?.let { AppRepository.resolveComponent(this, it)?.label }
+            ?: getString(R.string.opt_assistant_key_default)
 
         adapter.submit(
             listOf(
@@ -154,7 +156,7 @@ class HomeKeysSettingsActivity : BaseListActivity() {
                 Row(id = ID_DPAD_LEFT, title = getString(R.string.opt_dpad_left), trailing = directionalLabel(KeyEvent.KEYCODE_DPAD_LEFT), chevron = true),
                 Row(id = ID_DPAD_RIGHT, title = getString(R.string.opt_dpad_right), trailing = directionalLabel(KeyEvent.KEYCODE_DPAD_RIGHT), chevron = true),
                 Row(id = ID_CAMERA_KEY, title = getString(R.string.opt_camera_key), trailing = cameraLabel, chevron = true),
-                Row(id = ID_ASSISTANT_KEY, title = getString(R.string.opt_assistant_key), trailing = directionalLabel(KeyEvent.KEYCODE_F4), chevron = true),
+                Row(id = ID_ASSISTANT_KEY, title = getString(R.string.opt_assistant_key), trailing = assistantLabel, chevron = true),
                 Row.section(getString(R.string.sec_extra_keys)),
                 Row(id = ID_EXTRA_1, title = getString(R.string.opt_extra_key_1), trailing = systemLabel, chevron = true),
                 Row(id = ID_EXTRA_2, title = getString(R.string.opt_extra_key_2), trailing = systemLabel, chevron = true),

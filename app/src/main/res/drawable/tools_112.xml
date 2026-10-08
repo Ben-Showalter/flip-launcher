@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Tools app-drawer icon (Kyocera shortcut, see
+     util/KyoceraShortcuts.kt): a yellow toolbox - handle, lid band and
+     body. No baked-in background - shape/background is the shared
+     IconShapeRenderer pipeline's job, same as every other icon. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Handle: a rectangle with its middle cut out (evenOdd). -->
+    <path
+        android:fillColor="#F4C21F"
+        android:fillType="evenOdd"
+        android:pathData="M40,22h28v16h-28zM46,28h16v10h-16z" />
+
+    <!-- Body, with a transparent seam between lid and box. -->
+    <path
+        android:fillColor="#F4C21F"
+        android:fillType="evenOdd"
+        android:pathData="M16,38h76v48h-76zM16,54h76v4h-76z" />
+
+    <!-- Latch. -->
+    <path
+        android:fillColor="#B8C2CC"
+        android:pathData="M48,50h12v12h-12z" />
+
+</vector>

@@ -74,6 +74,7 @@
     <string name="opt_camera_key">Camera Button</string>
     <string name="opt_camera_key_default">Camera app (default)</string>
     <string name="opt_assistant_key">Mic / Assistant Button</string>
+    <string name="opt_assistant_key_default">Voice assistant (default)</string>
 
     <!-- Outer buttons (identified by scan code, see MainActivity) - bound in
          the phone's own Settings, not by the launcher. -->
@@ -254,4 +255,9 @@
     <string name="cd_notif_calls">Missed calls</string>
     <string name="cd_notif_messages">Messages</string>
     <string name="cd_notif_other">Other notifications</string>
+
+    <!-- Drawer shortcuts into Kyocera's own Home menus (util/KyoceraShortcuts.kt). -->
+    <string name="shortcut_media_center">Media Center</string>
+    <string name="shortcut_tools">Tools</string>
+    <string name="shortcut_quick_settings">Quick Settings</string>
 </resources>

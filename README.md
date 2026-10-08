@@ -48,6 +48,10 @@ goes back.
 ![App Drawer Grid](reference/apps.png)
 ![App Drawer List](reference/list.png)
 
+- On Kyocera phones the drawer also lists **Media Center**, **Tools** and
+  **Quick Settings**, which open Kyocera's own Home menus. They can be pinned
+  to Home or a key like any other app, and are hidden on other phones.
+
 ### Notices
 
 A custom notification list standing in for the system shade, which isn't
@@ -137,10 +141,10 @@ focused app is hidden from Home and the App Drawer.
 | Right soft key | Contacts (assignable) | Options |
 | Menu | All Apps (hold: assignable app) | Options |
 | Back / Clear | All Apps (hold: assignable app) | Back |
-| Call | Recent Calls | Call the focused entry (Recent Calls) |
+| Call | The phone's own call log (falls back to the launcher's Recent Calls) | Call the focused entry (Recent Calls) |
 | 0-9, `*`, `#` | Open the dialer prefilled; hold 2-9 for speed dial, 1 for voicemail | 1-9 launch the matching app on the drawer's grid page |
 | D-pad | Assignable app per direction | Move focus |
-| Camera / Mic (Assistant) | Assignable app (Camera opens the camera by default) | - |
+| Camera / Mic (Assistant) | Assignable app (by default Camera opens the camera, Mic the voice assistant) | - |
 
 Hold any assignable Home key for 5 seconds to pick its app on the spot. Keys
 the launcher doesn't recognize show a short "Unrecognized key" toast with
