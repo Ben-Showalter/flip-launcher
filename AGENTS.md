@@ -96,7 +96,8 @@ person's laptop.
   how long it's held, so a long press can't be detected (a hold timer never
   fires - tried and reverted). Instead an assigned one opens its app on a
   single press, but only while Home has focus, the screen is on, the
-  keyguard is down and the flip is open (`MainActivity.isSafeForOuterKey`),
+  keyguard is down (`MainActivity.outerKeyBlockReason`; a closed flip turns the
+  screen off, and the keyboard-hidden flag is unreliable on these keypads),
   so a phone in a pocket does nothing. No hold-to-assign. Other screens
   leave them to the phone, with no unknown-key toast.
 - **Category lookups** (`CategoryApps`): `resolveActivity()` returns

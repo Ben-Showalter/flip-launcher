@@ -11,7 +11,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
-import android.content.res.Configuration
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -523,7 +522,7 @@ class MainActivity : AppCompatActivity() {
     // outerKeyFor) and handled in [onOuterKeyEvent]. These phones report
     // only the press - never how long it's held - so a long press can't be
     // detected; instead an assigned button opens its app on a single press,
-    // but only when it's safe to (see [isSafeForOuterKey]), so a press in a
+    // but only when it's safe to (see [outerKeyBlockReason]), so a press in a
     // pocket or with the flip closed does nothing. There's no hold-to-assign
     // (Settings only). One with no app assigned is reported unhandled, so
     // the system's own binding (or default) applies - on the E4610 that
@@ -709,29 +708,37 @@ class MainActivity : AppCompatActivity() {
     /**
      * Opens an outer button's assigned app on whichever half of the press
      * arrives first (once per press, keyed by [KeyEvent.getDownTime]) - only
-     * if [isSafeForOuterKey]. Both halves are consumed either way.
+     * unless [outerKeyBlockReason] says not to. Both halves are consumed either way.
      */
     private fun onOuterKeyEvent(keyCode: Int, event: KeyEvent) {
         if (event.action != KeyEvent.ACTION_DOWN && event.action != KeyEvent.ACTION_UP) return
         if (extraKeyFiredDownTime[keyCode] == event.downTime) return
         extraKeyFiredDownTime[keyCode] = event.downTime
-        if (isSafeForOuterKey()) launchDirectionalKeyApp(keyCode)
+        val blocked = outerKeyBlockReason()
+        if (blocked == null) {
+            launchDirectionalKeyApp(keyCode)
+        } else if (blocked != 0) {
+            // Say why on screen (the user has no logcat); a screen-off press
+            // stays silent - nobody's looking, and it's the pocket case.
+            Toast.makeText(this, blocked, Toast.LENGTH_SHORT).show()
+        }
     }
 
     /**
-     * Whether an outer button may launch anything right now: Home is the
-     * window in front, the screen is on, the phone isn't on its lock screen
-     * and the flip is open - so a press in a pocket or bag does nothing.
+     * Why an outer button may not launch anything right now, as a message
+     * string res (0 = screen off, stay silent), or null if it may. Blocks a
+     * press when the screen is off (a closed flip turns the main screen off
+     * too, so this is also the flip check - Android's keyboard-hidden flag
+     * isn't reliable on these keypads), on the lock screen, or when Home
+     * isn't the window in front.
      */
-    private fun isSafeForOuterKey(): Boolean {
-        if (!hasWindowFocus()) return false
+    private fun outerKeyBlockReason(): Int? {
         val power = getSystemService(Context.POWER_SERVICE) as? PowerManager
-        if (power != null && !power.isInteractive) return false
+        if (power != null && !power.isInteractive) return 0
         val keyguard = getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
-        if (keyguard != null && keyguard.isKeyguardLocked) return false
-        // A closed flip hides the keypad; Kyocera flips also turn the main
-        // screen off, which the isInteractive check above already covers.
-        return resources.configuration.hardKeyboardHidden != Configuration.HARDKEYBOARDHIDDEN_YES
+        if (keyguard != null && keyguard.isKeyguardLocked) return R.string.outer_key_blocked_locked
+        if (!hasWindowFocus()) return R.string.outer_key_blocked_focus
+        return null
     }
 
     private fun cancelDigitHold(keyCode: Int) {

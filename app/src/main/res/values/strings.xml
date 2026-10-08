@@ -84,6 +84,8 @@
     <string name="opt_extra_key_3">Outer Speaker Key</string>
     <string name="opt_extra_key_4">PTT</string>
     <string name="opt_extra_key_system">Phone default</string>
+    <string name="outer_key_blocked_locked">Unlock the phone to use this button</string>
+    <string name="outer_key_blocked_focus">Close the open menu to use this button</string>
     <string name="extra_key_phone_setting">Use phone\'s own setting</string>
     <string name="extra_key_system_toast">Set this button in the phone\'s Settings</string>
 
