@@ -167,7 +167,7 @@ Key pieces:
   behind it, which washed out icons drawn in that color.
 - `IconShapeRenderer` masks app icons into a fixed squircle (adaptive icons
   composite their own fg/bg layers then get clipped; legacy icons are drawn
-  on a solid light gray tile). Icon shape, the plain-icon background and
+  on a solid medium-dark gray tile). Icon shape, the plain-icon background and
   animations are deliberately not settings: always squircle, always the gray
   tile, never any motion (`ThemeOverlay.FlipLauncher.NoAnimations` is always
   applied, list item animators are off).

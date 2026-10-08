@@ -156,8 +156,8 @@ their keycode, so you can learn a new phone's buttons without a computer.
   screen consistent and easy to retune.
 - Focus highlights follow the chosen accent color, and there's no motion:
   every screen change and list update is instant.
-- Every app icon is a squircle; plain (non-adaptive) icons sit on a solid light
-  gray tile so they stand out from the wallpaper and each other.
+- Every app icon is a squircle; plain (non-adaptive) icons sit on a solid
+  medium-dark gray tile that doesn't match any app's colors.
 - The phone's own soft-key label bar (the system navigation bar) is hidden on
   every screen in favor of the launcher's own labelled bar.
 

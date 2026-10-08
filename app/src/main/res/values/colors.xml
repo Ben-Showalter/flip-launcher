@@ -8,6 +8,8 @@
     <color name="kai_softkey_bg">#07080B</color>
     <color name="kai_on_accent">#08222B</color>
     <color name="kai_overlay">#B3000000</color>
+    <!-- Behind the status bar on Home / App Drawer: 98% black. -->
+    <color name="status_bar_scrim">#FA000000</color>
 
     <!-- Light theme counterparts for the neutral palette above (see
          Theme.FlipLauncher.Light in themes.xml). kai_on_accent is reused

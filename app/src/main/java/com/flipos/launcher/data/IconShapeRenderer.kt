@@ -23,8 +23,9 @@ import kotlin.math.sin
  * (the app developer's intended look) and then clipped to the shape — the
  * shape is ours to pick, the artwork inside it stays theirs. Non-adaptive
  * (legacy) icons have no background layer of their own, so they're drawn on
- * a solid light gray tile ([LEGACY_BACKGROUND]) - one neutral backing for
- * every plain icon, so none blends into the wallpaper or its neighbors.
+ * a solid medium-dark neutral gray tile ([LEGACY_BACKGROUND]) - one backing
+ * for every plain icon, dark and colorless enough not to match any app's
+ * own colors, so none blends into the tile, the wallpaper or its neighbors.
  */
 object IconShapeRenderer {
 
@@ -43,8 +44,8 @@ object IconShapeRenderer {
      */
     private const val ADAPTIVE_ICON_SCALE = 1.5625f
 
-    /** The solid light gray every legacy (non-adaptive) icon sits on. */
-    private const val LEGACY_BACKGROUND = 0xFFDADDE2.toInt()
+    /** The solid neutral gray every legacy (non-adaptive) icon sits on. */
+    private const val LEGACY_BACKGROUND = 0xFF5C6066.toInt()
 
     fun render(
         context: Context,

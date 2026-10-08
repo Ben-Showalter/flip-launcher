@@ -66,14 +66,13 @@
     </style>
 
     <!-- Home screen: show the user's wallpaper behind the clock & shortcuts.
-         The scrim lives on the window background (not the content view) so it
-         extends behind the status bar instead of being clipped by
-         fitsSystemWindows, keeping the status bar's darkening consistent with
-         the rest of the screen. -->
+         The scrim lives on the window background (not the content view);
+         the status bar itself gets a near-opaque (98%) black strip so its
+         icons stay readable over any wallpaper. -->
     <style name="Theme.FlipLauncher.Home" parent="Theme.FlipLauncher">
         <item name="android:windowShowWallpaper">true</item>
         <item name="android:windowBackground">@drawable/bg_home_scrim</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:statusBarColor">@color/status_bar_scrim</item>
     </style>
 
     <!-- App drawer: wallpaper behind a translucent black scrim, edge to edge,
