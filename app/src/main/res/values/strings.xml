@@ -26,15 +26,9 @@
     <string name="opt_menu_key">Menu Key (Long-Press)</string>
 
     <!-- App drawer context options -->
-    <string name="ctx_open">Open</string>
     <string name="ctx_move">Move</string>
     <string name="ctx_hide">Hide App</string>
     <string name="ctx_change_icon">Change Icon</string>
-    <string name="ctx_reset_icon">Reset Icon</string>
-    <string name="ctx_disable_wrap">Don\'t Wrap Icon</string>
-    <string name="ctx_enable_wrap">Wrap Icon</string>
-    <string name="ctx_uninstall">Uninstall</string>
-    <string name="ctx_settings">Settings</string>
 
     <!-- Screen titles -->
     <string name="title_all_apps">All Apps</string>
@@ -53,7 +47,6 @@
     <string name="empty_slot">Empty</string>
     <string name="content_apps">Open apps menu</string>
     <string name="hidden_badge">Hidden</string>
-    <string name="choose_home_app">Choose this app as your Home screen to finish setup.</string>
     <string name="back_longpress_not_set">Not set</string>
     <string name="back_longpress_choose">Choose App</string>
     <string name="back_longpress_clear">Clear</string>
@@ -116,20 +109,17 @@
     <string name="calllog_duration_format">%1$s · %2$s</string>
 
     <!-- Settings hub (unified Options + Launcher Settings) -->
-    <string name="title_settings">Launcher Settings</string>
+    <string name="title_settings">Home Screen Settings</string>
     <string name="cat_appearance">Appearance</string>
     <string name="cat_appearance_sub">Wallpaper, colors, icons</string>
     <string name="cat_notifications">Notifications</string>
-    <string name="cat_notifications_sub">Badges and access</string>
-    <string name="cat_home_keys">Home Shortcuts</string>
-    <string name="cat_home_keys_sub">Soft keys and shortcuts</string>
-    <string name="cat_apps_drawer">Apps &amp; Drawer</string>
-    <string name="cat_apps_drawer_sub">Drawer layout, hidden apps</string>
+    <string name="cat_notifications_sub">Home banner, read aloud, icon dots</string>
+    <string name="cat_home_keys">Home Screen &amp; Keys</string>
+    <string name="cat_home_keys_sub">Soft keys, buttons, speed dial</string>
+    <string name="cat_apps_drawer">App List</string>
+    <string name="cat_apps_drawer_sub">Grid or list, hidden apps</string>
 
     <!-- Settings section headers -->
-    <string name="sec_personalize">Personalize</string>
-    <string name="sec_home_apps">Home &amp; Apps</string>
-    <string name="sec_system">System</string>
     <string name="sec_wallpaper_color">Wallpaper &amp; Color</string>
     <string name="sec_icons">Icons</string>
     <string name="sec_notif_access">Access</string>
@@ -194,7 +184,6 @@
 
     <!-- Toasts -->
     <string name="toast_app_hidden">%1$s hidden</string>
-    <string name="toast_uninstall_failed">Can\'t uninstall app</string>
     <string name="toast_not_available">Not available on this device</string>
     <!-- Manual D-pad paths shown alongside (or instead of) system Settings screens. -->
     <string name="toast_settings_manual_path">Couldn\'t open Settings. Go to: %1$s</string>
@@ -269,4 +258,44 @@
     <string name="shortcut_media_center">Media Center</string>
     <string name="shortcut_tools">Tools</string>
     <string name="shortcut_quick_settings">Quick Settings</string>
+
+    <!-- Settings structure (hub → category → group) -->
+    <string name="cat_advanced">Advanced</string>
+    <string name="cat_advanced_sub">Default launcher, access, phone settings</string>
+    <string name="keys_group_navigation">Navigation &amp; Soft Keys</string>
+    <string name="keys_group_navigation_sub">Soft keys, D-pad, Back and Menu</string>
+    <string name="keys_group_other">Other Buttons</string>
+    <string name="keys_group_other_sub">Camera, Mic, SOS, outer buttons</string>
+    <string name="notif_group_banner">Home Banner</string>
+    <string name="notif_group_banner_sub">Which notifications show on Home</string>
+
+    <!-- Advanced -->
+    <string name="settings_default_launcher_yes">Yes</string>
+    <string name="settings_default_launcher_no">No — select to set</string>
+    <string name="settings_accessibility_access">Accessibility</string>
+    <string name="settings_accessibility_access_sub">Shows new notifications on Home and as icon dots on this phone, and reads messages aloud</string>
+    <string name="settings_settings_chooser">Ask which Settings to open</string>
+    <string name="settings_settings_chooser_sub">When opening Settings, choose Phone or Home Screen settings</string>
+    <string name="settings_phone_settings">Phone Settings</string>
+    <string name="path_default_launcher">Select Flip Launcher as the Home app</string>
+
+    <!-- Settings chooser -->
+    <string name="settings_chooser_title">Open which Settings?</string>
+    <string name="settings_chooser_phone">Phone Settings — Wi-Fi, sound, display and the rest of the phone</string>
+    <string name="settings_chooser_home">Home Screen Settings — this launcher\'s look, keys and app list</string>
+    <string name="settings_chooser_dont_ask">Don\'t ask again</string>
+
+    <!-- Startup prompts -->
+    <string name="prompt_default_title">Set Flip Launcher as your Home screen?</string>
+    <string name="prompt_default_message">Flip Launcher isn\'t your Home screen yet, so pressing the Home or End key won\'t bring you back here. Choose Flip Launcher on the next screen.</string>
+    <string name="prompt_accessibility_title">Turn on Accessibility?</string>
+    <string name="prompt_accessibility_message">On this phone, Flip Launcher needs Accessibility to show new notifications on the Home screen and as dots on app icons, and to read messages aloud. Select Flip Launcher on the next screen and turn it on.</string>
+    <string name="prompt_open_settings">Open Settings</string>
+    <string name="prompt_not_now">Not now</string>
+
+    <!-- App list Options menu -->
+    <string name="ctx_home_settings">Home Screen Settings</string>
+    <string name="ctx_list_view">Switch to List View</string>
+    <string name="ctx_grid_view">Switch to Grid View</string>
+    <string name="icon_picker_original">Original icon</string>
 </resources>

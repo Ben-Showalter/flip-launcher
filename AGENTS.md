@@ -67,9 +67,10 @@ person's laptop.
   manifest/service/grant flow - don't re-diagnose it from scratch.
   `service/NotificationAccessibilityService.kt` is the fallback (a separate
   OS subsystem, `AccessibilityService`'s notification events, not gated by
-  the same allowlist) - it only feeds the Home banner, not Notices/icon
-  dots, since accessibility has no "list active notifications" or removal
-  event.
+  the same allowlist) - it feeds the Home banner and the app list's icon
+  dots (`AppDrawerActivity.hasNotification` reads both sources), not
+  Notices, since accessibility has no "list active notifications" or
+  removal event. Home asks to turn it on at startup if it's off.
 
 - **Kyocera component names** (captured from logcat on the E4610; not yet
   verified on the E4810/E4811 - every launch falls back or toasts, never
@@ -153,6 +154,18 @@ Key pieces:
   Hide Apps, Shortcuts, App/Activity Picker, Notices). It also owns the
   accent-color theme-overlay-on-`onCreate` + recreate-on-resume-if-changed
   pattern — new list screens should extend it rather than reinventing this.
+- **Settings structure** (TurboText-style): `SettingsActivity` is a flat
+  list of categories (Appearance, Home Screen & Keys, App List,
+  Notifications, Advanced), each its own screen; long categories open to a
+  short menu whose rows reopen the same activity with an `EXTRA_GROUP`
+  (`HomeKeysSettingsActivity`: navigation / other; `NotificationSettingsActivity`:
+  banner / read_aloud). No section headers. System hand-offs (default
+  launcher, accessibility, notification and call-log access, phone settings)
+  live in `AdvancedSettingsActivity`. The hub isn't in the app list; the
+  phone's Settings entry asks Phone vs Home Screen Settings
+  (`util/Launch.kt`, off via "Don't ask again", back on in Advanced). Home
+  shows a default-launcher prompt, then an Accessibility prompt, at startup
+  (`MainActivity.maybeShowStartupPrompts`; checks in `util/AccessChecks.kt`).
 - `ListRowAdapter` + `Row` is the generic one-line-or-icon-row adapter reused
   across those list screens; `AppGridAdapter` is the App Drawer's icon grid;
   `NoticeRowAdapter` is the richer 3-line notice row.

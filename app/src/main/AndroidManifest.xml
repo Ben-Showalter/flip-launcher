@@ -133,20 +133,22 @@
             </intent-filter>
         </activity>
 
-        <!-- Unified settings hub. Exported with a LAUNCHER category so it also
-             appears in the app drawer like a regular app for discoverability. -->
+        <!-- Settings hub ("Home Screen Settings"). Not in the app list: the
+             phone's own Settings entry there asks Phone vs Home Screen
+             settings instead (util/Launch.kt). -->
         <activity
             android:name=".activities.SettingsActivity"
-            android:exported="true"
+            android:exported="false"
             android:icon="@drawable/settings_112"
             android:label="@string/title_settings"
             android:screenOrientation="portrait"
-            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize|screenLayout|smallestScreenSize">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize|screenLayout|smallestScreenSize" />
+
+        <activity
+            android:name=".activities.AdvancedSettingsActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize|screenLayout|smallestScreenSize" />
 
         <activity
             android:name=".activities.AppearanceSettingsActivity"

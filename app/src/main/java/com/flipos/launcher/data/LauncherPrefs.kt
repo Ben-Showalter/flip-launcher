@@ -155,6 +155,17 @@ class LauncherPrefs(context: Context) {
         prefs.edit().putString(KEY_APP_ORDER, order.joinToString(APP_ORDER_SEPARATOR)).apply()
     }
 
+    /**
+     * Whether opening the phone's Settings from the launcher first asks
+     * Phone Settings vs Home Screen Settings (util/Launch.kt). On until the
+     * user picks "Don't ask again"; turned back on from Advanced.
+     */
+    fun isSettingsChooserEnabled(): Boolean = prefs.getBoolean(KEY_SETTINGS_CHOOSER, true)
+
+    fun setSettingsChooserEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_SETTINGS_CHOOSER, enabled).apply()
+    }
+
     /** Whether the one-time app-order seeding ([AppRepository]) has already run. */
     fun isAppOrderSeeded(): Boolean = prefs.getBoolean(KEY_APP_ORDER_SEEDED, false)
 
@@ -441,6 +452,7 @@ class LauncherPrefs(context: Context) {
         private const val SPEED_DIAL_SEPARATOR = "::"
         private const val KEY_APP_ORDER_V4_SEEDED = "app_order_v4_seeded"
         private const val KEY_AUTO_ICONS_REVERTED = "auto_icons_reverted"
+        private const val KEY_SETTINGS_CHOOSER = "settings_chooser"
         private const val KEY_ICON_SIZE_PERCENT = "icon_size_percent"
         private const val KEY_RIGHT_KEY_APP = "right_key_app"
         private const val KEY_LEFT_KEY_APP = "left_key_app"

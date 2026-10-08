@@ -66,12 +66,13 @@ object AppRepository {
         val prefs = LauncherPrefs(context)
         val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
         val self = context.packageName
-        // Exclude our own activities except Settings, Notices and the Kyocera
-        // menu shortcuts, which are deliberately exported with a LAUNCHER
-        // category so they show up here like a regular app.
+        // Exclude our own activities except Notices and the Kyocera menu
+        // shortcuts, which are deliberately exported with a LAUNCHER category
+        // so they show up here like a regular app. (Our Settings hub is
+        // reached through the phone's Settings entry's chooser instead.)
         val resolveInfos = pm.queryIntentActivities(intent, 0).filter { ri ->
             val ai = ri.activityInfo ?: return@filter false
-            ai.packageName != self || ai.name == SETTINGS_ACTIVITY || ai.name == NOTICES_ACTIVITY ||
+            ai.packageName != self || ai.name == NOTICES_ACTIVITY ||
                 ai.name in KyoceraShortcuts.ALIASES
         }
         // Must run before icons are resolved below, so the very first

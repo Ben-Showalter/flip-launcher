@@ -63,7 +63,6 @@ class AppearanceSettingsActivity : BaseListActivity() {
 
         adapter.submit(
             listOf(
-                Row.section(getString(R.string.sec_wallpaper_color)),
                 Row(
                     id = ID_WALLPAPER,
                     title = getString(R.string.opt_set_wallpaper),
@@ -82,7 +81,6 @@ class AppearanceSettingsActivity : BaseListActivity() {
                     trailing = getString(prefs.getThemeMode().labelRes),
                     chevron = true,
                 ),
-                Row.section(getString(R.string.sec_icons)),
                 Row(
                     id = ID_PACK,
                     title = getString(R.string.settings_icon_pack),

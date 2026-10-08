@@ -14,12 +14,18 @@ import com.flipos.launcher.ui.ListRowAdapter
 import com.flipos.launcher.ui.Row
 import com.flipos.launcher.util.openSystemSettings
 
-/** Home screen key bindings and shortcut management. */
+/**
+ * Home screen key bindings. Opens to a short menu - Navigation & Soft Keys,
+ * Other Buttons (each its own screen, via [EXTRA_GROUP]) and Speed Dial.
+ */
 class HomeKeysSettingsActivity : BaseListActivity() {
 
     private lateinit var prefs: LauncherPrefs
     private lateinit var adapter: ListRowAdapter
     private val actions = HashMap<String, () -> Unit>()
+
+    /** Which group this screen shows ([GROUP_NAVIGATION] / [GROUP_OTHER]), or null for the menu. */
+    private var group: String? = null
 
     private val pickRightKeyApp = registerForActivityResult(StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
@@ -89,7 +95,16 @@ class HomeKeysSettingsActivity : BaseListActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = LauncherPrefs(this)
-        titleView.text = getString(R.string.cat_home_keys)
+        group = intent.getStringExtra(EXTRA_GROUP)
+        titleView.text = getString(
+            when (group) {
+                GROUP_NAVIGATION -> R.string.keys_group_navigation
+                GROUP_OTHER -> R.string.keys_group_other
+                else -> R.string.cat_home_keys
+            },
+        )
+        actions[ID_GROUP_NAVIGATION] = { openGroup(GROUP_NAVIGATION) }
+        actions[ID_GROUP_OTHER] = { openGroup(GROUP_OTHER) }
 
         actions[ID_LEFT_KEY] = { chooseLeftKey() }
         actions[ID_RIGHT_KEY] = { chooseRightKey() }
@@ -127,7 +142,30 @@ class HomeKeysSettingsActivity : BaseListActivity() {
         refreshRows()
     }
 
+    private fun openGroup(id: String) =
+        startActivity(Intent(this, HomeKeysSettingsActivity::class.java).putExtra(EXTRA_GROUP, id))
+
     private fun refreshRows() {
+        if (group == null) {
+            adapter.submit(
+                listOf(
+                    Row(
+                        id = ID_GROUP_NAVIGATION,
+                        title = getString(R.string.keys_group_navigation),
+                        subtitle = getString(R.string.keys_group_navigation_sub),
+                        chevron = true,
+                    ),
+                    Row(
+                        id = ID_GROUP_OTHER,
+                        title = getString(R.string.keys_group_other),
+                        subtitle = getString(R.string.keys_group_other_sub),
+                        chevron = true,
+                    ),
+                    Row(id = ID_SPEED_DIAL, title = getString(R.string.opt_speed_dial), chevron = true),
+                ),
+            )
+            return
+        }
         val leftLabel = prefs.getLeftKeyApp()?.let { AppRepository.resolveComponent(this, it)?.label }
             ?: getString(R.string.settings_left_key_contacts)
         val rightLabel = prefs.getRightKeyApp()?.let { AppRepository.resolveComponent(this, it)?.label }
@@ -146,27 +184,27 @@ class HomeKeysSettingsActivity : BaseListActivity() {
             ?: getString(R.string.opt_assistant_key_default)
 
         adapter.submit(
-            listOf(
-                Row.section(getString(R.string.sec_soft_keys)),
-                Row(id = ID_LEFT_KEY, title = getString(R.string.settings_left_key), trailing = leftLabel, chevron = true),
-                Row(id = ID_RIGHT_KEY, title = getString(R.string.settings_right_key), trailing = rightLabel, chevron = true),
-                Row.section(getString(R.string.sec_buttons)),
-                Row(id = ID_SPEED_DIAL, title = getString(R.string.opt_speed_dial), chevron = true),
-                Row(id = ID_BACK_LONGPRESS, title = getString(R.string.opt_back_longpress), trailing = backLabel, chevron = true),
-                Row(id = ID_MENU_KEY, title = getString(R.string.opt_menu_key), trailing = menuLabel, chevron = true),
-                Row.section(getString(R.string.sec_dpad_keys)),
-                Row(id = ID_DPAD_UP, title = getString(R.string.opt_dpad_up), trailing = directionalLabel(KeyEvent.KEYCODE_DPAD_UP), chevron = true),
-                Row(id = ID_DPAD_DOWN, title = getString(R.string.opt_dpad_down), trailing = directionalLabel(KeyEvent.KEYCODE_DPAD_DOWN), chevron = true),
-                Row(id = ID_DPAD_LEFT, title = getString(R.string.opt_dpad_left), trailing = directionalLabel(KeyEvent.KEYCODE_DPAD_LEFT), chevron = true),
-                Row(id = ID_DPAD_RIGHT, title = getString(R.string.opt_dpad_right), trailing = directionalLabel(KeyEvent.KEYCODE_DPAD_RIGHT), chevron = true),
-                Row(id = ID_CAMERA_KEY, title = getString(R.string.opt_camera_key), trailing = cameraLabel, chevron = true),
-                Row(id = ID_ASSISTANT_KEY, title = getString(R.string.opt_assistant_key), trailing = assistantLabel, chevron = true),
-                Row.section(getString(R.string.sec_extra_keys)),
-                Row(id = ID_EXTRA_1, title = getString(R.string.opt_extra_key_1), trailing = extraLabel(LauncherPrefs.KEYCODE_EXTRA_1), chevron = true),
-                Row(id = ID_EXTRA_2, title = getString(R.string.opt_extra_key_2), trailing = extraLabel(LauncherPrefs.KEYCODE_EXTRA_2), chevron = true),
-                Row(id = ID_EXTRA_3, title = getString(R.string.opt_extra_key_3), trailing = extraLabel(LauncherPrefs.KEYCODE_EXTRA_3), chevron = true),
-                Row(id = ID_EXTRA_4, title = getString(R.string.opt_extra_key_4), trailing = extraLabel(LauncherPrefs.KEYCODE_EXTRA_4), chevron = true),
-            ),
+            if (group == GROUP_NAVIGATION) {
+                listOf(
+                    Row(id = ID_LEFT_KEY, title = getString(R.string.settings_left_key), trailing = leftLabel, chevron = true),
+                    Row(id = ID_RIGHT_KEY, title = getString(R.string.settings_right_key), trailing = rightLabel, chevron = true),
+                    Row(id = ID_DPAD_UP, title = getString(R.string.opt_dpad_up), trailing = directionalLabel(KeyEvent.KEYCODE_DPAD_UP), chevron = true),
+                    Row(id = ID_DPAD_DOWN, title = getString(R.string.opt_dpad_down), trailing = directionalLabel(KeyEvent.KEYCODE_DPAD_DOWN), chevron = true),
+                    Row(id = ID_DPAD_LEFT, title = getString(R.string.opt_dpad_left), trailing = directionalLabel(KeyEvent.KEYCODE_DPAD_LEFT), chevron = true),
+                    Row(id = ID_DPAD_RIGHT, title = getString(R.string.opt_dpad_right), trailing = directionalLabel(KeyEvent.KEYCODE_DPAD_RIGHT), chevron = true),
+                    Row(id = ID_BACK_LONGPRESS, title = getString(R.string.opt_back_longpress), trailing = backLabel, chevron = true),
+                    Row(id = ID_MENU_KEY, title = getString(R.string.opt_menu_key), trailing = menuLabel, chevron = true),
+                )
+            } else {
+                listOf(
+                    Row(id = ID_CAMERA_KEY, title = getString(R.string.opt_camera_key), trailing = cameraLabel, chevron = true),
+                    Row(id = ID_ASSISTANT_KEY, title = getString(R.string.opt_assistant_key), trailing = assistantLabel, chevron = true),
+                    Row(id = ID_EXTRA_1, title = getString(R.string.opt_extra_key_1), trailing = extraLabel(LauncherPrefs.KEYCODE_EXTRA_1), chevron = true),
+                    Row(id = ID_EXTRA_2, title = getString(R.string.opt_extra_key_2), trailing = extraLabel(LauncherPrefs.KEYCODE_EXTRA_2), chevron = true),
+                    Row(id = ID_EXTRA_3, title = getString(R.string.opt_extra_key_3), trailing = extraLabel(LauncherPrefs.KEYCODE_EXTRA_3), chevron = true),
+                    Row(id = ID_EXTRA_4, title = getString(R.string.opt_extra_key_4), trailing = extraLabel(LauncherPrefs.KEYCODE_EXTRA_4), chevron = true),
+                )
+            },
         )
     }
 
@@ -340,6 +378,12 @@ class HomeKeysSettingsActivity : BaseListActivity() {
     }
 
     companion object {
+        /** Opens just one group of key settings: [GROUP_NAVIGATION] or [GROUP_OTHER]. */
+        const val EXTRA_GROUP = "group"
+        const val GROUP_NAVIGATION = "navigation"
+        const val GROUP_OTHER = "other"
+        private const val ID_GROUP_NAVIGATION = "group_navigation"
+        private const val ID_GROUP_OTHER = "group_other"
         private const val ID_LEFT_KEY = "left_key"
         private const val ID_RIGHT_KEY = "right_key"
         private const val ID_BACK_LONGPRESS = "back_longpress"

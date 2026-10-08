@@ -124,20 +124,37 @@ class IconPickerActivity : AppCompatActivity() {
             consume = { packs ->
                 if (isDestroyed) return@load
                 // The bundled set is always offered first, so there's something
-                // to pick from even with no icon pack installed.
+                // to pick from even with no icon pack installed. An app with a
+                // custom icon also gets "Original icon" on top, to undo it.
+                val hasOverride = prefs.getIconOverride(appKey) != null
                 val labels = listOf(getString(R.string.icon_picker_built_in)) + packs.map { it.label }
                 val packageNames = listOf(BuiltInIcons.PACK_ID) + packs.map { it.packageName }
-                if (labels.size == 1) {
+                if (labels.size == 1 && !hasOverride) {
                     openSource(packageNames[0], labels[0])
                 } else {
+                    val offset = if (hasOverride) 1 else 0
+                    val items = (if (hasOverride) listOf(getString(R.string.icon_picker_original)) else emptyList()) + labels
                     AlertDialog.Builder(this)
                         .setTitle(R.string.icon_picker_choose_pack)
-                        .setItems(labels.toTypedArray()) { _, which -> openSource(packageNames[which], labels[which]) }
+                        .setItems(items.toTypedArray()) { _, which ->
+                            if (which < offset) {
+                                resetToOriginal()
+                            } else {
+                                openSource(packageNames[which - offset], labels[which - offset])
+                            }
+                        }
                         .setOnCancelListener { finish() }
                         .show()
                 }
             },
         )
+    }
+
+    /** Drops this app's custom icon, back to its own (what Reset Icon used to do). */
+    private fun resetToOriginal() {
+        prefs.clearIconOverride(appKey)
+        Toast.makeText(this, R.string.icon_picker_reset, Toast.LENGTH_SHORT).show()
+        finish()
     }
 
     private fun openSource(packageName: String, label: String) {

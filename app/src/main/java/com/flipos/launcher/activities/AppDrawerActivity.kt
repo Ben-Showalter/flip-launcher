@@ -4,7 +4,6 @@ import com.flipos.launcher.R
 
 import android.content.Intent
 import android.graphics.Color
-import android.net.Uri
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.View
@@ -19,6 +18,7 @@ import com.flipos.launcher.data.AppInfo
 import com.flipos.launcher.data.AppRepository
 import com.flipos.launcher.data.LauncherPrefs
 import com.flipos.launcher.data.NotificationCounts
+import com.flipos.launcher.data.NotificationStore
 import com.flipos.launcher.data.NotificationDotColor
 import com.flipos.launcher.ui.AppGridAdapter
 import com.flipos.launcher.ui.ListRowAdapter
@@ -160,11 +160,15 @@ class AppDrawerActivity : AppCompatActivity() {
         refresh()
         window.hideNavigationBar()
         applyWallpaperScrim()
+        NotificationCounts.addListener(dotListener)
+        NotificationStore.addListener(dotListener)
     }
 
     override fun onPause() {
         super.onPause()
         releaseHeldKeys()
+        NotificationCounts.removeListener(dotListener)
+        NotificationStore.removeListener(dotListener)
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -265,8 +269,28 @@ class AppDrawerActivity : AppCompatActivity() {
         return (rows / 2) * gridColumns + gridColumns / 2
     }
 
+    /**
+     * Whether [app] gets an icon dot: an active notification per the
+     * notification listener, or a pending one from the accessibility
+     * fallback - the only source on the E4810/E4811, where the listener
+     * never binds (see AGENTS.md).
+     */
     private fun hasNotification(app: AppInfo): Boolean =
-        prefs.isIconNotificationDotEnabled() && NotificationCounts.packagesWithNotifications.contains(app.packageName)
+        prefs.isIconNotificationDotEnabled() && (
+            NotificationCounts.packagesWithNotifications.contains(app.packageName) ||
+                NotificationStore.items.any { it.packageName == app.packageName }
+            )
+
+    /** Re-draws the dots in place when notifications change, without moving focus. */
+    private val dotListener: () -> Unit = {
+        if (!isDestroyed && movingKey == null) {
+            if (listMode) {
+                bindList(focusPosition = focusedPosition())
+            } else {
+                gridAdapter.notifyItemRangeChanged(0, gridAdapter.itemCount)
+            }
+        }
+    }
 
     private fun totalPages(): Int =
         if (allApps.isEmpty()) 1 else ceil(allApps.size / pageSize.toDouble()).toInt()
@@ -445,23 +469,13 @@ class AppDrawerActivity : AppCompatActivity() {
 
     private fun showContextMenu(app: AppInfo) {
         if (isFinishing || isDestroyed) return
-        val items = mutableListOf(
-            ContextItem(getString(R.string.ctx_open)) { launchAppByKey(app.key) },
+        val items = listOf(
             ContextItem(getString(R.string.ctx_move)) { enterMoveMode(app) },
             ContextItem(getString(R.string.ctx_hide)) { hideApp(app) },
             ContextItem(getString(R.string.ctx_change_icon)) { changeIcon(app) },
+            ContextItem(getString(R.string.ctx_home_settings)) { startActivity(Intent(this, SettingsActivity::class.java)) },
+            ContextItem(getString(if (listMode) R.string.ctx_grid_view else R.string.ctx_list_view)) { toggleViewMode() },
         )
-        if (prefs.getIconOverride(app.key) != null) {
-            items.add(ContextItem(getString(R.string.ctx_reset_icon)) { resetIcon(app) })
-        }
-        val wrapEnabled = prefs.isIconWrapEnabled(app.key)
-        items.add(
-            ContextItem(getString(if (wrapEnabled) R.string.ctx_disable_wrap else R.string.ctx_enable_wrap)) {
-                toggleIconWrap(app, !wrapEnabled)
-            },
-        )
-        items.add(ContextItem(getString(R.string.ctx_uninstall)) { uninstallApp(app) })
-        items.add(ContextItem(getString(R.string.ctx_settings)) { startActivity(Intent(this, SettingsActivity::class.java)) })
 
         val titleView = layoutInflater.inflate(R.layout.dialog_app_context_title, null).apply {
             findViewById<TextView>(R.id.dialog_title_label).text = app.label
@@ -473,38 +487,22 @@ class AppDrawerActivity : AppCompatActivity() {
             .show()
     }
 
+    /** Flips the drawer between grid and list in place (the same setting as App List → view). */
+    private fun toggleViewMode() {
+        prefs.setDrawerListViewEnabled(!listMode)
+        applyViewMode()
+        updatePageSize()
+        refresh()
+    }
+
     private fun changeIcon(app: AppInfo) {
         startActivity(Intent(this, IconPickerActivity::class.java).putExtra(IconPickerActivity.EXTRA_APP_KEY, app.key))
-    }
-
-    private fun resetIcon(app: AppInfo) {
-        prefs.clearIconOverride(app.key)
-        Toast.makeText(this, R.string.icon_picker_reset, Toast.LENGTH_SHORT).show()
-        refresh()
-    }
-
-    private fun toggleIconWrap(app: AppInfo, enabled: Boolean) {
-        prefs.setIconWrapEnabled(app.key, enabled)
-        refresh()
     }
 
     private fun hideApp(app: AppInfo) {
         prefs.setHidden(app.key, true)
         Toast.makeText(this, getString(R.string.toast_app_hidden, app.label), Toast.LENGTH_SHORT).show()
         refresh()
-    }
-
-    private fun uninstallApp(app: AppInfo) {
-        try {
-            startActivity(
-                Intent(
-                    Intent.ACTION_DELETE,
-                    Uri.fromParts("package", app.packageName, null),
-                ),
-            )
-        } catch (e: Exception) {
-            Toast.makeText(this, R.string.toast_uninstall_failed, Toast.LENGTH_SHORT).show()
-        }
     }
 
     // -------------------------------------------------------------- Move

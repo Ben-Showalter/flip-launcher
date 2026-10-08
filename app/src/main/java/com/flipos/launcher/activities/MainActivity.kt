@@ -17,6 +17,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
 import android.provider.MediaStore
+import android.provider.Settings
 import android.speech.RecognizerIntent
 import android.view.KeyEvent
 import android.view.View
@@ -26,6 +27,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.flipos.launcher.data.AppRepository
@@ -43,12 +45,15 @@ import com.flipos.launcher.util.WallpaperContrast
 import com.flipos.launcher.util.accentColorAlpha
 import com.flipos.launcher.util.applyFakeBold
 import com.flipos.launcher.util.hideNavigationBar
+import com.flipos.launcher.util.isAccessibilityServiceEnabled
+import com.flipos.launcher.util.isDefaultLauncher
 import com.flipos.launcher.util.isStarKey
 import com.flipos.launcher.util.outerKeyFor
 import com.flipos.launcher.util.launchAppByKey
 import com.flipos.launcher.util.placeCall
 import com.flipos.launcher.util.SystemSpeedDialResult
 import com.flipos.launcher.util.openSystemSpeedDial
+import com.flipos.launcher.util.openSettingsWithPath
 import com.flipos.launcher.util.systemSpeedDial
 import com.flipos.launcher.util.toastIfUnknownKey
 import java.text.SimpleDateFormat
@@ -293,7 +298,7 @@ class MainActivity : AppCompatActivity() {
         focusAppMenu()
         NotificationStore.addListener(notifListener)
         updateNotifBanner()
-        maybePromptDefaultLauncher()
+        maybeShowStartupPrompts()
         // The accent color may have changed in Settings while Home was backgrounded;
         // theme overlays only apply at onCreate, so recreate to pick it up. Done last
         // (after registering the receiver/listener above) so onPause's matching
@@ -404,7 +409,7 @@ class MainActivity : AppCompatActivity() {
             launchAppByKey(fallback)
         } else {
             Toast.makeText(this, R.string.directional_key_unset_toast, Toast.LENGTH_SHORT).show()
-            startActivity(Intent(this, HomeKeysSettingsActivity::class.java))
+            openKeySettings(HomeKeysSettingsActivity.GROUP_NAVIGATION)
         }
     }
 
@@ -421,7 +426,7 @@ class MainActivity : AppCompatActivity() {
             launchAppByKey(fallback)
         } else {
             Toast.makeText(this, R.string.directional_key_unset_toast, Toast.LENGTH_SHORT).show()
-            startActivity(Intent(this, HomeKeysSettingsActivity::class.java))
+            openKeySettings(HomeKeysSettingsActivity.GROUP_NAVIGATION)
         }
     }
 
@@ -852,8 +857,15 @@ class MainActivity : AppCompatActivity() {
         }
         if ((keyCode == KeyEvent.KEYCODE_F4 || keyCode == KEYCODE_ASSISTANT_RAW) && openVoiceAssistant()) return
         Toast.makeText(this, R.string.directional_key_unset_toast, Toast.LENGTH_SHORT).show()
-        startActivity(Intent(this, HomeKeysSettingsActivity::class.java))
+        val isDpad = keyCode == KeyEvent.KEYCODE_DPAD_UP || keyCode == KeyEvent.KEYCODE_DPAD_DOWN ||
+            keyCode == KeyEvent.KEYCODE_DPAD_LEFT || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
+        openKeySettings(if (isDpad) HomeKeysSettingsActivity.GROUP_NAVIGATION else HomeKeysSettingsActivity.GROUP_OTHER)
     }
+
+    /** Opens the Home Keys settings screen holding an unassigned key's row. */
+    private fun openKeySettings(group: String) = startActivity(
+        Intent(this, HomeKeysSettingsActivity::class.java).putExtra(HomeKeysSettingsActivity.EXTRA_GROUP, group),
+    )
 
     /**
      * Opens the phone's voice assistant / voice command app for an
@@ -945,23 +957,59 @@ class MainActivity : AppCompatActivity() {
 
     // ------------------------------------------------------ Default launcher
 
-    private fun isDefaultLauncher(): Boolean {
-        val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
-        val resolved = packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
-        return resolved?.activityInfo?.packageName == packageName
+    /** The startup prompt currently on screen, so a resume never stacks a second one. */
+    private var startupPrompt: AlertDialog? = null
+
+    /**
+     * At most once per launcher start each, one at a time: ask to make this
+     * the default Home app if it isn't, then to turn on Accessibility if
+     * it's off (it feeds the Home banner, icon dots and read-aloud on these
+     * phones). Both hand off to the phone's own settings screen with a toast
+     * naming the D-pad path.
+     */
+    private fun maybeShowStartupPrompts() {
+        if (isFinishing || startupPrompt?.isShowing == true) return
+        if (!defaultPromptShown && !isDefaultLauncher()) {
+            defaultPromptShown = true
+            showStartupPrompt(
+                R.string.prompt_default_title,
+                R.string.prompt_default_message,
+            ) { openSettingsWithPath(Settings.ACTION_HOME_SETTINGS, R.string.path_default_launcher) }
+            return
+        }
+        if (!accessibilityPromptShown && !isAccessibilityServiceEnabled()) {
+            accessibilityPromptShown = true
+            showStartupPrompt(
+                R.string.prompt_accessibility_title,
+                R.string.prompt_accessibility_message,
+            ) { openSettingsWithPath(Settings.ACTION_ACCESSIBILITY_SETTINGS, R.string.path_accessibility) }
+        }
     }
 
-    private fun maybePromptDefaultLauncher() {
-        // Gently hint, but never yank the user away — they opt in deliberately via
-        // Options → "Set as Default Launcher".
-        if (defaultPromptShown || isDefaultLauncher()) return
-        defaultPromptShown = true
-        Toast.makeText(this, R.string.choose_home_app, Toast.LENGTH_LONG).show()
+    private fun showStartupPrompt(title: Int, message: Int, onOpen: () -> Unit) {
+        var opened = false
+        startupPrompt = AlertDialog.Builder(this)
+            .setTitle(title)
+            .setMessage(message)
+            .setPositiveButton(R.string.prompt_open_settings) { _, _ ->
+                opened = true
+                onOpen()
+            }
+            .setNegativeButton(R.string.prompt_not_now, null)
+            .setOnDismissListener {
+                startupPrompt = null
+                // "Not now" moves straight on to the next prompt, if any;
+                // after "Open Settings" it waits for the return to Home
+                // (onResume), so it never pops up over the settings screen.
+                if (!opened) maybeShowStartupPrompts()
+            }
+            .show()
     }
 
     companion object {
         // Shown at most once per process so we don't nag on every resume.
         private var defaultPromptShown = false
+        private var accessibilityPromptShown = false
 
         /** How long an assignable key must be held to open its assign menu. */
         private const val ASSIGN_HOLD_MS = 5000L

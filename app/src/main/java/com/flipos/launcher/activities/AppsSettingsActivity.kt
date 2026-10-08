@@ -51,7 +51,6 @@ class AppsSettingsActivity : BaseListActivity() {
         )
         adapter.submit(
             listOf(
-                Row.section(getString(R.string.sec_app_drawer)),
                 Row(
                     id = ID_DRAWER_VIEW,
                     title = getString(R.string.settings_drawer_view),

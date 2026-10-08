@@ -41,13 +41,13 @@ goes back.
 - Default order: Contacts, Notices, Messaging, Gallery, Media Center, Notepad,
   Quick Settings, Settings, Tools (whichever the phone has), then everything
   else A-Z. Move any app from its Options menu.
-- Long-press (or the Options soft key) on any app to:
-  - Add it to Home shortcuts
-  - Hide it from the drawer
-  - Change its icon (from an installed icon pack or the launcher's own bundled
-    icon set)
-  - Reset a per-app icon override
-  - Uninstall it
+- The Options soft key on any app offers:
+  - **Move** it
+  - **Hide** it from the app list
+  - **Change Icon** (from an installed icon pack or the launcher's own bundled
+    set, or back to the **Original icon**)
+  - **Home Screen Settings**
+  - **Switch to List / Grid View**
 
 ![App Drawer Grid](reference/apps.png)
 ![App Drawer List](reference/list.png)
@@ -72,41 +72,32 @@ Requires Notification Access, granted from **Settings → Notifications**.
 
 ### Settings
 
-Everything lives in one **Settings** hub, so there's a single, followable place
-for customization. Open it by long-pressing the center soft key on Home; it's
-also listed in the app drawer like a normal app. Settings are grouped into
-categories you drill into:
+Settings is a short list where every row opens its own screen, so nothing is
+crowded onto one page. Open it by long-pressing the center soft key on Home,
+from an app's Options menu, or from the **Settings** entry in the app list -
+which asks whether you want **Phone Settings** (Wi-Fi, sound, display and the
+rest of the phone) or **Home Screen Settings** (this launcher). Choose
+**Don't ask again** to always open Phone Settings; turn the question back on in
+Advanced.
 
-- **Appearance**
-  - **Set Wallpaper** — pick from bundled wallpapers or the system chooser
-  - **Accent Color** — cyan (default), red, orange, yellow, green, blue,
-    indigo, violet — applied to focus highlights, page dots, toggles, and other
-    accents throughout the launcher
-  - **Icon Pack** — apply any installed icon pack (Nova/ADW/Apex-compatible)
-    launcher-wide
-  - **App Icon Size** — small / medium / large
-- **Notifications**
-  - **Notification Access** — grants/checks the permission that powers Notices
-    and the Home badges
-  - **Show Missed Calls / Messages / Other Notifications** — independent
-    toggles for the Home badge summary
-  - **Notification Dots on Icons** — small dot over app icons with pending
-    notifications
+- **Appearance** - wallpaper, accent color, light/dark theme, icon pack, app
+  icon size
 - **Home Screen & Keys**
-  - **Home Left Key / Home Right Key** — assign an app to either soft key, or
-    leave them as Notices / Contacts
-  - **Back Button (Long-Press)** — assign an app to launch on long-press Back
-  - **Customize Home Shortcuts** — see below
-- **Apps & Drawer**
-  - **App Drawer View** — Grid or List
-  - **Hide / Show Apps** — see below
-- **System**
-  - **Set as Default Launcher**
-  - **System Settings**
+  - **Navigation & Soft Keys** - left/right soft keys, D-pad directions,
+    long-press Back and Menu
+  - **Other Buttons** - Camera, Mic/Assistant, SOS, outer END, outer Speaker,
+    PTT
+  - **Speed Dial**
+- **App List** - grid or list view, hide/show apps
+- **Notifications**
+  - **Home Banner** - which notifications show on Home, and hiding their text
+  - **Read Aloud** - when, which voice, how fast
+  - **Icon Dots** on/off
+- **Advanced** - Set as Default Launcher, Accessibility, Notification Access,
+  Call Log Access, Ask which Settings to open, Phone Settings
 
-Rows are designed to read clearly on a small screen: section headers group
-related settings, On/Off toggles show a switch-style pill, and rows that open
-another screen or chooser show a chevron.
+On start, Home asks (once per start, one at a time) to make Flip Launcher the
+default Home app and to turn on Accessibility, if either isn't already.
 
 #### Home Shortcuts
 
