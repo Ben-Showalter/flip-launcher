@@ -92,9 +92,17 @@ person's laptop.
   `kyocera.intent.action.PTT_SETTINGS`) is a Kyocera Home feature that never
   fires under another launcher, so Home assigns them itself (scan codes →
   `LauncherPrefs.KEYCODE_EXTRA_1..4`); an unassigned one is still reported
-  unhandled. Assigned ones only act on a 1-second hold (fired while held,
-  like the system's long-press binding) and have no hold-to-assign, so a
-  phone in a pocket can't launch apps or open the picker.
+  unhandled. Assigned ones only act on a long press (the framework
+  long-press timeout, ~500 ms) and have no hold-to-assign, so a phone in a
+  pocket can't launch apps or open the picker. The long press counts
+  however it arrives - timer while held, a long-press repeat, or an UP
+  (even a cancelled one) late enough - because the phone may end a held
+  outer-button press itself once its own long-press threshold passes.
+- **Category lookups** (`CategoryApps`): `resolveActivity()` returns
+  Android's chooser (package `android`) when several apps match with no
+  default - treat that as unresolved. The drawer's default order picks each
+  slot from known packages, then all handlers, then label
+  (`AppRepository.pickApp`).
 
 ## Flip-DumbPhoneGuide conventions
 

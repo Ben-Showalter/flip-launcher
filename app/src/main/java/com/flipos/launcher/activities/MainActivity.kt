@@ -69,7 +69,7 @@ import java.util.Locale
  * are the exception: their long-press (speed dial / voicemail) fires the
  * instant it's detected, and assignment for them is Settings-only. The
  * phone's outer buttons (SOS, outer END/Speaker, PTT) open their assigned
- * app on a 1-second hold (a short press does nothing); unassigned, they're
+ * app on a long press (a short press does nothing); unassigned, they're
  * left to the system's own key-assignment setting.
  */
 class MainActivity : AppCompatActivity() {
@@ -124,6 +124,9 @@ class MainActivity : AppCompatActivity() {
 
     /** Scheduled outer-button hold runnables (see [scheduleExtraKeyHold]), keyed by synthetic keycode. */
     private val extraKeyHoldRunnables = HashMap<Int, Runnable>()
+
+    /** [KeyEvent.getDownTime] of the outer-button press that last launched, keyed by synthetic keycode. */
+    private val extraKeyFiredDownTime = HashMap<Int, Long>()
 
     /** Scheduled digit short-tap dial runnables (debounced against a same-key re-press), keyed by keyCode. */
     private val digitTapRunnables = HashMap<Int, Runnable>()
@@ -521,9 +524,12 @@ class MainActivity : AppCompatActivity() {
     // and remapped to an app-defined synthetic keycode before reaching
     // onKeyDown/onKeyUp (which only ever use their keyCode *parameter*), so
     // they can be told apart. Like the phone's own binding, an assigned one
-    // only acts on a deliberate hold ([EXTRA_KEY_HOLD_MS], fired while still
-    // held) - a short press does nothing, so a bump in a pocket can't open
-    // anything - and there's no hold-to-assign (Settings only). One with no
+    // only acts on a long press ([EXTRA_KEY_HOLD_MS]) - a short press does
+    // nothing, so a bump in a pocket can't open anything - and there's no
+    // hold-to-assign (Settings only). The phone may end a held press early
+    // once its own long-press threshold passes (a cancelled UP, or a
+    // long-press repeat), so the hold counts however it's reported - see
+    // [onExtraKeyEvent]. One with no
     // app assigned is reported unhandled instead, so the system's own
     // binding (or default) applies - on the E4610 that binding is a Kyocera
     // Home feature that never fires under another launcher, hence assigning
@@ -533,10 +539,7 @@ class MainActivity : AppCompatActivity() {
         val extraKey = EXTRA_KEY_SCAN_CODES[event.scanCode]
         if (extraKey != null) {
             if (prefs.getExtraKeyApp(extraKey) == null) return false
-            when (event.action) {
-                KeyEvent.ACTION_DOWN -> if (event.repeatCount == 0) scheduleExtraKeyHold(extraKey)
-                KeyEvent.ACTION_UP -> cancelExtraKeyHold(extraKey)
-            }
+            onExtraKeyEvent(extraKey, event)
             return true
         }
         if (event.keyCode in DIRECTIONAL_KEYS) {
@@ -708,12 +711,43 @@ class MainActivity : AppCompatActivity() {
         assignHandler.postDelayed(runnable, DIGIT_HOLD_MS)
     }
 
-    /** Opens an outer button's assigned app once it's been held for [EXTRA_KEY_HOLD_MS]; a release first cancels it. */
-    private fun scheduleExtraKeyHold(keyCode: Int) {
+    /**
+     * Opens an outer button's assigned app on a long press, counted however
+     * the phone reports it: the hold timer firing while still down, a
+     * long-press/auto-repeat DOWN, or an UP (even a cancelled one) arriving
+     * at least [EXTRA_KEY_HOLD_MS] after the DOWN. Fires at most once per
+     * press (keyed by [KeyEvent.getDownTime]); a short tap does nothing.
+     */
+    private fun onExtraKeyEvent(keyCode: Int, event: KeyEvent) {
+        when (event.action) {
+            KeyEvent.ACTION_DOWN -> {
+                if (event.repeatCount == 0) {
+                    event.startTracking()
+                    scheduleExtraKeyHold(keyCode, event.downTime)
+                } else {
+                    fireExtraKey(keyCode, event.downTime)
+                }
+            }
+            KeyEvent.ACTION_UP -> {
+                cancelExtraKeyHold(keyCode)
+                if (event.eventTime - event.downTime >= EXTRA_KEY_HOLD_MS) fireExtraKey(keyCode, event.downTime)
+            }
+        }
+    }
+
+    /** Launches [keyCode]'s app unless this press ([downTime]) already did. */
+    private fun fireExtraKey(keyCode: Int, downTime: Long) {
+        if (extraKeyFiredDownTime[keyCode] == downTime) return
+        extraKeyFiredDownTime[keyCode] = downTime
+        cancelExtraKeyHold(keyCode)
+        launchDirectionalKeyApp(keyCode)
+    }
+
+    private fun scheduleExtraKeyHold(keyCode: Int, downTime: Long) {
         cancelExtraKeyHold(keyCode)
         val runnable = Runnable {
             extraKeyHoldRunnables.remove(keyCode)
-            launchDirectionalKeyApp(keyCode)
+            fireExtraKey(keyCode, downTime)
         }
         extraKeyHoldRunnables[keyCode] = runnable
         assignHandler.postDelayed(runnable, EXTRA_KEY_HOLD_MS)
@@ -926,10 +960,11 @@ class MainActivity : AppCompatActivity() {
 
         /**
          * How long an outer button (SOS, outer END/Speaker, PTT) must be held
-         * to open its assigned app - a deliberate press, like the phone's own
-         * long-press binding, so pocket bumps don't launch anything.
+         * to open its assigned app - the framework's own long-press timeout,
+         * the same threshold the phone's own binding uses, so a pocket bump
+         * doesn't launch anything but the system can't end the press first.
          */
-        private const val EXTRA_KEY_HOLD_MS = 1000L
+        private val EXTRA_KEY_HOLD_MS = ViewConfiguration.getLongPressTimeout().toLong()
 
         /** How long an assignable key must be held to open its assign menu. */
         private const val ASSIGN_HOLD_MS = 5000L

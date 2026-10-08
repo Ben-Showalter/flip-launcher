@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
+import android.provider.Settings
 import android.util.LruCache
 import com.flipos.launcher.util.CategoryApps
 import com.flipos.launcher.util.KyoceraShortcuts
@@ -24,6 +25,9 @@ object AppRepository {
 
     /** Kyocera's Notepad app (confirmed via logcat on the E4610). */
     private const val NOTEPAD_PACKAGE = "jp.kyocera.memo"
+
+    /** Kyocera's Gallery launcher entry (on the default-visible whitelist below). */
+    private const val KYOCERA_GALLERY_PACKAGE = "jp.kyocera.gallery.launcher"
 
     /**
      * Memoizes the shaped/wrapped icon bitmap per (component + override + pack +
@@ -167,13 +171,13 @@ object AppRepository {
      * (alphabetical) relative order, appended after every positioned one.
      */
     private fun applyAppOrder(context: Context, prefs: LauncherPrefs, apps: List<AppInfo>): List<AppInfo> {
-        if (!prefs.isAppOrderSeeded() || !prefs.isAppOrderV2Seeded()) {
+        if (!prefs.isAppOrderSeeded() || !prefs.isAppOrderV3Seeded()) {
             // A first install, or one seeded with the older default order:
             // (re)apply the current default once. Manual moves made before
             // this update are replaced this one time only.
-            prefs.setAppOrder(seedAppOrder(context, apps))
+            prefs.setAppOrder(seedAppOrder(context, prefs, apps))
             prefs.setAppOrderSeeded()
-            prefs.setAppOrderV2Seeded()
+            prefs.setAppOrderV3Seeded()
             prefs.setSettingsSeedFixed()
         } else if (!prefs.isSettingsSeedFixed()) {
             fixSettingsSeed(context, prefs, apps)
@@ -187,7 +191,7 @@ object AppRepository {
 
     /**
      * One-time starting order (see [LauncherPrefs.isAppOrderSeeded] /
-     * [LauncherPrefs.isAppOrderV2Seeded]) - exactly one 3x3 grid page:
+     * [LauncherPrefs.isAppOrderV3Seeded]) - exactly one 3x3 grid page:
      * Contacts, Notices, Messaging, Gallery, Media Center, Notepad, Quick
      * Settings, the real Settings app, Tools, so Media Center lands in the
      * center cell the drawer focuses first. Everything else stays
@@ -195,22 +199,80 @@ object AppRepository {
      * Kyocera menu shortcuts and Notepad exist only on Kyocera) is simply
      * skipped, not left as a gap. Afterward the order is fully freeform.
      */
-    private fun seedAppOrder(context: Context, apps: List<AppInfo>): List<String> {
-        fun activityKey(activityName: String): String? = apps.firstOrNull { it.activityName == activityName }?.key
-        fun componentPackageKey(componentKey: String?): String? =
-            packageNameKey(apps, componentKey?.let { ComponentName.unflattenFromString(it)?.packageName })
+    private fun seedAppOrder(context: Context, prefs: LauncherPrefs, apps: List<AppInfo>): List<String> {
+        val hidden = prefs.getHiddenKeys()
+        val visible = apps.filter { it.key !in hidden }
+        fun activityKey(activityName: String): String? = visible.firstOrNull { it.activityName == activityName }?.key
+        fun keyPackage(componentKey: String?): String? = componentKey?.let { ComponentName.unflattenFromString(it)?.packageName }
 
         return listOfNotNull(
-            componentPackageKey(CategoryApps.contactsKey(context)),
+            pickApp(
+                context, visible,
+                packages = listOfNotNull(keyPackage(CategoryApps.contactsKey(context)), "com.android.contacts"),
+                intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_CONTACTS),
+                label = "Contacts",
+            ),
             activityKey(NOTICES_ACTIVITY),
-            componentPackageKey(CategoryApps.smsKey(context)),
-            componentPackageKey(CategoryApps.galleryKey(context)),
+            pickApp(
+                context, visible,
+                packages = listOfNotNull(
+                    keyPackage(CategoryApps.smsKey(context)), "com.android.mms", "com.android.messaging",
+                ),
+                intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_MESSAGING),
+                label = "Messaging",
+            ),
+            pickApp(
+                context, visible,
+                packages = listOf(KYOCERA_GALLERY_PACKAGE),
+                intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_GALLERY),
+                label = "Gallery",
+            ),
             activityKey(KyoceraShortcuts.MEDIA_CENTER_ALIAS),
-            packageNameKey(apps, NOTEPAD_PACKAGE),
+            pickApp(context, visible, packages = listOf(NOTEPAD_PACKAGE), intent = null, label = "Notepad"),
             activityKey(KyoceraShortcuts.QUICK_SETTINGS_ALIAS),
-            packageNameKey(apps, CategoryApps.systemSettingsPackage(context)),
+            pickApp(
+                context, visible,
+                packages = listOfNotNull(
+                    "jp.kyocera.settings.nfp", "com.android.settings", CategoryApps.systemSettingsPackage(context),
+                ),
+                intent = Intent(Settings.ACTION_SETTINGS),
+                label = "Settings",
+            ),
             activityKey(KyoceraShortcuts.TOOLS_ALIAS),
         ).distinct()
+    }
+
+    /**
+     * The first visible app matching, in order: one of [packages]; any
+     * handler of [intent] (skipping Android's own chooser, which
+     * `resolveActivity` returns whenever several apps match with no
+     * default); or an app labeled exactly [label]. Our own activities are
+     * excluded from the label match so "Settings" can't pick ours.
+     */
+    @Suppress("DEPRECATION") // int-flags overload kept for minSdk 21 compatibility
+    private fun pickApp(
+        context: Context,
+        visible: List<AppInfo>,
+        packages: List<String>,
+        intent: Intent?,
+        label: String,
+    ): String? {
+        for (pkg in packages) {
+            visible.firstOrNull { it.packageName == pkg }?.let { return it.key }
+        }
+        if (intent != null) {
+            val handlers = try {
+                context.packageManager.queryIntentActivities(intent, 0)
+            } catch (e: Exception) {
+                emptyList()
+            }
+            for (ri in handlers) {
+                val pkg = ri.activityInfo?.packageName ?: continue
+                if (pkg == CategoryApps.CHOOSER_PACKAGE) continue
+                visible.firstOrNull { it.packageName == pkg }?.let { return it.key }
+            }
+        }
+        return visible.firstOrNull { it.packageName != context.packageName && it.label.equals(label, ignoreCase = true) }?.key
     }
 
     /** Matches [packageName] against [apps] by package, resolving a category resolver's result to a real entry's component key. */

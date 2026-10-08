@@ -174,14 +174,15 @@ class LauncherPrefs(context: Context) {
     }
 
     /**
-     * Whether the second-generation default order (Contacts, Notices,
-     * Messaging, Gallery, Media Center, ... - see [AppRepository]) has been
-     * applied once, replacing whatever the first seeding stored.
+     * Whether the current default order (Contacts, Notices, Messaging,
+     * Gallery, Media Center, ... - see [AppRepository]) has been applied
+     * once, replacing whatever an earlier seeding stored. (v3: v2 missed
+     * Gallery/Settings on phones where their lookup hit the app chooser.)
      */
-    fun isAppOrderV2Seeded(): Boolean = prefs.getBoolean(KEY_APP_ORDER_V2_SEEDED, false)
+    fun isAppOrderV3Seeded(): Boolean = prefs.getBoolean(KEY_APP_ORDER_V3_SEEDED, false)
 
-    fun setAppOrderV2Seeded() {
-        prefs.edit().putBoolean(KEY_APP_ORDER_V2_SEEDED, true).apply()
+    fun setAppOrderV3Seeded() {
+        prefs.edit().putBoolean(KEY_APP_ORDER_V3_SEEDED, true).apply()
     }
 
     /**
@@ -461,7 +462,7 @@ class LauncherPrefs(context: Context) {
         private const val KEY_EXTRA_KEY_PREFIX = "extra_key_"
         private const val KEY_SPEED_DIAL_PREFIX = "speed_dial_"
         private const val SPEED_DIAL_SEPARATOR = "::"
-        private const val KEY_APP_ORDER_V2_SEEDED = "app_order_v2_seeded"
+        private const val KEY_APP_ORDER_V3_SEEDED = "app_order_v3_seeded"
         private const val KEY_AUTO_ICONS_REVERTED = "auto_icons_reverted"
         private const val KEY_ICON_SIZE_PERCENT = "icon_size_percent"
         private const val KEY_RIGHT_KEY_APP = "right_key_app"

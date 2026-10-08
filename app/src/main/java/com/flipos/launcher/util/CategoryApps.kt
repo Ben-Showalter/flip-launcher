@@ -77,14 +77,23 @@ object CategoryApps {
         return categoryKey(context, Intent.CATEGORY_APP_FILES)
     }
 
+    /**
+     * Package of Android's own "choose an app" screen, which resolveActivity()
+     * returns whenever several apps handle an intent and none is the default -
+     * never a real answer, so every resolver here treats it as "unresolved".
+     */
+    const val CHOOSER_PACKAGE = "android"
+
     private fun categoryKey(context: Context, category: String): String? {
         val intent = Intent(Intent.ACTION_MAIN).addCategory(category)
         val ai = context.packageManager.resolveActivity(intent, 0)?.activityInfo ?: return null
+        if (ai.packageName == CHOOSER_PACKAGE) return null
         return ComponentName(ai.packageName, ai.name).flattenToString()
     }
 
     private fun resolvePackage(context: Context, intent: Intent): String? =
         context.packageManager.resolveActivity(intent, 0)?.activityInfo?.packageName
+            ?.takeIf { it != CHOOSER_PACKAGE }
 
     private fun launchKeyFor(context: Context, packageName: String): String? =
         context.packageManager.getLaunchIntentForPackage(packageName)?.component?.flattenToString()
