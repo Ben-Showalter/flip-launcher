@@ -92,7 +92,9 @@ person's laptop.
   `kyocera.intent.action.PTT_SETTINGS`) is a Kyocera Home feature that never
   fires under another launcher, so Home assigns them itself (scan codes →
   `LauncherPrefs.KEYCODE_EXTRA_1..4`); an unassigned one is still reported
-  unhandled.
+  unhandled. Assigned ones only act on a 1-second hold (fired while held,
+  like the system's long-press binding) and have no hold-to-assign, so a
+  phone in a pocket can't launch apps or open the picker.
 
 ## Flip-DumbPhoneGuide conventions
 

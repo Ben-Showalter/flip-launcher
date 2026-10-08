@@ -149,7 +149,7 @@ focused app is hidden from Home and the App Drawer.
 | 0-9, `*`, `#` | Open the dialer prefilled; hold 0/2-9 for speed dial (the phone's, or the launcher's own under **Settings → Home Keys → Speed Dial**), 1 for voicemail | 1-9 launch the matching app on the drawer's grid page |
 | D-pad | Assignable app per direction | Move focus |
 | Camera / Mic (Assistant) | Assignable app (by default Camera opens the camera, Mic the voice assistant) | - |
-| SOS / outer END / outer Speaker / PTT | Assignable app; unassigned, the phone's own button setting applies | - |
+| SOS / outer END / outer Speaker / PTT | Hold ~1 second to open the assigned app (a short press does nothing, so pocket bumps don't launch anything); unassigned, the phone's own button setting applies | - |
 
 Hold any assignable Home key for 5 seconds to pick its app on the spot. Keys
 the launcher doesn't recognize show a short "Unrecognized key" toast with
