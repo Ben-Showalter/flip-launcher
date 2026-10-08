@@ -22,6 +22,9 @@ object AppRepository {
     private const val SETTINGS_ACTIVITY = "com.flipos.launcher.activities.SettingsActivity"
     private const val NOTICES_ACTIVITY = "com.flipos.launcher.activities.NoticesActivity"
 
+    /** Kyocera's Notepad app (confirmed via logcat on the E4610). */
+    private const val NOTEPAD_PACKAGE = "jp.kyocera.memo"
+
     /**
      * Memoizes the shaped/wrapped icon bitmap per (component + override + pack +
      * shape + background + density), so a re-query doesn't re-run the whole
@@ -64,14 +67,11 @@ object AppRepository {
             ai.packageName != self || ai.name == SETTINGS_ACTIVITY || ai.name == NOTICES_ACTIVITY ||
                 ai.name in KyoceraShortcuts.ALIASES
         }
-        // Must run before icons are resolved below, not after (unlike
-        // applyAppOrder, which only re-sorts an already-built list) - an
-        // icon override written after the fact wouldn't show up until the
-        // next query, leaving the very first drawer render on a fresh
-        // install with the old icon.
-        if (!prefs.isBuiltInIconsApplied()) {
-            applyBuiltInIconDefaults(context, prefs, resolveInfos)
-            prefs.setBuiltInIconsApplied()
+        // Must run before icons are resolved below, so the very first
+        // render after the cleanup already shows the stock icons.
+        if (!prefs.isAutoIconsReverted()) {
+            if (prefs.isBuiltInIconsApplied()) revertAutoIcons(context, prefs, resolveInfos)
+            prefs.setAutoIconsReverted()
         }
         if (!prefs.isUnlistedAppsHidden()) {
             applyDefaultHiddenApps(context, prefs, resolveInfos)
@@ -94,38 +94,29 @@ object AppRepository {
     }
 
     /**
-     * One-time (see [LauncherPrefs.isBuiltInIconsApplied]) best-effort pass
-     * that applies our own colorful [BuiltInIcons] to a handful of common
-     * apps whose own stock icons render flat/monochrome on some hardware
-     * (the E4610), wherever they can be resolved with confidence via
-     * standard Android category intents - the same [CategoryApps] resolvers
-     * already used for Home key defaults and app-grid seeding. Never touches
-     * an app the user already picked a custom icon for. Anything
-     * unresolvable is simply skipped, not left as a gap - this only covers
-     * the categories Android exposes a reliable intent for; the rest of the
-     * built-in set stays available for manual Change Icon selection.
+     * One-time cleanup (see [LauncherPrefs.isAutoIconsReverted]) for installs
+     * where a since-removed pass automatically put our own [BuiltInIcons] on
+     * a handful of common apps. Clears each of those overrides only if it is
+     * still exactly what that pass wrote, so an icon the user picked
+     * themselves is kept.
      */
-    private fun applyBuiltInIconDefaults(context: Context, prefs: LauncherPrefs, resolveInfos: List<ResolveInfo>) {
-        fun keyForPackage(packageName: String?): String? {
-            val pkg = packageName ?: return null
-            val ai = resolveInfos.firstOrNull { it.activityInfo?.packageName == pkg }?.activityInfo ?: return null
-            return ComponentName(ai.packageName, ai.name).flattenToString()
-        }
-        fun applyDefault(componentKey: String?, iconName: String) {
-            val packageName = componentKey?.let { ComponentName.unflattenFromString(it)?.packageName }
-            val key = keyForPackage(packageName) ?: return
-            if (prefs.getIconOverride(key) != null) return
-            prefs.setIconOverride(key, BuiltInIcons.PACK_ID, iconName)
+    private fun revertAutoIcons(context: Context, prefs: LauncherPrefs, resolveInfos: List<ResolveInfo>) {
+        fun revert(componentKey: String?, iconName: String) {
+            val pkg = componentKey?.let { ComponentName.unflattenFromString(it)?.packageName } ?: return
+            val ai = resolveInfos.firstOrNull { it.activityInfo?.packageName == pkg }?.activityInfo ?: return
+            val key = ComponentName(ai.packageName, ai.name).flattenToString()
+            if (prefs.getIconOverride(key) == (BuiltInIcons.PACK_ID to iconName)) prefs.clearIconOverride(key)
         }
 
-        applyDefault(CategoryApps.dialerKey(context), "call_log_112")
-        applyDefault(CategoryApps.smsKey(context), "sms_112")
-        applyDefault(CategoryApps.contactsKey(context), "contact_112")
-        applyDefault(CategoryApps.galleryKey(context), "gallery_84")
-        applyDefault(CategoryApps.calendarKey(context), "calendar_112")
-        applyDefault(CategoryApps.cameraKey(context), "camera_112")
-        applyDefault(CategoryApps.emailKey(context), "email_112")
-        applyDefault(CategoryApps.musicKey(context), "music_112")
+        revert(CategoryApps.dialerKey(context), "call_log_112")
+        revert(CategoryApps.smsKey(context), "sms_112")
+        revert(CategoryApps.contactsKey(context), "contact_112")
+        revert(CategoryApps.galleryKey(context), "gallery_84")
+        revert(CategoryApps.calendarKey(context), "calendar_112")
+        revert(CategoryApps.cameraKey(context), "camera_112")
+        revert(CategoryApps.emailKey(context), "email_112")
+        revert(CategoryApps.musicKey(context), "music_112")
+        invalidateIconCaches()
     }
 
     /**
@@ -176,9 +167,13 @@ object AppRepository {
      * (alphabetical) relative order, appended after every positioned one.
      */
     private fun applyAppOrder(context: Context, prefs: LauncherPrefs, apps: List<AppInfo>): List<AppInfo> {
-        if (!prefs.isAppOrderSeeded()) {
+        if (!prefs.isAppOrderSeeded() || !prefs.isAppOrderV2Seeded()) {
+            // A first install, or one seeded with the older default order:
+            // (re)apply the current default once. Manual moves made before
+            // this update are replaced this one time only.
             prefs.setAppOrder(seedAppOrder(context, apps))
             prefs.setAppOrderSeeded()
+            prefs.setAppOrderV2Seeded()
             prefs.setSettingsSeedFixed()
         } else if (!prefs.isSettingsSeedFixed()) {
             fixSettingsSeed(context, prefs, apps)
@@ -191,14 +186,14 @@ object AppRepository {
     }
 
     /**
-     * One-time starting order (see [LauncherPrefs.isAppOrderSeeded]): call
-     * history, default SMS app, contacts, gallery, file manager, calendar,
-     * notices, the real Settings app - in that order, first on the grid;
-     * everything else stays alphabetical after them. A category with no
-     * resolvable app on this device (or "media center"/notepad, which have
-     * no reliable automatic detection at all) is simply skipped, not left as
-     * a gap. This only ever runs once - afterward the order is just
-     * whatever's stored, fully freeform.
+     * One-time starting order (see [LauncherPrefs.isAppOrderSeeded] /
+     * [LauncherPrefs.isAppOrderV2Seeded]) - exactly one 3x3 grid page:
+     * Contacts, Notices, Messaging, Gallery, Media Center, Notepad, Quick
+     * Settings, the real Settings app, Tools, so Media Center lands in the
+     * center cell the drawer focuses first. Everything else stays
+     * alphabetical after them. Anything this phone doesn't have (the three
+     * Kyocera menu shortcuts and Notepad exist only on Kyocera) is simply
+     * skipped, not left as a gap. Afterward the order is fully freeform.
      */
     private fun seedAppOrder(context: Context, apps: List<AppInfo>): List<String> {
         fun activityKey(activityName: String): String? = apps.firstOrNull { it.activityName == activityName }?.key
@@ -206,14 +201,15 @@ object AppRepository {
             packageNameKey(apps, componentKey?.let { ComponentName.unflattenFromString(it)?.packageName })
 
         return listOfNotNull(
-            componentPackageKey(CategoryApps.dialerKey(context)),
-            componentPackageKey(CategoryApps.smsKey(context)),
             componentPackageKey(CategoryApps.contactsKey(context)),
-            componentPackageKey(CategoryApps.galleryKey(context)),
-            componentPackageKey(CategoryApps.filesKey(context)),
-            componentPackageKey(CategoryApps.calendarKey(context)),
             activityKey(NOTICES_ACTIVITY),
+            componentPackageKey(CategoryApps.smsKey(context)),
+            componentPackageKey(CategoryApps.galleryKey(context)),
+            activityKey(KyoceraShortcuts.MEDIA_CENTER_ALIAS),
+            packageNameKey(apps, NOTEPAD_PACKAGE),
+            activityKey(KyoceraShortcuts.QUICK_SETTINGS_ALIAS),
             packageNameKey(apps, CategoryApps.systemSettingsPackage(context)),
+            activityKey(KyoceraShortcuts.TOOLS_ALIAS),
         ).distinct()
     }
 

@@ -71,6 +71,42 @@ class LauncherPrefs(context: Context) {
     fun getAssistantKeyApp(): String? = prefs.getString(KEY_ASSISTANT_KEY_APP, null)
     fun setAssistantKeyApp(key: String?) = prefs.edit().putString(KEY_ASSISTANT_KEY_APP, key).apply()
 
+    // ---------------------------------------------- Outer buttons (Home)
+    //
+    // SOS, outer END, outer Speaker and PTT, identified by scan code (see
+    // MainActivity.EXTRA_KEY_SCAN_CODES). Null = unassigned, which leaves the
+    // press to the phone's own key-assignment setting.
+
+    fun getExtraKeyApp(keyCode: Int): String? = prefs.getString(extraKeyPref(keyCode), null)
+    fun setExtraKeyApp(keyCode: Int, key: String?) = prefs.edit().putString(extraKeyPref(keyCode), key).apply()
+
+    private fun extraKeyPref(keyCode: Int) = "$KEY_EXTRA_KEY_PREFIX${KEYCODE_EXTRA_1 - keyCode + 1}_app"
+
+    // ------------------------------------------------------------ Speed dial
+    //
+    // The launcher's own speed-dial slots, used when the phone's dialer data
+    // can't be read (the E4610 - see util/SystemSpeedDial.kt).
+
+    /** The phone number + display label long-press-dialed by a digit key. */
+    data class SpeedDialEntry(val number: String, val label: String)
+
+    /** Launcher speed dial entry bound to [digit] (one of [SPEED_DIAL_DIGITS]), or null if unset. */
+    fun getSpeedDial(digit: Int): SpeedDialEntry? {
+        val raw = prefs.getString(speedDialKey(digit), null) ?: return null
+        val parts = raw.split(SPEED_DIAL_SEPARATOR, limit = 2)
+        return if (parts.size == 2) SpeedDialEntry(parts[0], parts[1]) else null
+    }
+
+    fun setSpeedDial(digit: Int, number: String, label: String) {
+        prefs.edit().putString(speedDialKey(digit), "$number$SPEED_DIAL_SEPARATOR$label").apply()
+    }
+
+    fun clearSpeedDial(digit: Int) {
+        prefs.edit().remove(speedDialKey(digit)).apply()
+    }
+
+    private fun speedDialKey(digit: Int) = "$KEY_SPEED_DIAL_PREFIX$digit"
+
     // ---------------------------------------------------------- Icon size
 
     /** App drawer icon size as a percentage of the size that exactly fills a
@@ -138,15 +174,32 @@ class LauncherPrefs(context: Context) {
     }
 
     /**
-     * Whether the one-time pass that applies our own colorful built-in
-     * icons ([BuiltInIcons]) to a handful of common apps ([AppRepository])
-     * has already run.
+     * Whether the second-generation default order (Contacts, Notices,
+     * Messaging, Gallery, Media Center, ... - see [AppRepository]) has been
+     * applied once, replacing whatever the first seeding stored.
+     */
+    fun isAppOrderV2Seeded(): Boolean = prefs.getBoolean(KEY_APP_ORDER_V2_SEEDED, false)
+
+    fun setAppOrderV2Seeded() {
+        prefs.edit().putBoolean(KEY_APP_ORDER_V2_SEEDED, true).apply()
+    }
+
+    /**
+     * Whether the one-time cleanup that removes the built-in icons the old
+     * automatic pass ([isBuiltInIconsApplied]) put on common apps has run.
+     */
+    fun isAutoIconsReverted(): Boolean = prefs.getBoolean(KEY_AUTO_ICONS_REVERTED, false)
+
+    fun setAutoIconsReverted() {
+        prefs.edit().putBoolean(KEY_AUTO_ICONS_REVERTED, true).apply()
+    }
+
+    /**
+     * Whether the (since removed) automatic pass that put our own built-in
+     * icons on a handful of common apps ever ran on this install - only
+     * read now, to decide whether [isAutoIconsReverted]'s cleanup applies.
      */
     fun isBuiltInIconsApplied(): Boolean = prefs.getBoolean(KEY_BUILT_IN_ICONS_APPLIED, false)
-
-    fun setBuiltInIconsApplied() {
-        prefs.edit().putBoolean(KEY_BUILT_IN_ICONS_APPLIED, true).apply()
-    }
 
     /**
      * Whether the one-time pass that hides every app not on a fixed
@@ -370,6 +423,20 @@ class LauncherPrefs(context: Context) {
          */
         const val KEYCODE_CAMERA_ALT2 = 288
 
+        /**
+         * App-defined synthetic keycodes for the four outer buttons (SOS,
+         * outer END, outer Speaker, PTT), which have no reliable
+         * KeyEvent.KEYCODE_* of their own - see MainActivity.EXTRA_KEY_SCAN_CODES.
+         */
+        const val KEYCODE_EXTRA_1 = -101
+        const val KEYCODE_EXTRA_2 = -102
+        const val KEYCODE_EXTRA_3 = -103
+        const val KEYCODE_EXTRA_4 = -104
+        val EXTRA_KEYCODES = listOf(KEYCODE_EXTRA_1, KEYCODE_EXTRA_2, KEYCODE_EXTRA_3, KEYCODE_EXTRA_4)
+
+        /** Digits that can carry a speed dial assignment. 1 is reserved for voicemail. */
+        val SPEED_DIAL_DIGITS = listOf(0, 2, 3, 4, 5, 6, 7, 8, 9)
+
         const val READ_ALOUD_NEVER = "never"
         const val READ_ALOUD_ALWAYS = "always"
         const val READ_ALOUD_BLUETOOTH = "bluetooth"
@@ -391,6 +458,11 @@ class LauncherPrefs(context: Context) {
         private const val KEY_DPAD_RIGHT_APP = "dpad_right_app"
         private const val KEY_CAMERA_KEY_APP = "camera_key_app"
         private const val KEY_ASSISTANT_KEY_APP = "assistant_key_app"
+        private const val KEY_EXTRA_KEY_PREFIX = "extra_key_"
+        private const val KEY_SPEED_DIAL_PREFIX = "speed_dial_"
+        private const val SPEED_DIAL_SEPARATOR = "::"
+        private const val KEY_APP_ORDER_V2_SEEDED = "app_order_v2_seeded"
+        private const val KEY_AUTO_ICONS_REVERTED = "auto_icons_reverted"
         private const val KEY_ICON_SIZE_PERCENT = "icon_size_percent"
         private const val KEY_RIGHT_KEY_APP = "right_key_app"
         private const val KEY_LEFT_KEY_APP = "left_key_app"

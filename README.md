@@ -34,9 +34,13 @@ goes back.
 - Every installed, non-hidden app, in **grid** or **list** view (toggle in
   **Settings → Apps & Drawer**):
   - **Grid**: a 3x3 icon page at a time, tracked by a column of dots on the
-    right. Number keys 1-9 launch the matching icon on the current page.
+    right. Number keys 1-9 launch the matching icon on the current page, and
+    the drawer opens with the center icon focused.
   - **List**: one continuous scroll, icon + label per row — no pages, no dots,
     just normal scrolling.
+- Default order: Contacts, Notices, Messaging, Gallery, Media Center, Notepad,
+  Quick Settings, Settings, Tools (whichever the phone has), then everything
+  else A-Z. Move any app from its Options menu.
 - Long-press (or the Options soft key) on any app to:
   - Add it to Home shortcuts
   - Hide it from the drawer
@@ -142,9 +146,10 @@ focused app is hidden from Home and the App Drawer.
 | Menu | All Apps (hold: assignable app) | Options |
 | Back / Clear | All Apps (hold: assignable app) | Back |
 | Call | The phone's own call log (falls back to the launcher's Recent Calls) | Call the focused entry (Recent Calls) |
-| 0-9, `*`, `#` | Open the dialer prefilled; hold 2-9 for speed dial, 1 for voicemail | 1-9 launch the matching app on the drawer's grid page |
+| 0-9, `*`, `#` | Open the dialer prefilled; hold 0/2-9 for speed dial (the phone's, or the launcher's own under **Settings → Home Keys → Speed Dial**), 1 for voicemail | 1-9 launch the matching app on the drawer's grid page |
 | D-pad | Assignable app per direction | Move focus |
 | Camera / Mic (Assistant) | Assignable app (by default Camera opens the camera, Mic the voice assistant) | - |
+| SOS / outer END / outer Speaker / PTT | Assignable app; unassigned, the phone's own button setting applies | - |
 
 Hold any assignable Home key for 5 seconds to pick its app on the spot. Keys
 the launcher doesn't recognize show a short "Unrecognized key" toast with

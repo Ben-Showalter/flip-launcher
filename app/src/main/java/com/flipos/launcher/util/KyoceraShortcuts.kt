@@ -18,12 +18,12 @@ object KyoceraShortcuts {
 
     const val KYOCERA_HOME_PACKAGE = "jp.kyocera.kyocerahome"
 
+    const val MEDIA_CENTER_ALIAS = "com.flipos.launcher.activities.MediaCenterShortcut"
+    const val TOOLS_ALIAS = "com.flipos.launcher.activities.ToolsShortcut"
+    const val QUICK_SETTINGS_ALIAS = "com.flipos.launcher.activities.QuickSettingsShortcut"
+
     /** Fully-qualified alias names, as they appear in ActivityInfo.name. */
-    val ALIASES = setOf(
-        "com.flipos.launcher.activities.MediaCenterShortcut",
-        "com.flipos.launcher.activities.ToolsShortcut",
-        "com.flipos.launcher.activities.QuickSettingsShortcut",
-    )
+    val ALIASES = setOf(MEDIA_CENTER_ALIAS, TOOLS_ALIAS, QUICK_SETTINGS_ALIAS)
 
     /**
      * Shows the aliases in the drawer only on phones that have Kyocera's Home

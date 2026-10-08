@@ -43,6 +43,8 @@ import com.flipos.launcher.util.hideNavigationBar
 import com.flipos.launcher.util.isStarKey
 import com.flipos.launcher.util.launchAppByKey
 import com.flipos.launcher.util.placeCall
+import com.flipos.launcher.util.SystemSpeedDialResult
+import com.flipos.launcher.util.openSystemSpeedDial
 import com.flipos.launcher.util.systemSpeedDial
 import com.flipos.launcher.util.toastIfUnknownKey
 import java.text.SimpleDateFormat
@@ -66,8 +68,8 @@ import java.util.Locale
  * 5-second-hold "assign" menu - see the Key handling section below. Digits
  * are the exception: their long-press (speed dial / voicemail) fires the
  * instant it's detected, and assignment for them is Settings-only. The
- * phone's outer buttons (SOS, outer END/Speaker, PTT) are left entirely to
- * the system's own key-assignment settings.
+ * phone's outer buttons (SOS, outer END/Speaker, PTT) open their assigned
+ * app; unassigned, they're left to the system's own key-assignment setting.
  */
 class MainActivity : AppCompatActivity() {
 
@@ -165,6 +167,7 @@ class MainActivity : AppCompatActivity() {
                 KeyEvent.KEYCODE_DPAD_RIGHT -> prefs.setDpadRightApp(key)
                 KeyEvent.KEYCODE_CAMERA, LauncherPrefs.KEYCODE_CAMERA_ALT, LauncherPrefs.KEYCODE_CAMERA_ALT2 -> prefs.setCameraKeyApp(key)
                 KeyEvent.KEYCODE_F4, KEYCODE_ASSISTANT_RAW -> prefs.setAssistantKeyApp(key)
+                in LauncherPrefs.EXTRA_KEYCODES -> prefs.setExtraKeyApp(target, key)
             }
             AppRepository.resolveComponent(this, key)?.label?.let {
                 Toast.makeText(this, getString(R.string.key_assigned_toast, it), Toast.LENGTH_SHORT).show()
@@ -507,13 +510,26 @@ class MainActivity : AppCompatActivity() {
     // (and Camera, for uniformity) are captured a level higher, in
     // dispatchKeyEvent, before the view hierarchy gets a look at them.
     //
-    // The phone's outer buttons (see SYSTEM_KEY_SCAN_CODES) belong to the
-    // system's own key-assignment settings, not this launcher: they're
-    // reported unhandled so the system's binding (or default) applies, and
-    // never reach onKeyDown, where they'd trip the unrecognized-key toast.
+    // The phone's outer buttons (see EXTRA_KEY_SCAN_CODES) have no reliable
+    // KeyEvent.KEYCODE_* of their own, so they're identified by raw scan code
+    // and remapped to an app-defined synthetic keycode before reaching
+    // onKeyDown/onKeyUp (which only ever use their keyCode *parameter*), so
+    // they ride the same hold/assign machinery as every other key. One with
+    // no app assigned is reported unhandled instead, so the system's own
+    // binding (or default) applies - on the E4610 that binding is a Kyocera
+    // Home feature that never fires under another launcher, hence assigning
+    // them here.
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (event.scanCode in SYSTEM_KEY_SCAN_CODES) return false
+        val extraKey = EXTRA_KEY_SCAN_CODES[event.scanCode]
+        if (extraKey != null) {
+            if (prefs.getExtraKeyApp(extraKey) == null) return false
+            return when (event.action) {
+                KeyEvent.ACTION_DOWN -> onKeyDown(extraKey, event)
+                KeyEvent.ACTION_UP -> onKeyUp(extraKey, event)
+                else -> true
+            }
+        }
         if (event.keyCode in DIRECTIONAL_KEYS) {
             return when (event.action) {
                 KeyEvent.ACTION_DOWN -> onKeyDown(event.keyCode, event)
@@ -545,7 +561,9 @@ class MainActivity : AppCompatActivity() {
             KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
             KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
             KeyEvent.KEYCODE_CAMERA, LauncherPrefs.KEYCODE_CAMERA_ALT, LauncherPrefs.KEYCODE_CAMERA_ALT2,
-            KeyEvent.KEYCODE_F4, KEYCODE_ASSISTANT_RAW -> {
+            KeyEvent.KEYCODE_F4, KEYCODE_ASSISTANT_RAW,
+            LauncherPrefs.KEYCODE_EXTRA_1, LauncherPrefs.KEYCODE_EXTRA_2,
+            LauncherPrefs.KEYCODE_EXTRA_3, LauncherPrefs.KEYCODE_EXTRA_4 -> {
                 beginPressTracking(keyCode, event)
                 if (event.repeatCount == 0) scheduleAssign(keyCode)
                 return true
@@ -611,7 +629,9 @@ class MainActivity : AppCompatActivity() {
             KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
             KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
             KeyEvent.KEYCODE_CAMERA, LauncherPrefs.KEYCODE_CAMERA_ALT, LauncherPrefs.KEYCODE_CAMERA_ALT2,
-            KeyEvent.KEYCODE_F4, KEYCODE_ASSISTANT_RAW -> {
+            KeyEvent.KEYCODE_F4, KEYCODE_ASSISTANT_RAW,
+            LauncherPrefs.KEYCODE_EXTRA_1, LauncherPrefs.KEYCODE_EXTRA_2,
+            LauncherPrefs.KEYCODE_EXTRA_3, LauncherPrefs.KEYCODE_EXTRA_4 -> {
                 cancelAssign(keyCode)
                 if (assignFired.remove(keyCode)) return true
                 launchDirectionalKeyApp(keyCode)
@@ -713,33 +733,36 @@ class MainActivity : AppCompatActivity() {
         assignAppLauncher.launch(Intent(this, AppPickerActivity::class.java))
     }
 
-    /** Dials [digit]'s speed-dial number from the phone's own dialer data, or - if unset - opens the phone's own Speed Dial settings. */
+    /**
+     * Dials [digit]'s speed-dial number: the phone's own dialer data first,
+     * then the launcher's own slot (see [SpeedDialSettingsActivity]).
+     */
     private fun dialSpeedDial(digit: Int) {
-        contactsPermission.run(onDenied = { openSystemSpeedDial() }) {
-            val entry = systemSpeedDial(this, digit)
-            if (entry == null) {
-                Toast.makeText(this, getString(R.string.speed_dial_unset_shortcut_toast, digit), Toast.LENGTH_SHORT).show()
-                openSystemSpeedDial()
-            } else {
-                placeCall(callPermission, entry.number)
-            }
+        contactsPermission.run(onDenied = { resolveSpeedDial(digit, SystemSpeedDialResult.Unsupported) }) {
+            resolveSpeedDial(digit, systemSpeedDial(this, digit))
         }
     }
 
     /**
-     * Opens the phone's own Speed Dial settings screen, mirroring
-     * [openCallLog]'s exact component-targeting/fallback pattern for this
-     * same Kyocera/AOSP dialer.
+     * Calls whichever number is set, or - if neither is - opens the screen
+     * whose slots this key can actually read: the phone's own Speed Dial
+     * settings when its data is readable (the E4810), else the launcher's
+     * (the E4610, whose dialer data this app can't see).
      */
-    private fun openSystemSpeedDial() {
-        try {
+    private fun resolveSpeedDial(digit: Int, system: SystemSpeedDialResult) {
+        val number = (system as? SystemSpeedDialResult.Found)?.entry?.number ?: prefs.getSpeedDial(digit)?.number
+        if (number != null) {
+            placeCall(callPermission, number)
+            return
+        }
+        Toast.makeText(this, getString(R.string.speed_dial_unset_shortcut_toast, digit), Toast.LENGTH_SHORT).show()
+        if (system is SystemSpeedDialResult.Unset) {
+            openSystemSpeedDial()
+        } else {
             startActivity(
-                Intent(Intent.ACTION_MAIN).setComponent(
-                    ComponentName("com.android.dialer", "com.android.dialer.app.speeddial.SpeedDialActivity"),
-                ),
+                Intent(this, SpeedDialSettingsActivity::class.java)
+                    .putExtra(SpeedDialSettingsActivity.EXTRA_FOCUS_DIGIT, digit),
             )
-        } catch (e: Exception) {
-            Toast.makeText(this, R.string.toast_not_available, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -757,6 +780,7 @@ class MainActivity : AppCompatActivity() {
             KeyEvent.KEYCODE_DPAD_RIGHT -> prefs.getDpadRightApp()
             KeyEvent.KEYCODE_CAMERA, LauncherPrefs.KEYCODE_CAMERA_ALT, LauncherPrefs.KEYCODE_CAMERA_ALT2 -> prefs.getCameraKeyApp()
             KeyEvent.KEYCODE_F4, KEYCODE_ASSISTANT_RAW -> prefs.getAssistantKeyApp()
+            in LauncherPrefs.EXTRA_KEYCODES -> prefs.getExtraKeyApp(keyCode)
             else -> null
         }
         if (key != null) {
@@ -915,12 +939,20 @@ class MainActivity : AppCompatActivity() {
 
         /**
          * The phone's outer buttons, identified by raw scan code since they
-         * have no reliable KeyEvent.KEYCODE_* of their own: SOS (763), outer
-         * END (764 on the E4810, 172 on the E4610), outer Speaker (765/213)
-         * and PTT (766/231). Left to the system's key-assignment settings -
-         * see [dispatchKeyEvent].
+         * have no reliable KeyEvent.KEYCODE_* of their own, mapped to
+         * synthetic keycodes (see [dispatchKeyEvent]): SOS (763), outer END
+         * (764 on the E4810, 172 on the E4610), outer Speaker (765/213) and
+         * PTT (766/231).
          */
-        private val SYSTEM_KEY_SCAN_CODES = setOf(763, 764, 765, 766, 172, 213, 231)
+        private val EXTRA_KEY_SCAN_CODES = mapOf(
+            763 to LauncherPrefs.KEYCODE_EXTRA_1,
+            764 to LauncherPrefs.KEYCODE_EXTRA_2,
+            765 to LauncherPrefs.KEYCODE_EXTRA_3,
+            766 to LauncherPrefs.KEYCODE_EXTRA_4,
+            172 to LauncherPrefs.KEYCODE_EXTRA_2,
+            213 to LauncherPrefs.KEYCODE_EXTRA_3,
+            231 to LauncherPrefs.KEYCODE_EXTRA_4,
+        )
 
         /**
          * The Kyocera dialer's own call log, tried in order by [openCallLog]:

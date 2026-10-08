@@ -101,10 +101,12 @@ class HomeKeysSettingsActivity : BaseListActivity() {
         actions[ID_DPAD_RIGHT] = { configureDirectionalKey(KeyEvent.KEYCODE_DPAD_RIGHT) }
         actions[ID_CAMERA_KEY] = { configureDirectionalKey(KeyEvent.KEYCODE_CAMERA) }
         actions[ID_ASSISTANT_KEY] = { configureDirectionalKey(KeyEvent.KEYCODE_F4) }
-        // The outer buttons are bound in the phone's own Settings, not here (see MainActivity.dispatchKeyEvent).
-        for (id in listOf(ID_EXTRA_1, ID_EXTRA_2, ID_EXTRA_3, ID_EXTRA_4)) {
-            actions[id] = { openSystemKeySettings() }
+        // Outer buttons: an assigned app opens from Home; unassigned, the
+        // phone's own key setting applies (see MainActivity.dispatchKeyEvent).
+        EXTRA_ROW_IDS.forEachIndexed { index, id ->
+            actions[id] = { configureExtraKey(LauncherPrefs.EXTRA_KEYCODES[index]) }
         }
+        actions[ID_SPEED_DIAL] = { startActivity(Intent(this, SpeedDialSettingsActivity::class.java)) }
 
         adapter = ListRowAdapter(onClick = { dispatch(it) })
         listView.adapter = adapter
@@ -136,7 +138,8 @@ class HomeKeysSettingsActivity : BaseListActivity() {
             ?: getString(R.string.back_longpress_not_set)
         fun directionalLabel(keyCode: Int) = getDirectionalKeyApp(keyCode)?.let { AppRepository.resolveComponent(this, it)?.label }
             ?: getString(R.string.back_longpress_not_set)
-        val systemLabel = getString(R.string.opt_extra_key_system)
+        fun extraLabel(keyCode: Int) = prefs.getExtraKeyApp(keyCode)?.let { AppRepository.resolveComponent(this, it)?.label }
+            ?: getString(R.string.opt_extra_key_system)
         val cameraLabel = prefs.getCameraKeyApp()?.let { AppRepository.resolveComponent(this, it)?.label }
             ?: getString(R.string.opt_camera_key_default)
         val assistantLabel = prefs.getAssistantKeyApp()?.let { AppRepository.resolveComponent(this, it)?.label }
@@ -148,6 +151,7 @@ class HomeKeysSettingsActivity : BaseListActivity() {
                 Row(id = ID_LEFT_KEY, title = getString(R.string.settings_left_key), trailing = leftLabel, chevron = true),
                 Row(id = ID_RIGHT_KEY, title = getString(R.string.settings_right_key), trailing = rightLabel, chevron = true),
                 Row.section(getString(R.string.sec_buttons)),
+                Row(id = ID_SPEED_DIAL, title = getString(R.string.opt_speed_dial), chevron = true),
                 Row(id = ID_BACK_LONGPRESS, title = getString(R.string.opt_back_longpress), trailing = backLabel, chevron = true),
                 Row(id = ID_MENU_KEY, title = getString(R.string.opt_menu_key), trailing = menuLabel, chevron = true),
                 Row.section(getString(R.string.sec_dpad_keys)),
@@ -158,10 +162,10 @@ class HomeKeysSettingsActivity : BaseListActivity() {
                 Row(id = ID_CAMERA_KEY, title = getString(R.string.opt_camera_key), trailing = cameraLabel, chevron = true),
                 Row(id = ID_ASSISTANT_KEY, title = getString(R.string.opt_assistant_key), trailing = assistantLabel, chevron = true),
                 Row.section(getString(R.string.sec_extra_keys)),
-                Row(id = ID_EXTRA_1, title = getString(R.string.opt_extra_key_1), trailing = systemLabel, chevron = true),
-                Row(id = ID_EXTRA_2, title = getString(R.string.opt_extra_key_2), trailing = systemLabel, chevron = true),
-                Row(id = ID_EXTRA_3, title = getString(R.string.opt_extra_key_3), trailing = systemLabel, chevron = true),
-                Row(id = ID_EXTRA_4, title = getString(R.string.opt_extra_key_4), trailing = systemLabel, chevron = true),
+                Row(id = ID_EXTRA_1, title = getString(R.string.opt_extra_key_1), trailing = extraLabel(LauncherPrefs.KEYCODE_EXTRA_1), chevron = true),
+                Row(id = ID_EXTRA_2, title = getString(R.string.opt_extra_key_2), trailing = extraLabel(LauncherPrefs.KEYCODE_EXTRA_2), chevron = true),
+                Row(id = ID_EXTRA_3, title = getString(R.string.opt_extra_key_3), trailing = extraLabel(LauncherPrefs.KEYCODE_EXTRA_3), chevron = true),
+                Row(id = ID_EXTRA_4, title = getString(R.string.opt_extra_key_4), trailing = extraLabel(LauncherPrefs.KEYCODE_EXTRA_4), chevron = true),
             ),
         )
     }
@@ -254,6 +258,7 @@ class HomeKeysSettingsActivity : BaseListActivity() {
         KeyEvent.KEYCODE_DPAD_RIGHT -> prefs.getDpadRightApp()
         KeyEvent.KEYCODE_CAMERA -> prefs.getCameraKeyApp()
         KeyEvent.KEYCODE_F4 -> prefs.getAssistantKeyApp()
+        in LauncherPrefs.EXTRA_KEYCODES -> prefs.getExtraKeyApp(keyCode)
         else -> null
     }
 
@@ -265,6 +270,7 @@ class HomeKeysSettingsActivity : BaseListActivity() {
             KeyEvent.KEYCODE_DPAD_RIGHT -> prefs.setDpadRightApp(key)
             KeyEvent.KEYCODE_CAMERA -> prefs.setCameraKeyApp(key)
             KeyEvent.KEYCODE_F4 -> prefs.setAssistantKeyApp(key)
+            in LauncherPrefs.EXTRA_KEYCODES -> prefs.setExtraKeyApp(keyCode, key)
         }
     }
 
@@ -292,7 +298,43 @@ class HomeKeysSettingsActivity : BaseListActivity() {
             .show()
     }
 
+    /** Choose / clear an app for an outer button, or hand it to the phone's own key setting. */
+    private fun configureExtraKey(keyCode: Int) {
+        val assigned = getDirectionalKeyApp(keyCode) != null
+        val labels = listOfNotNull(
+            getString(R.string.back_longpress_choose),
+            if (assigned) getString(R.string.back_longpress_clear) else null,
+            getString(R.string.extra_key_phone_setting),
+        )
+        AlertDialog.Builder(this)
+            .setItems(labels.toTypedArray()) { _, which ->
+                when (labels[which]) {
+                    getString(R.string.back_longpress_choose) -> {
+                        pendingDirectionalKey = keyCode
+                        pickDirectionalKeyApp.launch(Intent(this, AppPickerActivity::class.java))
+                    }
+                    getString(R.string.back_longpress_clear) -> {
+                        setDirectionalKeyApp(keyCode, null)
+                        refreshRows()
+                    }
+                    else -> openSystemKeySettings()
+                }
+            }
+            .show()
+    }
+
+    /**
+     * The phone's own button-assignment screen: the E4610's PTT/key settings
+     * (`com.android.settings/.afp.PttSettings`, confirmed via logcat) where
+     * it exists, else the Settings app with a toast saying where to look.
+     */
     private fun openSystemKeySettings() {
+        try {
+            startActivity(Intent(ACTION_KYOCERA_PTT_SETTINGS))
+            return
+        } catch (e: Exception) {
+            // Not this model; fall back to the Settings app.
+        }
         Toast.makeText(this, R.string.extra_key_system_toast, Toast.LENGTH_LONG).show()
         openSystemSettings()
     }
@@ -312,5 +354,8 @@ class HomeKeysSettingsActivity : BaseListActivity() {
         private const val ID_EXTRA_2 = "extra_key_2"
         private const val ID_EXTRA_3 = "extra_key_3"
         private const val ID_EXTRA_4 = "extra_key_4"
+        private val EXTRA_ROW_IDS = listOf(ID_EXTRA_1, ID_EXTRA_2, ID_EXTRA_3, ID_EXTRA_4)
+        private const val ID_SPEED_DIAL = "speed_dial"
+        private const val ACTION_KYOCERA_PTT_SETTINGS = "kyocera.intent.action.PTT_SETTINGS"
     }
 }

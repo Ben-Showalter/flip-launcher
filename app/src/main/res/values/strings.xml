@@ -83,11 +83,24 @@
     <string name="opt_extra_key_2">Outer END Key</string>
     <string name="opt_extra_key_3">Outer Speaker Key</string>
     <string name="opt_extra_key_4">PTT</string>
-    <string name="opt_extra_key_system">System settings</string>
+    <string name="opt_extra_key_system">Phone default</string>
+    <string name="extra_key_phone_setting">Use phone\'s own setting</string>
     <string name="extra_key_system_toast">Set this button in the phone\'s Settings</string>
 
     <!-- Speed dial (long-press digit keys 0, 2-9) - read from the phone's own
          system speed dial data; see util/SystemSpeedDial.kt. -->
+    <string name="opt_speed_dial">Speed Dial</string>
+    <string name="title_speed_dial">Speed Dial</string>
+    <string name="shortcut_slot_label">Key %1$d</string>
+    <string name="speed_dial_not_set">Not set</string>
+    <string name="speed_dial_voicemail">Voicemail</string>
+    <string name="speed_dial_locked">Locked</string>
+    <string name="speed_dial_voicemail_locked_toast">Key 1 is reserved for voicemail</string>
+    <string name="speed_dial_pick_contact">Pick Contact</string>
+    <string name="speed_dial_enter_number">Enter Number Manually</string>
+    <string name="speed_dial_save">Save</string>
+    <string name="menu_phone_speed_dial">Phone\'s speed dial settings</string>
+    <string name="toast_no_contacts">No contacts app</string>
     <string name="speed_dial_unset_shortcut_toast">Key %1$d isn\'t set — opening Speed Dial settings</string>
 
     <!-- Recent Calls (Send key) -->

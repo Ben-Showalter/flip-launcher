@@ -82,6 +82,17 @@ person's laptop.
   new one there and in the manifest). The Mic/Assistant key reports keycode
   287 (scan 171) on the E4610, even with the launcher focused; other builds
   send `KEYCODE_F4`, so both are handled.
+- **E4610 speed dial and outer keys** (Android 7): `content://speed_dial`
+  holds nothing the dialer's own Speed Dial screen
+  (`com.android.dialer/.speeddial.SpeedDialActivity` there, `.app.speeddial.`
+  on newer models) saves, so `util/SystemSpeedDial.kt` reports it
+  `Unsupported` and Home falls back to the launcher's own slots
+  (`SpeedDialSettingsActivity`). The outer buttons' system assignment
+  (`com.android.settings/.afp.PttSettings`, action
+  `kyocera.intent.action.PTT_SETTINGS`) is a Kyocera Home feature that never
+  fires under another launcher, so Home assigns them itself (scan codes →
+  `LauncherPrefs.KEYCODE_EXTRA_1..4`); an unassigned one is still reported
+  unhandled.
 
 ## Flip-DumbPhoneGuide conventions
 

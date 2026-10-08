@@ -221,15 +221,27 @@ class AppDrawerActivity : AppCompatActivity() {
             produce = { AppRepository.getVisibleApps(this, prefs) },
             consume = { apps ->
                 if (isDestroyed) return@load
+                val firstBind = allApps.isEmpty()
                 allApps = apps
                 if (listMode) {
                     bindList()
+                } else if (firstBind) {
+                    // Opening the grid lands on the center cell of the first
+                    // page (Media Center in the default order), mirroring the
+                    // stock Kyocera menu, rather than the top-left corner.
+                    bindPage(0, focusPosition = gridCenterIndex())
                 } else {
                     val maxPage = (totalPages() - 1).coerceAtLeast(0)
                     bindPage(currentPage.coerceIn(0, maxPage))
                 }
             },
         )
+    }
+
+    /** The middle cell of a page (index 4 on the usual 3x3) - the grid's initial focus. */
+    private fun gridCenterIndex(): Int {
+        val rows = (pageSize / gridColumns).coerceAtLeast(1)
+        return (rows / 2) * gridColumns + gridColumns / 2
     }
 
     private fun hasNotification(app: AppInfo): Boolean =
