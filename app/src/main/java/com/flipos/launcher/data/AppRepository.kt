@@ -3,6 +3,7 @@ package com.flipos.launcher.data
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
@@ -22,6 +23,8 @@ object AppRepository {
 
     private const val SETTINGS_ACTIVITY = "com.flipos.launcher.activities.SettingsActivity"
     private const val NOTICES_ACTIVITY = "com.flipos.launcher.activities.NoticesActivity"
+
+    private const val CALL_LOG_LABEL = "Call Log"
 
     /** Kyocera's Notepad app (confirmed via logcat on the E4610). */
     private const val NOTEPAD_PACKAGE = "jp.kyocera.memo"
@@ -86,7 +89,7 @@ object AppRepository {
                 val ai = ri.activityInfo ?: return@mapNotNull null
                 val key = ComponentName(ai.packageName, ai.name).flattenToString()
                 AppInfo(
-                    label = ri.loadLabel(pm).toString(),
+                    label = labelFor(pm, ai, ri.loadLabel(pm)),
                     packageName = ai.packageName,
                     activityName = ai.name,
                     icon = resolveIcon(context, prefs, key, ri.loadIcon(pm)),
@@ -95,6 +98,19 @@ object AppRepository {
             .sortedBy { it.label.lowercase() }
             .toList()
         return applyAppOrder(context, prefs, apps)
+    }
+
+    /**
+     * A never-blank display label: the activity's own [loaded] label, else
+     * "Call Log" for a call-log activity (the E4610 dialer's call-log drawer
+     * entry ships with an empty label), else its app's label, else the
+     * package name.
+     */
+    private fun labelFor(pm: PackageManager, ai: ActivityInfo, loaded: CharSequence?): String {
+        loaded?.toString()?.takeIf { it.isNotBlank() }?.let { return it }
+        if (ai.name.contains("calllog", ignoreCase = true)) return CALL_LOG_LABEL
+        ai.applicationInfo?.loadLabel(pm)?.toString()?.takeIf { it.isNotBlank() }?.let { return it }
+        return ai.packageName
     }
 
     /**
@@ -171,13 +187,13 @@ object AppRepository {
      * (alphabetical) relative order, appended after every positioned one.
      */
     private fun applyAppOrder(context: Context, prefs: LauncherPrefs, apps: List<AppInfo>): List<AppInfo> {
-        if (!prefs.isAppOrderSeeded() || !prefs.isAppOrderV3Seeded()) {
+        if (!prefs.isAppOrderSeeded() || !prefs.isAppOrderV4Seeded()) {
             // A first install, or one seeded with the older default order:
             // (re)apply the current default once. Manual moves made before
             // this update are replaced this one time only.
             prefs.setAppOrder(seedAppOrder(context, prefs, apps))
             prefs.setAppOrderSeeded()
-            prefs.setAppOrderV3Seeded()
+            prefs.setAppOrderV4Seeded()
             prefs.setSettingsSeedFixed()
         } else if (!prefs.isSettingsSeedFixed()) {
             fixSettingsSeed(context, prefs, apps)
@@ -191,7 +207,7 @@ object AppRepository {
 
     /**
      * One-time starting order (see [LauncherPrefs.isAppOrderSeeded] /
-     * [LauncherPrefs.isAppOrderV3Seeded]) - exactly one 3x3 grid page:
+     * [LauncherPrefs.isAppOrderV4Seeded]) - exactly one 3x3 grid page:
      * Contacts, Notices, Messaging, Gallery, Media Center, Notepad, Quick
      * Settings, the real Settings app, Tools, so Media Center lands in the
      * center cell the drawer focuses first. Everything else stays
@@ -200,8 +216,10 @@ object AppRepository {
      * skipped, not left as a gap. Afterward the order is fully freeform.
      */
     private fun seedAppOrder(context: Context, prefs: LauncherPrefs, apps: List<AppInfo>): List<String> {
-        val hidden = prefs.getHiddenKeys()
-        val visible = apps.filter { it.key !in hidden }
+        // Search every app, hidden or not - the old one-time "hide unlisted
+        // apps" default hid Gallery/Settings on phones whose packages weren't
+        // on its whitelist - and unhide whatever gets picked below.
+        val visible = apps
         fun activityKey(activityName: String): String? = visible.firstOrNull { it.activityName == activityName }?.key
         fun keyPackage(componentKey: String?): String? = componentKey?.let { ComponentName.unflattenFromString(it)?.packageName }
 
@@ -239,7 +257,10 @@ object AppRepository {
                 label = "Settings",
             ),
             activityKey(KyoceraShortcuts.TOOLS_ALIAS),
-        ).distinct()
+        ).distinct().also { picked ->
+            val hidden = prefs.getHiddenKeys()
+            picked.filter { it in hidden }.forEach { prefs.setHidden(it, false) }
+        }
     }
 
     /**
@@ -312,8 +333,10 @@ object AppRepository {
 
     /** Apps shown to the user (hidden ones removed). */
     fun getVisibleApps(context: Context, prefs: LauncherPrefs): List<AppInfo> {
+        val all = getAllApps(context)
+        // Read after getAllApps(): its one-time order seeding may unhide apps.
         val hidden = prefs.getHiddenKeys()
-        return getAllApps(context).filter { it.key !in hidden }
+        return all.filter { it.key !in hidden }
     }
 
     /**
@@ -332,7 +355,7 @@ object AppRepository {
                 .map { ai ->
                     val key = ComponentName(packageName, ai.name).flattenToString()
                     AppInfo(
-                        label = ai.loadLabel(pm).toString(),
+                        label = labelFor(pm, ai, ai.loadLabel(pm)),
                         packageName = packageName,
                         activityName = ai.name,
                         icon = resolveIcon(context, prefs, key, ai.loadIcon(pm)),
@@ -357,7 +380,7 @@ object AppRepository {
             @Suppress("DEPRECATION")
             val ai = pm.getActivityInfo(component, 0)
             AppInfo(
-                label = ai.loadLabel(pm).toString(),
+                label = labelFor(pm, ai, ai.loadLabel(pm)),
                 packageName = component.packageName,
                 activityName = component.className,
                 icon = resolveIcon(context, prefs, key, ai.loadIcon(pm)),

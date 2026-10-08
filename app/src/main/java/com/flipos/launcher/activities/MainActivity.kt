@@ -3,6 +3,7 @@ package com.flipos.launcher.activities
 import com.flipos.launcher.R
 
 import android.Manifest
+import android.app.KeyguardManager
 import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
@@ -10,10 +11,12 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
+import android.content.res.Configuration
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
 import android.provider.MediaStore
 import android.speech.RecognizerIntent
 import android.view.KeyEvent
@@ -41,6 +44,7 @@ import com.flipos.launcher.util.accentColorAlpha
 import com.flipos.launcher.util.applyFakeBold
 import com.flipos.launcher.util.hideNavigationBar
 import com.flipos.launcher.util.isStarKey
+import com.flipos.launcher.util.outerKeyFor
 import com.flipos.launcher.util.launchAppByKey
 import com.flipos.launcher.util.placeCall
 import com.flipos.launcher.util.SystemSpeedDialResult
@@ -69,8 +73,8 @@ import java.util.Locale
  * are the exception: their long-press (speed dial / voicemail) fires the
  * instant it's detected, and assignment for them is Settings-only. The
  * phone's outer buttons (SOS, outer END/Speaker, PTT) open their assigned
- * app on a long press (a short press does nothing); unassigned, they're
- * left to the system's own key-assignment setting.
+ * app on a single press, only while Home is showing with the screen on and
+ * the flip open; unassigned, they're left to the system's own key setting.
  */
 class MainActivity : AppCompatActivity() {
 
@@ -121,9 +125,6 @@ class MainActivity : AppCompatActivity() {
 
     /** Scheduled digit-long-press (speed dial / voicemail) runnables, keyed by keyCode. */
     private val digitHoldRunnables = HashMap<Int, Runnable>()
-
-    /** Scheduled outer-button hold runnables (see [scheduleExtraKeyHold]), keyed by synthetic keycode. */
-    private val extraKeyHoldRunnables = HashMap<Int, Runnable>()
 
     /** [KeyEvent.getDownTime] of the outer-button press that last launched, keyed by synthetic keycode. */
     private val extraKeyFiredDownTime = HashMap<Int, Long>()
@@ -310,7 +311,6 @@ class MainActivity : AppCompatActivity() {
         assignRunnables.clear()
         digitHoldRunnables.clear()
         digitTapRunnables.clear()
-        extraKeyHoldRunnables.clear()
         pressedTapKeys.clear()
         // digitHandledDownTime deliberately survives a pause: placing a
         // speed-dial call (from a hold firing) backgrounds this Activity via
@@ -333,7 +333,6 @@ class MainActivity : AppCompatActivity() {
         // latter must survive a speed-dial call taking focus.
         assignRunnables.keys.toList().forEach { cancelAssign(it) }
         digitHoldRunnables.keys.toList().forEach { cancelDigitHold(it) }
-        extraKeyHoldRunnables.keys.toList().forEach { cancelExtraKeyHold(it) }
         pressedTapKeys.clear()
     }
 
@@ -519,27 +518,23 @@ class MainActivity : AppCompatActivity() {
     // (and Camera, for uniformity) are captured a level higher, in
     // dispatchKeyEvent, before the view hierarchy gets a look at them.
     //
-    // The phone's outer buttons (see EXTRA_KEY_SCAN_CODES) have no reliable
-    // KeyEvent.KEYCODE_* of their own, so they're identified by raw scan code
-    // and remapped to an app-defined synthetic keycode before reaching
-    // onKeyDown/onKeyUp (which only ever use their keyCode *parameter*), so
-    // they can be told apart. Like the phone's own binding, an assigned one
-    // only acts on a long press ([EXTRA_KEY_HOLD_MS]) - a short press does
-    // nothing, so a bump in a pocket can't open anything - and there's no
-    // hold-to-assign (Settings only). The phone may end a held press early
-    // once its own long-press threshold passes (a cancelled UP, or a
-    // long-press repeat), so the hold counts however it's reported - see
-    // [onExtraKeyEvent]. One with no
-    // app assigned is reported unhandled instead, so the system's own
-    // binding (or default) applies - on the E4610 that binding is a Kyocera
-    // Home feature that never fires under another launcher, hence assigning
-    // them here.
+    // The phone's outer buttons have no reliable KeyEvent.KEYCODE_* of their
+    // own, so they're identified by raw scan code (see util/Keys.kt
+    // outerKeyFor) and handled in [onOuterKeyEvent]. These phones report
+    // only the press - never how long it's held - so a long press can't be
+    // detected; instead an assigned button opens its app on a single press,
+    // but only when it's safe to (see [isSafeForOuterKey]), so a press in a
+    // pocket or with the flip closed does nothing. There's no hold-to-assign
+    // (Settings only). One with no app assigned is reported unhandled, so
+    // the system's own binding (or default) applies - on the E4610 that
+    // binding is a Kyocera Home feature that never fires under another
+    // launcher, hence assigning them here.
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        val extraKey = EXTRA_KEY_SCAN_CODES[event.scanCode]
-        if (extraKey != null) {
-            if (prefs.getExtraKeyApp(extraKey) == null) return false
-            onExtraKeyEvent(extraKey, event)
+        val outerKey = outerKeyFor(event.scanCode)
+        if (outerKey != null) {
+            if (prefs.getExtraKeyApp(outerKey) == null) return false
+            onOuterKeyEvent(outerKey, event)
             return true
         }
         if (event.keyCode in DIRECTIONAL_KEYS) {
@@ -712,49 +707,31 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Opens an outer button's assigned app on a long press, counted however
-     * the phone reports it: the hold timer firing while still down, a
-     * long-press/auto-repeat DOWN, or an UP (even a cancelled one) arriving
-     * at least [EXTRA_KEY_HOLD_MS] after the DOWN. Fires at most once per
-     * press (keyed by [KeyEvent.getDownTime]); a short tap does nothing.
+     * Opens an outer button's assigned app on whichever half of the press
+     * arrives first (once per press, keyed by [KeyEvent.getDownTime]) - only
+     * if [isSafeForOuterKey]. Both halves are consumed either way.
      */
-    private fun onExtraKeyEvent(keyCode: Int, event: KeyEvent) {
-        when (event.action) {
-            KeyEvent.ACTION_DOWN -> {
-                if (event.repeatCount == 0) {
-                    event.startTracking()
-                    scheduleExtraKeyHold(keyCode, event.downTime)
-                } else {
-                    fireExtraKey(keyCode, event.downTime)
-                }
-            }
-            KeyEvent.ACTION_UP -> {
-                cancelExtraKeyHold(keyCode)
-                if (event.eventTime - event.downTime >= EXTRA_KEY_HOLD_MS) fireExtraKey(keyCode, event.downTime)
-            }
-        }
+    private fun onOuterKeyEvent(keyCode: Int, event: KeyEvent) {
+        if (event.action != KeyEvent.ACTION_DOWN && event.action != KeyEvent.ACTION_UP) return
+        if (extraKeyFiredDownTime[keyCode] == event.downTime) return
+        extraKeyFiredDownTime[keyCode] = event.downTime
+        if (isSafeForOuterKey()) launchDirectionalKeyApp(keyCode)
     }
 
-    /** Launches [keyCode]'s app unless this press ([downTime]) already did. */
-    private fun fireExtraKey(keyCode: Int, downTime: Long) {
-        if (extraKeyFiredDownTime[keyCode] == downTime) return
-        extraKeyFiredDownTime[keyCode] = downTime
-        cancelExtraKeyHold(keyCode)
-        launchDirectionalKeyApp(keyCode)
-    }
-
-    private fun scheduleExtraKeyHold(keyCode: Int, downTime: Long) {
-        cancelExtraKeyHold(keyCode)
-        val runnable = Runnable {
-            extraKeyHoldRunnables.remove(keyCode)
-            fireExtraKey(keyCode, downTime)
-        }
-        extraKeyHoldRunnables[keyCode] = runnable
-        assignHandler.postDelayed(runnable, EXTRA_KEY_HOLD_MS)
-    }
-
-    private fun cancelExtraKeyHold(keyCode: Int) {
-        extraKeyHoldRunnables.remove(keyCode)?.let { assignHandler.removeCallbacks(it) }
+    /**
+     * Whether an outer button may launch anything right now: Home is the
+     * window in front, the screen is on, the phone isn't on its lock screen
+     * and the flip is open - so a press in a pocket or bag does nothing.
+     */
+    private fun isSafeForOuterKey(): Boolean {
+        if (!hasWindowFocus()) return false
+        val power = getSystemService(Context.POWER_SERVICE) as? PowerManager
+        if (power != null && !power.isInteractive) return false
+        val keyguard = getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
+        if (keyguard != null && keyguard.isKeyguardLocked) return false
+        // A closed flip hides the keypad; Kyocera flips also turn the main
+        // screen off, which the isInteractive check above already covers.
+        return resources.configuration.hardKeyboardHidden != Configuration.HARDKEYBOARDHIDDEN_YES
     }
 
     private fun cancelDigitHold(keyCode: Int) {
@@ -958,14 +935,6 @@ class MainActivity : AppCompatActivity() {
         // Shown at most once per process so we don't nag on every resume.
         private var defaultPromptShown = false
 
-        /**
-         * How long an outer button (SOS, outer END/Speaker, PTT) must be held
-         * to open its assigned app - the framework's own long-press timeout,
-         * the same threshold the phone's own binding uses, so a pocket bump
-         * doesn't launch anything but the system can't end the press first.
-         */
-        private val EXTRA_KEY_HOLD_MS = ViewConfiguration.getLongPressTimeout().toLong()
-
         /** How long an assignable key must be held to open its assign menu. */
         private const val ASSIGN_HOLD_MS = 5000L
 
@@ -997,23 +966,6 @@ class MainActivity : AppCompatActivity() {
             KeyEvent.KEYCODE_CAMERA,
             LauncherPrefs.KEYCODE_CAMERA_ALT,
             LauncherPrefs.KEYCODE_CAMERA_ALT2,
-        )
-
-        /**
-         * The phone's outer buttons, identified by raw scan code since they
-         * have no reliable KeyEvent.KEYCODE_* of their own, mapped to
-         * synthetic keycodes (see [dispatchKeyEvent]): SOS (763), outer END
-         * (764 on the E4810, 172 on the E4610), outer Speaker (765/213) and
-         * PTT (766/231).
-         */
-        private val EXTRA_KEY_SCAN_CODES = mapOf(
-            763 to LauncherPrefs.KEYCODE_EXTRA_1,
-            764 to LauncherPrefs.KEYCODE_EXTRA_2,
-            765 to LauncherPrefs.KEYCODE_EXTRA_3,
-            766 to LauncherPrefs.KEYCODE_EXTRA_4,
-            172 to LauncherPrefs.KEYCODE_EXTRA_2,
-            213 to LauncherPrefs.KEYCODE_EXTRA_3,
-            231 to LauncherPrefs.KEYCODE_EXTRA_4,
         )
 
         /**

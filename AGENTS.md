@@ -92,17 +92,21 @@ person's laptop.
   `kyocera.intent.action.PTT_SETTINGS`) is a Kyocera Home feature that never
   fires under another launcher, so Home assigns them itself (scan codes →
   `LauncherPrefs.KEYCODE_EXTRA_1..4`); an unassigned one is still reported
-  unhandled. Assigned ones only act on a long press (the framework
-  long-press timeout, ~500 ms) and have no hold-to-assign, so a phone in a
-  pocket can't launch apps or open the picker. The long press counts
-  however it arrives - timer while held, a long-press repeat, or an UP
-  (even a cancelled one) late enough - because the phone may end a held
-  outer-button press itself once its own long-press threshold passes.
+  unhandled. These phones report only the press of an outer button, never
+  how long it's held, so a long press can't be detected (a hold timer never
+  fires - tried and reverted). Instead an assigned one opens its app on a
+  single press, but only while Home has focus, the screen is on, the
+  keyguard is down and the flip is open (`MainActivity.isSafeForOuterKey`),
+  so a phone in a pocket does nothing. No hold-to-assign. Other screens
+  leave them to the phone, with no unknown-key toast.
 - **Category lookups** (`CategoryApps`): `resolveActivity()` returns
   Android's chooser (package `android`) when several apps match with no
   default - treat that as unresolved. The drawer's default order picks each
   slot from known packages, then all handlers, then label
-  (`AppRepository.pickApp`).
+  (`AppRepository.pickApp`), searching hidden apps too and unhiding what it
+  picks (the old hide-unlisted default hid Gallery/Settings on the E4610).
+  The E4610 dialer's call-log drawer entry has an empty label; labels fall
+  back to "Call Log", then the app label (`AppRepository.labelFor`).
 
 ## Flip-DumbPhoneGuide conventions
 

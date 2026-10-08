@@ -16,6 +16,25 @@ const val KEYCODE_ASSISTANT_RAW = 287
 fun isAssistantKey(keyCode: Int): Boolean =
     keyCode == KeyEvent.KEYCODE_F4 || keyCode == KEYCODE_ASSISTANT_RAW
 
+/**
+ * The phone's outer buttons, identified by raw scan code since they have no
+ * reliable KeyEvent.KEYCODE_* of their own, mapped to the launcher's
+ * synthetic keycodes: SOS (763), outer END (764 on the E4810, 172 on the
+ * E4610), outer Speaker (765/213) and PTT (766/231).
+ */
+private val OUTER_KEY_SCAN_CODES = mapOf(
+    763 to LauncherPrefs.KEYCODE_EXTRA_1,
+    764 to LauncherPrefs.KEYCODE_EXTRA_2,
+    765 to LauncherPrefs.KEYCODE_EXTRA_3,
+    766 to LauncherPrefs.KEYCODE_EXTRA_4,
+    172 to LauncherPrefs.KEYCODE_EXTRA_2,
+    213 to LauncherPrefs.KEYCODE_EXTRA_3,
+    231 to LauncherPrefs.KEYCODE_EXTRA_4,
+)
+
+/** The synthetic keycode (LauncherPrefs.KEYCODE_EXTRA_*) for an outer button's [scanCode], or null. */
+fun outerKeyFor(scanCode: Int): Int? = OUTER_KEY_SCAN_CODES[scanCode]
+
 /** `*` arrives as either keycode depending on the device; treat them as the same key. */
 fun isStarKey(keyCode: Int): Boolean =
     keyCode == KeyEvent.KEYCODE_STAR || keyCode == KeyEvent.KEYCODE_NUMPAD_MULTIPLY
@@ -64,7 +83,9 @@ class SoftKeyRouter(
  * has no logcat, so this is the fastest way to learn a new phone's keys.
  */
 fun Context.toastIfUnknownKey(keyCode: Int, event: KeyEvent) {
-    if (event.repeatCount != 0 || keyCode in KNOWN_KEYS) return
+    // Outer buttons are known - only Home acts on them; elsewhere they're
+    // left to the phone, without the diagnostic toast.
+    if (event.repeatCount != 0 || keyCode in KNOWN_KEYS || outerKeyFor(event.scanCode) != null) return
     Toast.makeText(
         this,
         getString(R.string.unrecognized_key_toast, keyCode, event.scanCode),

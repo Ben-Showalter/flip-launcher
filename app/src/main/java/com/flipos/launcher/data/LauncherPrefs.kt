@@ -74,7 +74,7 @@ class LauncherPrefs(context: Context) {
     // ---------------------------------------------- Outer buttons (Home)
     //
     // SOS, outer END, outer Speaker and PTT, identified by scan code (see
-    // MainActivity.EXTRA_KEY_SCAN_CODES). Null = unassigned, which leaves the
+    // util/Keys.kt outerKeyFor). Null = unassigned, which leaves the
     // press to the phone's own key-assignment setting.
 
     fun getExtraKeyApp(keyCode: Int): String? = prefs.getString(extraKeyPref(keyCode), null)
@@ -176,13 +176,14 @@ class LauncherPrefs(context: Context) {
     /**
      * Whether the current default order (Contacts, Notices, Messaging,
      * Gallery, Media Center, ... - see [AppRepository]) has been applied
-     * once, replacing whatever an earlier seeding stored. (v3: v2 missed
-     * Gallery/Settings on phones where their lookup hit the app chooser.)
+     * once, replacing whatever an earlier seeding stored. (v4: earlier
+     * versions missed Gallery/Settings where their lookup hit the app
+     * chooser, or where the old hide-unlisted default had hidden them.)
      */
-    fun isAppOrderV3Seeded(): Boolean = prefs.getBoolean(KEY_APP_ORDER_V3_SEEDED, false)
+    fun isAppOrderV4Seeded(): Boolean = prefs.getBoolean(KEY_APP_ORDER_V4_SEEDED, false)
 
-    fun setAppOrderV3Seeded() {
-        prefs.edit().putBoolean(KEY_APP_ORDER_V3_SEEDED, true).apply()
+    fun setAppOrderV4Seeded() {
+        prefs.edit().putBoolean(KEY_APP_ORDER_V4_SEEDED, true).apply()
     }
 
     /**
@@ -427,7 +428,7 @@ class LauncherPrefs(context: Context) {
         /**
          * App-defined synthetic keycodes for the four outer buttons (SOS,
          * outer END, outer Speaker, PTT), which have no reliable
-         * KeyEvent.KEYCODE_* of their own - see MainActivity.EXTRA_KEY_SCAN_CODES.
+         * KeyEvent.KEYCODE_* of their own - see util/Keys.kt outerKeyFor.
          */
         const val KEYCODE_EXTRA_1 = -101
         const val KEYCODE_EXTRA_2 = -102
@@ -462,7 +463,7 @@ class LauncherPrefs(context: Context) {
         private const val KEY_EXTRA_KEY_PREFIX = "extra_key_"
         private const val KEY_SPEED_DIAL_PREFIX = "speed_dial_"
         private const val SPEED_DIAL_SEPARATOR = "::"
-        private const val KEY_APP_ORDER_V3_SEEDED = "app_order_v3_seeded"
+        private const val KEY_APP_ORDER_V4_SEEDED = "app_order_v4_seeded"
         private const val KEY_AUTO_ICONS_REVERTED = "auto_icons_reverted"
         private const val KEY_ICON_SIZE_PERCENT = "icon_size_percent"
         private const val KEY_RIGHT_KEY_APP = "right_key_app"
