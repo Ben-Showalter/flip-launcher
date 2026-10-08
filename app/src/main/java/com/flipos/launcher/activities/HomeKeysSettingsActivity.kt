@@ -100,6 +100,7 @@ class HomeKeysSettingsActivity : BaseListActivity() {
         actions[ID_DPAD_LEFT] = { configureDirectionalKey(KeyEvent.KEYCODE_DPAD_LEFT) }
         actions[ID_DPAD_RIGHT] = { configureDirectionalKey(KeyEvent.KEYCODE_DPAD_RIGHT) }
         actions[ID_CAMERA_KEY] = { configureDirectionalKey(KeyEvent.KEYCODE_CAMERA) }
+        actions[ID_ASSISTANT_KEY] = { configureDirectionalKey(KeyEvent.KEYCODE_F4) }
         // The outer buttons are bound in the phone's own Settings, not here (see MainActivity.dispatchKeyEvent).
         for (id in listOf(ID_EXTRA_1, ID_EXTRA_2, ID_EXTRA_3, ID_EXTRA_4)) {
             actions[id] = { openSystemKeySettings() }
@@ -109,11 +110,10 @@ class HomeKeysSettingsActivity : BaseListActivity() {
         listView.adapter = adapter
 
         softKeys.setLabels(
-            getString(R.string.softkey_back),
+            null,
             getString(R.string.softkey_select),
             null,
         )
-        softKeys.setOnLeftClick { finish() }
         softKeys.setOnCenterClick { focusedPosition().takeIf { it >= 0 }?.let { dispatch(it) } }
         refreshRows()
         focusFirst()
@@ -154,6 +154,7 @@ class HomeKeysSettingsActivity : BaseListActivity() {
                 Row(id = ID_DPAD_LEFT, title = getString(R.string.opt_dpad_left), trailing = directionalLabel(KeyEvent.KEYCODE_DPAD_LEFT), chevron = true),
                 Row(id = ID_DPAD_RIGHT, title = getString(R.string.opt_dpad_right), trailing = directionalLabel(KeyEvent.KEYCODE_DPAD_RIGHT), chevron = true),
                 Row(id = ID_CAMERA_KEY, title = getString(R.string.opt_camera_key), trailing = cameraLabel, chevron = true),
+                Row(id = ID_ASSISTANT_KEY, title = getString(R.string.opt_assistant_key), trailing = directionalLabel(KeyEvent.KEYCODE_F4), chevron = true),
                 Row.section(getString(R.string.sec_extra_keys)),
                 Row(id = ID_EXTRA_1, title = getString(R.string.opt_extra_key_1), trailing = systemLabel, chevron = true),
                 Row(id = ID_EXTRA_2, title = getString(R.string.opt_extra_key_2), trailing = systemLabel, chevron = true),
@@ -250,6 +251,7 @@ class HomeKeysSettingsActivity : BaseListActivity() {
         KeyEvent.KEYCODE_DPAD_LEFT -> prefs.getDpadLeftApp()
         KeyEvent.KEYCODE_DPAD_RIGHT -> prefs.getDpadRightApp()
         KeyEvent.KEYCODE_CAMERA -> prefs.getCameraKeyApp()
+        KeyEvent.KEYCODE_F4 -> prefs.getAssistantKeyApp()
         else -> null
     }
 
@@ -260,6 +262,7 @@ class HomeKeysSettingsActivity : BaseListActivity() {
             KeyEvent.KEYCODE_DPAD_LEFT -> prefs.setDpadLeftApp(key)
             KeyEvent.KEYCODE_DPAD_RIGHT -> prefs.setDpadRightApp(key)
             KeyEvent.KEYCODE_CAMERA -> prefs.setCameraKeyApp(key)
+            KeyEvent.KEYCODE_F4 -> prefs.setAssistantKeyApp(key)
         }
     }
 
@@ -292,14 +295,6 @@ class HomeKeysSettingsActivity : BaseListActivity() {
         openSystemSettings()
     }
 
-    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_SOFT_LEFT) {
-            finish()
-            return true
-        }
-        return super.onKeyDown(keyCode, event)
-    }
-
     companion object {
         private const val ID_LEFT_KEY = "left_key"
         private const val ID_RIGHT_KEY = "right_key"
@@ -310,6 +305,7 @@ class HomeKeysSettingsActivity : BaseListActivity() {
         private const val ID_DPAD_LEFT = "dpad_left"
         private const val ID_DPAD_RIGHT = "dpad_right"
         private const val ID_CAMERA_KEY = "camera_key"
+        private const val ID_ASSISTANT_KEY = "assistant_key"
         private const val ID_EXTRA_1 = "extra_key_1"
         private const val ID_EXTRA_2 = "extra_key_2"
         private const val ID_EXTRA_3 = "extra_key_3"

@@ -9,6 +9,7 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.flipos.launcher.R
 import com.flipos.launcher.data.NoticeItem
+import com.flipos.launcher.util.applyFakeBold
 
 /** Rows for the custom Notices screen: icon, title, body text and a relative timestamp. */
 class NoticeRowAdapter(
@@ -27,6 +28,7 @@ class NoticeRowAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_notice_row, parent, false)
+        view.applyFakeBold()
         return VH(view)
     }
 

@@ -26,7 +26,11 @@ import com.flipos.launcher.ui.PageIndicatorView
 import com.flipos.launcher.ui.Row
 import com.flipos.launcher.ui.SoftKeyBar
 import com.flipos.launcher.util.BackgroundLoader
+import com.flipos.launcher.util.SoftKeyRouter
+import com.flipos.launcher.util.applyFakeBold
+import com.flipos.launcher.util.hideNavigationBar
 import com.flipos.launcher.util.launchAppByKey
+import com.flipos.launcher.util.toastIfUnknownKey
 import kotlin.math.ceil
 import kotlin.math.min
 
@@ -71,6 +75,15 @@ class AppDrawerActivity : AppCompatActivity() {
 
     private val loader = BackgroundLoader()
 
+    /**
+     * Left soft key has no action here (Back leaves the drawer); Right/MENU
+     * open the focused app's Options. Both act on key UP - see [SoftKeyRouter].
+     */
+    private val softKeyRouter = SoftKeyRouter(onPrimary = {}, onOptions = { optionsForFocused() })
+
+    /** Digit keys whose DOWN landed here, so their launch fires on UP (and only for a real press). */
+    private val pressedDigits = mutableSetOf<Int>()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = LauncherPrefs(this)
@@ -87,6 +100,7 @@ class AppDrawerActivity : AppCompatActivity() {
         softKeys = findViewById(R.id.soft_keys)
         pageIndicator = findViewById(R.id.page_indicator)
         pageIndicator.animateChanges = prefs.isAnimationsEnabled()
+        findViewById<View>(android.R.id.content).applyFakeBold()
 
         // The window shows the wallpaper through a translucent overlay (see
         // Theme.FlipLauncher.Drawer); these two would otherwise paint over it
@@ -125,7 +139,6 @@ class AppDrawerActivity : AppCompatActivity() {
 
         softKeys.setLabels(null, null, getString(R.string.softkey_options))
         softKeys.setCenterPlainLabel(getString(R.string.softkey_select).uppercase())
-        softKeys.setOnLeftClick { finish() }
         softKeys.setOnCenterClick { openFocused() }
         softKeys.setOnRightClick { optionsForFocused() }
     }
@@ -142,6 +155,23 @@ class AppDrawerActivity : AppCompatActivity() {
         applyViewMode()
         updatePageSize()
         refresh()
+        window.hideNavigationBar()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        releaseHeldKeys()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) window.hideNavigationBar() else releaseHeldKeys()
+    }
+
+    /** Drops in-flight presses whose UP a dialog or a closing flip may swallow. */
+    private fun releaseHeldKeys() {
+        softKeyRouter.reset()
+        pressedDigits.clear()
     }
 
     override fun onDestroy() {
@@ -625,26 +655,34 @@ class AppDrawerActivity : AppCompatActivity() {
         if (event.repeatCount > 0 && isRepeatGuardedKey(keyCode)) return true
         val step = repeatStep(event)
         when (keyCode) {
-            in KeyEvent.KEYCODE_1..KeyEvent.KEYCODE_9 -> {
-                // Only the grid has a fixed nine-per-page shape for this
-                // feature-phone shortcut to map onto; the list just scrolls.
-                if (!listMode) {
-                    currentPageItems.getOrNull(keyCode - KeyEvent.KEYCODE_1)?.let { launchAppByKey(it.key) }
-                }
-                return true
-            }
+            // Launches on UP (see onKeyUp) so the UP can't reach the launched app.
+            in KeyEvent.KEYCODE_1..KeyEvent.KEYCODE_9 -> { pressedDigits.add(keyCode); return true }
             // Handled explicitly (rather than left to view focus search) so a
             // page flip only happens once focus is already on the bottom/top row.
             KeyEvent.KEYCODE_DPAD_DOWN -> { if (listMode) moveFocusLinear(step) else moveFocusByRow(step); return true }
             KeyEvent.KEYCODE_DPAD_UP -> { if (listMode) moveFocusLinear(-step) else moveFocusByRow(-step); return true }
-            // In the grid, left/right wrap across rows (and pages) instead of
-            // stopping at a row edge; the list has no columns to move between.
+            // In the grid, left/right flow across rows (and pages) instead of
+            // stopping at a row edge, clamped at the very first/last app; the
+            // list has no columns to move between.
             KeyEvent.KEYCODE_DPAD_RIGHT -> { if (!listMode) { moveFocusByColumn(step); return true } }
             KeyEvent.KEYCODE_DPAD_LEFT -> { if (!listMode) { moveFocusByColumn(-step); return true } }
-            KeyEvent.KEYCODE_SOFT_LEFT -> { finish(); return true }
-            KeyEvent.KEYCODE_SOFT_RIGHT, KeyEvent.KEYCODE_MENU -> { optionsForFocused(); return true }
         }
+        if (softKeyRouter.onKeyDown(keyCode, event)) return true
+        toastIfUnknownKey(keyCode, event)
         return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode in KeyEvent.KEYCODE_1..KeyEvent.KEYCODE_9) {
+            // Only the grid has a fixed nine-per-page shape for this
+            // feature-phone shortcut to map onto; the list just scrolls.
+            if (pressedDigits.remove(keyCode) && !event.isCanceled && movingKey == null && !listMode) {
+                currentPageItems.getOrNull(keyCode - KeyEvent.KEYCODE_1)?.let { launchAppByKey(it.key) }
+            }
+            return true
+        }
+        if (softKeyRouter.onKeyUp(keyCode, event)) return true
+        return super.onKeyUp(keyCode, event)
     }
 
     private fun isRepeatGuardedKey(keyCode: Int): Boolean = when (keyCode) {

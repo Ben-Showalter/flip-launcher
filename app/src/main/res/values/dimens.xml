@@ -2,7 +2,7 @@
 <resources>
     <!-- Soft keys / chrome -->
     <dimen name="softkey_height">48dp</dimen>
-    <dimen name="softkey_text">15sp</dimen>
+    <dimen name="softkey_text">16sp</dimen>
 
     <!-- Home clock block -->
     <dimen name="clock_text">64sp</dimen>
@@ -20,12 +20,12 @@
     <dimen name="page_dot_margin">5dp</dimen>
 
     <!-- Type scale (sp). Tuned for readability on ~240x320 QVGA screens. -->
-    <dimen name="text_title">25sp</dimen>
-    <dimen name="screen_title">25sp</dimen>
+    <dimen name="text_title">18sp</dimen>
+    <dimen name="screen_title">18sp</dimen>
     <dimen name="text_row_title">16sp</dimen>
-    <dimen name="text_row_subtitle">12sp</dimen>
-    <dimen name="text_row_trailing">13sp</dimen>
-    <dimen name="text_section">12sp</dimen>
+    <dimen name="text_row_subtitle">14sp</dimen>
+    <dimen name="text_row_trailing">14sp</dimen>
+    <dimen name="text_section">14sp</dimen>
     <dimen name="text_caption">11sp</dimen>
 
     <!-- Spacing scale (dp). Use these instead of inline paddings. -->

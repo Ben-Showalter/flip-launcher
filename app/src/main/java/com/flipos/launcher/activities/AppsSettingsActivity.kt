@@ -4,7 +4,6 @@ import com.flipos.launcher.R
 
 import android.content.Intent
 import android.os.Bundle
-import android.view.KeyEvent
 import com.flipos.launcher.data.LauncherPrefs
 import com.flipos.launcher.ui.ListRowAdapter
 import com.flipos.launcher.ui.Row
@@ -31,11 +30,10 @@ class AppsSettingsActivity : BaseListActivity() {
         listView.adapter = adapter
 
         softKeys.setLabels(
-            getString(R.string.softkey_back),
+            null,
             getString(R.string.softkey_select),
             null,
         )
-        softKeys.setOnLeftClick { finish() }
         softKeys.setOnCenterClick { focusedPosition().takeIf { it >= 0 }?.let { dispatch(it) } }
         refreshRows()
         focusFirst()
@@ -67,14 +65,6 @@ class AppsSettingsActivity : BaseListActivity() {
 
     private fun dispatch(position: Int) {
         adapter.rowAt(position)?.id?.let { actions[it]?.invoke() }
-    }
-
-    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_SOFT_LEFT) {
-            finish()
-            return true
-        }
-        return super.onKeyDown(keyCode, event)
     }
 
     companion object {

@@ -54,11 +54,13 @@ class PermissionGate(
     }
 }
 
-/** Opens this app's system permission settings page, for a permanently-denied permission. */
+/**
+ * Sends the user to grant a permanently-denied permission by hand. Opens the
+ * general Apps list rather than this app's own page - per-app deep links
+ * don't work on these OEM builds - with a toast naming the path.
+ */
 fun AppCompatActivity.openAppPermissionSettings() {
-    startActivity(
-        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null)),
-    )
+    openSettingsWithPath(Settings.ACTION_APPLICATION_SETTINGS, R.string.path_app_permissions)
 }
 
 /**

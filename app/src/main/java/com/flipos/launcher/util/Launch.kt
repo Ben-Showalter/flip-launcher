@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import android.widget.Toast
+import androidx.annotation.StringRes
 import com.flipos.launcher.R
 import com.flipos.launcher.data.AppRepository
 
@@ -41,4 +42,19 @@ fun Context.openSystemSettings() {
         }
     }
     Toast.makeText(this, R.string.toast_not_available, Toast.LENGTH_SHORT).show()
+}
+
+/**
+ * Opens a general system Settings list screen ([action]) and shows the manual
+ * path to our entry in it ([manualPath]). OEM builds on keypad flip phones
+ * don't honor deep links to a single app's page, and some lack a screen
+ * outright - so never crash, and always tell the user where to go by D-pad.
+ */
+fun Context.openSettingsWithPath(action: String, @StringRes manualPath: Int) {
+    try {
+        startActivity(Intent(action))
+        Toast.makeText(this, manualPath, Toast.LENGTH_LONG).show()
+    } catch (e: Exception) {
+        Toast.makeText(this, getString(R.string.toast_settings_manual_path, getString(manualPath)), Toast.LENGTH_LONG).show()
+    }
 }

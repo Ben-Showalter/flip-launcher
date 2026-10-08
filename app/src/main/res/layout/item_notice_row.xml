@@ -6,7 +6,8 @@
     android:layout_marginVertical="2dp"
     android:background="@drawable/bg_item_focus"
     android:clickable="true"
-    android:focusable="true">
+    android:focusable="true"
+    android:focusableInTouchMode="false">
 
     <LinearLayout
         android:layout_width="match_parent"

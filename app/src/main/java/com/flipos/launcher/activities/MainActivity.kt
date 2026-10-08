@@ -15,7 +15,6 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
-import android.util.Log
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewConfiguration
@@ -33,12 +32,17 @@ import com.flipos.launcher.data.NotificationKind
 import com.flipos.launcher.data.NotificationStore
 import com.flipos.launcher.util.BackgroundLoader
 import com.flipos.launcher.util.CategoryApps
+import com.flipos.launcher.util.KEYCODE_ASSISTANT_RAW
 import com.flipos.launcher.util.PermissionGate
 import com.flipos.launcher.util.ReadAloud
 import com.flipos.launcher.util.accentColorAlpha
+import com.flipos.launcher.util.applyFakeBold
+import com.flipos.launcher.util.hideNavigationBar
+import com.flipos.launcher.util.isStarKey
 import com.flipos.launcher.util.launchAppByKey
 import com.flipos.launcher.util.placeCall
 import com.flipos.launcher.util.systemSpeedDial
+import com.flipos.launcher.util.toastIfUnknownKey
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -132,6 +136,13 @@ class MainActivity : AppCompatActivity() {
     /** Keycodes that have crossed the framework long-press threshold for the current press. */
     private val longPressFired = HashSet<Int>()
 
+    /**
+     * CALL / `*` / `#` presses whose DOWN landed on Home, so their action runs
+     * on UP - and only for a real press, never a stray UP left over from
+     * another window.
+     */
+    private val pressedTapKeys = HashSet<Int>()
+
     private val callPermission = PermissionGate(this, Manifest.permission.CALL_PHONE)
     private val contactsPermission = PermissionGate(this, Manifest.permission.READ_CONTACTS)
 
@@ -151,6 +162,7 @@ class MainActivity : AppCompatActivity() {
                 KeyEvent.KEYCODE_DPAD_LEFT -> prefs.setDpadLeftApp(key)
                 KeyEvent.KEYCODE_DPAD_RIGHT -> prefs.setDpadRightApp(key)
                 KeyEvent.KEYCODE_CAMERA, LauncherPrefs.KEYCODE_CAMERA_ALT, LauncherPrefs.KEYCODE_CAMERA_ALT2 -> prefs.setCameraKeyApp(key)
+                KeyEvent.KEYCODE_F4, KEYCODE_ASSISTANT_RAW -> prefs.setAssistantKeyApp(key)
             }
             AppRepository.resolveComponent(this, key)?.label?.let {
                 Toast.makeText(this, getString(R.string.key_assigned_toast, it), Toast.LENGTH_SHORT).show()
@@ -197,6 +209,7 @@ class MainActivity : AppCompatActivity() {
             theme.applyStyle(R.style.ThemeOverlay_FlipLauncher_NoAnimations, true)
         }
         setContentView(R.layout.activity_main)
+        findViewById<View>(android.R.id.content).applyFakeBold()
 
         clock = findViewById(R.id.clock)
         ampm = findViewById(R.id.ampm)
@@ -233,6 +246,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        window.hideNavigationBar()
         ContextCompat.registerReceiver(
             this,
             timeReceiver,
@@ -283,12 +297,29 @@ class MainActivity : AppCompatActivity() {
         assignRunnables.clear()
         digitHoldRunnables.clear()
         digitTapRunnables.clear()
+        pressedTapKeys.clear()
         // digitHandledDownTime deliberately survives a pause: placing a
         // speed-dial call (from a hold firing) backgrounds this Activity via
         // the system InCallActivity, triggering this very onPause() while
         // more events for the same physical press are still arriving -
         // clearing it here reopens the double-dial window it exists to
         // close. Each new press already clears its own entry in onKeyDown.
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            window.hideNavigationBar()
+            return
+        }
+        // A dialog (or closing the flip) can swallow a held key's UP, so stop
+        // any hold timers now rather than let them fire behind the new window.
+        // Pending digit *tap* dials (already released) and longPressFired /
+        // digitHandledDownTime are left alone - see onPause for why the
+        // latter must survive a speed-dial call taking focus.
+        assignRunnables.keys.toList().forEach { cancelAssign(it) }
+        digitHoldRunnables.keys.toList().forEach { cancelDigitHold(it) }
+        pressedTapKeys.clear()
     }
 
     override fun onDestroy() {
@@ -489,11 +520,6 @@ class MainActivity : AppCompatActivity() {
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         when (keyCode) {
             in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> {
-                // TEMP diagnostic logging for the digit-double-dial hardware investigation.
-                Log.d(
-                    TAG,
-                    "DOWN key=$keyCode repeat=${event.repeatCount} down=${event.downTime} time=${event.eventTime} scan=${event.scanCode}",
-                )
                 if (event.repeatCount == 0) {
                     cancelDigitTap(keyCode)
                     longPressFired.remove(keyCode)
@@ -502,11 +528,17 @@ class MainActivity : AppCompatActivity() {
                 }
                 return true
             }
-            KeyEvent.KEYCODE_STAR, KeyEvent.KEYCODE_POUND -> return true
+            // Resolved on UP: launching the dialer / Recent Calls on DOWN would
+            // hand it our UP (a second "*", or a CALL that dials).
+            KeyEvent.KEYCODE_STAR, KeyEvent.KEYCODE_NUMPAD_MULTIPLY, KeyEvent.KEYCODE_POUND, KeyEvent.KEYCODE_CALL -> {
+                if (event.repeatCount == 0) pressedTapKeys.add(keyCode)
+                return true
+            }
             KeyEvent.KEYCODE_SOFT_LEFT, KeyEvent.KEYCODE_SOFT_RIGHT,
             KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
             KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
-            KeyEvent.KEYCODE_CAMERA, LauncherPrefs.KEYCODE_CAMERA_ALT, LauncherPrefs.KEYCODE_CAMERA_ALT2 -> {
+            KeyEvent.KEYCODE_CAMERA, LauncherPrefs.KEYCODE_CAMERA_ALT, LauncherPrefs.KEYCODE_CAMERA_ALT2,
+            KeyEvent.KEYCODE_F4, KEYCODE_ASSISTANT_RAW -> {
                 beginPressTracking(keyCode, event)
                 if (event.repeatCount == 0) scheduleAssign(keyCode)
                 return true
@@ -517,24 +549,15 @@ class MainActivity : AppCompatActivity() {
                 trackLongPress(keyCode, event)
                 return true
             }
-            KeyEvent.KEYCODE_CALL -> { openCallLog(); return true }
             KeyEvent.KEYCODE_BACK -> {
                 beginPressTracking(keyCode, event)
                 if (event.repeatCount == 0) scheduleAssign(keyCode)
                 trackLongPress(keyCode, event)
             }
-            else -> {
-                // Diagnostic aid for identifying vendor-specific physical buttons
-                // (e.g. on Kyocera-style hardware) that don't map to a keycode
-                // this app already recognizes above.
-                if (event.repeatCount == 0 && keyCode !in SILENT_UNKNOWN_KEYS) {
-                    Toast.makeText(
-                        this,
-                        getString(R.string.unrecognized_key_toast, keyCode, event.scanCode),
-                        Toast.LENGTH_SHORT,
-                    ).show()
-                }
-            }
+            // Diagnostic aid for identifying vendor-specific physical buttons
+            // (e.g. on Kyocera-style hardware) that don't map to a keycode
+            // this app already recognizes above.
+            else -> toastIfUnknownKey(keyCode, event)
         }
         return super.onKeyDown(keyCode, event)
     }
@@ -542,11 +565,6 @@ class MainActivity : AppCompatActivity() {
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
         when (keyCode) {
             in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> {
-                // TEMP diagnostic logging for the digit-double-dial hardware investigation.
-                Log.d(
-                    TAG,
-                    "UP key=$keyCode repeat=${event.repeatCount} down=${event.downTime} time=${event.eventTime} scan=${event.scanCode}",
-                )
                 cancelDigitHold(keyCode)
                 // The long-press action (if any) already fired from the scheduled runnable.
                 if (longPressFired.remove(keyCode)) {
@@ -561,8 +579,16 @@ class MainActivity : AppCompatActivity() {
                 scheduleDigitTap(keyCode)
                 return true
             }
-            KeyEvent.KEYCODE_STAR -> { startDial("*"); return true }
-            KeyEvent.KEYCODE_POUND -> { startDial("#"); return true }
+            KeyEvent.KEYCODE_STAR, KeyEvent.KEYCODE_NUMPAD_MULTIPLY, KeyEvent.KEYCODE_POUND, KeyEvent.KEYCODE_CALL -> {
+                if (pressedTapKeys.remove(keyCode) && !event.isCanceled) {
+                    when {
+                        keyCode == KeyEvent.KEYCODE_CALL -> openCallLog()
+                        isStarKey(keyCode) -> startDial("*")
+                        else -> startDial("#")
+                    }
+                }
+                return true
+            }
             KeyEvent.KEYCODE_SOFT_LEFT -> {
                 cancelAssign(keyCode)
                 if (assignFired.remove(keyCode)) return true
@@ -577,7 +603,8 @@ class MainActivity : AppCompatActivity() {
             }
             KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
             KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
-            KeyEvent.KEYCODE_CAMERA, LauncherPrefs.KEYCODE_CAMERA_ALT, LauncherPrefs.KEYCODE_CAMERA_ALT2 -> {
+            KeyEvent.KEYCODE_CAMERA, LauncherPrefs.KEYCODE_CAMERA_ALT, LauncherPrefs.KEYCODE_CAMERA_ALT2,
+            KeyEvent.KEYCODE_F4, KEYCODE_ASSISTANT_RAW -> {
                 cancelAssign(keyCode)
                 if (assignFired.remove(keyCode)) return true
                 launchDirectionalKeyApp(keyCode)
@@ -642,7 +669,6 @@ class MainActivity : AppCompatActivity() {
     private fun scheduleDigitHold(keyCode: Int) {
         cancelDigitHold(keyCode)
         val runnable = Runnable {
-            Log.d(TAG, "HOLD FIRED key=$keyCode") // TEMP diagnostic logging.
             longPressFired.add(keyCode)
             if (keyCode == KeyEvent.KEYCODE_1) callVoicemail() else dialSpeedDial(keyCode - KeyEvent.KEYCODE_0)
         }
@@ -651,10 +677,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun cancelDigitHold(keyCode: Int) {
-        digitHoldRunnables.remove(keyCode)?.let {
-            Log.d(TAG, "HOLD CANCELLED key=$keyCode") // TEMP diagnostic logging.
-            assignHandler.removeCallbacks(it)
-        }
+        digitHoldRunnables.remove(keyCode)?.let { assignHandler.removeCallbacks(it) }
     }
 
     /**
@@ -667,7 +690,6 @@ class MainActivity : AppCompatActivity() {
     private fun scheduleDigitTap(keyCode: Int) {
         cancelDigitTap(keyCode)
         val runnable = Runnable {
-            Log.d(TAG, "TAP FIRED key=$keyCode") // TEMP diagnostic logging.
             startDial((keyCode - KeyEvent.KEYCODE_0).toString())
         }
         digitTapRunnables[keyCode] = runnable
@@ -675,10 +697,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun cancelDigitTap(keyCode: Int) {
-        digitTapRunnables.remove(keyCode)?.let {
-            Log.d(TAG, "TAP CANCELLED key=$keyCode") // TEMP diagnostic logging.
-            assignHandler.removeCallbacks(it)
-        }
+        digitTapRunnables.remove(keyCode)?.let { assignHandler.removeCallbacks(it) }
     }
 
     /** Opens the app picker to assign [keyCode] (MENU/BACK/soft-key/D-pad/Camera - digits are handled by the phone's own Speed Dial settings, see [dialSpeedDial]). */
@@ -729,6 +748,7 @@ class MainActivity : AppCompatActivity() {
             KeyEvent.KEYCODE_DPAD_LEFT -> prefs.getDpadLeftApp()
             KeyEvent.KEYCODE_DPAD_RIGHT -> prefs.getDpadRightApp()
             KeyEvent.KEYCODE_CAMERA, LauncherPrefs.KEYCODE_CAMERA_ALT, LauncherPrefs.KEYCODE_CAMERA_ALT2 -> prefs.getCameraKeyApp()
+            KeyEvent.KEYCODE_F4, KEYCODE_ASSISTANT_RAW -> prefs.getAssistantKeyApp()
             else -> null
         }
         if (key != null) {
@@ -829,9 +849,6 @@ class MainActivity : AppCompatActivity() {
         // Shown at most once per process so we don't nag on every resume.
         private var defaultPromptShown = false
 
-        /** TEMP: diagnostic logging tag for the digit-double-dial hardware investigation. */
-        private const val TAG = "FlipDigitKey"
-
         /** How long an assignable key must be held to open its assign menu. */
         private const val ASSIGN_HOLD_MS = 5000L
 
@@ -873,15 +890,5 @@ class MainActivity : AppCompatActivity() {
          * see [dispatchKeyEvent].
          */
         private val SYSTEM_KEY_SCAN_CODES = setOf(763, 764, 765, 766, 172, 213, 231)
-
-        /** Keys that should never trigger the unrecognized-key diagnostic toast. */
-        private val SILENT_UNKNOWN_KEYS = setOf(
-            KeyEvent.KEYCODE_VOLUME_UP,
-            KeyEvent.KEYCODE_VOLUME_DOWN,
-            KeyEvent.KEYCODE_VOLUME_MUTE,
-            KeyEvent.KEYCODE_POWER,
-            KeyEvent.KEYCODE_DPAD_CENTER,
-            KeyEvent.KEYCODE_ENTER,
-        )
     }
 }

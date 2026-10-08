@@ -4,7 +4,6 @@ import com.flipos.launcher.R
 
 import android.graphics.drawable.Drawable
 import android.os.Bundle
-import android.view.KeyEvent
 import android.widget.Toast
 import com.flipos.launcher.data.IconPackRepository
 import com.flipos.launcher.data.LauncherPrefs
@@ -35,8 +34,7 @@ class IconPackActivity : BaseListActivity() {
         adapter = ListRowAdapter(onClick = { pick(it) })
         listView.adapter = adapter
 
-        softKeys.setLabels(getString(R.string.softkey_back), getString(R.string.softkey_select), null)
-        softKeys.setOnLeftClick { finish() }
+        softKeys.setLabels(null, getString(R.string.softkey_select), null)
         softKeys.setOnCenterClick { pick(focusedPosition()) }
 
         load()
@@ -85,13 +83,5 @@ class IconPackActivity : BaseListActivity() {
             Toast.LENGTH_SHORT,
         ).show()
         load()
-    }
-
-    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_SOFT_LEFT) {
-            finish()
-            return true
-        }
-        return super.onKeyDown(keyCode, event)
     }
 }

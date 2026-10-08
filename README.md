@@ -1,11 +1,15 @@
 # Flip Launcher — a KaiOS-style Android launcher
 
-A KaiOS-style Android launcher built for feature-phone-shaped devices (small,
-low-resolution, D-pad/soft-key driven screens like the TCL Flip 2 / Flip Go)
-rather than touch-first flagships. Navigation leans on the physical soft keys
-and D-pad: number keys 1-9 double as shortcuts everywhere they make sense, and
-every screen mirrors the three-soft-key layout (left / center / right) KaiOS
-users already know.
+A KaiOS-style Android launcher built for keypad flip phones (small,
+low-resolution, D-pad/soft-key driven, no touchscreen) rather than touch-first
+flagships. It's tested on the Kyocera DuraXV Extreme E4810 / E4811 and the
+E4610, and follows the house rules in
+[Flip-DumbPhoneGuide](https://github.com/Ben-Showalter/Flip-DumbPhoneGuide/blob/main/AGENTS.md).
+Navigation leans on the physical soft keys and D-pad: number keys 1-9 double
+as shortcuts everywhere they make sense, and every screen uses the same
+soft-key layout - **Left** runs the screen's main action, **Center/OK**
+selects, **Right** (or **Menu**) opens Options, and the **Back/Clear** key
+goes back.
 
 ![Home Screen](reference/home.png)
 
@@ -52,7 +56,7 @@ timestamp ("2 minutes ago", "8:30 AM", …) per notification.
 
 - **Dismiss** (left soft key) — dismiss the focused notice
 - **Select** (center) — open the notice's action, then dismiss it
-- **Dismiss All** (right) — clear every active notification
+- **Options** (right) — **Dismiss All** clears every active notification
 
 Requires Notification Access, granted from **Settings → Notifications**.
 
@@ -124,6 +128,24 @@ focused app is hidden from Home and the App Drawer.
   that pack's full icon set or from the launcher's own bundled icon collection
   — so there's always something to pick from even with no icon pack installed.
 
+### Key map
+
+| Key | Home | List screens / App Drawer |
+|---|---|---|
+| Left soft key | Notices (assignable) | Screen's main action (e.g. Dismiss) |
+| Center / OK | All Apps (hold: Settings) | Select the focused row |
+| Right soft key | Contacts (assignable) | Options |
+| Menu | All Apps (hold: assignable app) | Options |
+| Back / Clear | All Apps (hold: assignable app) | Back |
+| Call | Recent Calls | Call the focused entry (Recent Calls) |
+| 0-9, `*`, `#` | Open the dialer prefilled; hold 2-9 for speed dial, 1 for voicemail | 1-9 launch the matching app on the drawer's grid page |
+| D-pad | Assignable app per direction | Move focus |
+| Camera / Mic (Assistant) | Assignable app (Camera opens the camera by default) | - |
+
+Hold any assignable Home key for 5 seconds to pick its app on the spot. Keys
+the launcher doesn't recognize show a short "Unrecognized key" toast with
+their keycode, so you can learn a new phone's buttons without a computer.
+
 ## Built for small, non-touch screens
 
 - Tuned for QVGA (~240x320) portrait displays driven by a D-pad, soft keys, and
@@ -133,6 +155,8 @@ focused app is hidden from Home and the App Drawer.
 - Focus highlights follow the chosen accent color, and animations are kept
   short and cheap (alpha/scale only) so they stay smooth on weak chipsets — and
   can be turned off entirely.
+- The phone's own soft-key label bar (the system navigation bar) is hidden on
+  every screen in favor of the launcher's own labelled bar.
 
 ## Requirements
 
@@ -155,14 +179,25 @@ The debug APK lands in `app/build/outputs/apk/debug/`.
 
 ## Installing
 
-```bash
-adb install -r app/build/outputs/apk/debug/app-debug.apk
-```
+These phones have no Play Store, so the APK is sideloaded. Either:
 
-Then set Flip Launcher as your default Home app (**Settings → System → Set as
-Default Launcher**), and grant Notification Access from **Settings →
-Notifications** if you want the Notices screen and Home notification badges to
-work.
+- **ADB:** `adb install -r app/build/outputs/apk/debug/app-debug.apk`, or
+- **USB copy / email:** put the APK on the phone, open it from the Files app,
+  and allow installs from that source when asked.
+
+Then, all with the D-pad:
+
+1. **Make it the Home app:** open Flip Launcher, hold **Center/OK** for
+   Settings, select **Set as Default Launcher**, pick **Flip Launcher** and
+   press OK.
+2. **Notification Access** (Notices + Home badges): **Settings →
+   Notifications → Notification Access**, select **Flip Launcher** and turn it
+   on. On the Kyocera E4810/E4811 this access never takes effect (a platform
+   restriction), so also turn on **Accessibility Fallback Access** from the same screen,
+   which feeds the Home banner instead.
+3. **Call Log access** (Recent Calls): **Settings → Notifications → Call Log
+   Access**, then allow it. If it was denied before, the phone opens its Apps
+   list: select **Flip Launcher → Permissions** and turn on Call logs.
 
 ## Permissions
 

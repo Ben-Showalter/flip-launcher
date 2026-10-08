@@ -71,6 +71,33 @@ person's laptop.
   dots, since accessibility has no "list active notifications" or removal
   event.
 
+## Flip-DumbPhoneGuide conventions
+
+This app follows the house rules in
+[Flip-DumbPhoneGuide/AGENTS.md](https://github.com/Ben-Showalter/Flip-DumbPhoneGuide/blob/main/AGENTS.md)
+(written from testing on these same Kyocera phones). Read it before changing
+key handling, focus, or layout. Decisions taken here:
+
+- **Soft keys:** Left = the screen's primary action (blank if none), Center/OK
+  = select, Right *and* `KEYCODE_MENU` = Options, hardware Back/Clear = back.
+  No "Back" label on Left. `BaseListActivity` owns this map via
+  `util/Keys.kt`'s `SoftKeyRouter`; list screens override `onPrimaryKey()` /
+  `onOptionsKey()`, never `onKeyDown` for soft keys. Home (`MainActivity`) is
+  the one exception: its soft keys and D-pad are user-assignable app slots.
+- **Act on key UP, consume both halves.** Anything that finishes the screen or
+  launches another app/screen fires on UP, and only for a press whose DOWN
+  this window saw - otherwise the stray UP lands in the next window (e.g. Home
+  opening Notices). Digit launches in the drawer, CALL/`*`/`#` on Home, and all
+  soft keys follow this.
+- **The system navigation bar is hidden** on every screen
+  (`util/SystemBars.kt`, from `onResume()` and `onWindowFocusChanged(true)`).
+- **Bold** uses fake bold (`util/FakeBold.kt`'s `applyFakeBold()` after
+  inflating) because the stock font doesn't render real bold.
+- **Settings screens:** open general list screens via `openSettingsWithPath()`
+  (never a per-app deep link) so a toast always tells the user the D-pad path.
+- **Unknown keys** show a keycode toast on every screen (`toastIfUnknownKey`).
+  Add a keycode to `KNOWN_KEYS` in `util/Keys.kt` once the app handles it.
+
 ## Project structure
 
 `app/src/main/java/com/flipos/launcher/` is split into sibling packages:

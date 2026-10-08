@@ -8,7 +8,6 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.service.notification.NotificationListenerService
-import android.view.KeyEvent
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -16,6 +15,7 @@ import com.flipos.launcher.data.NoticeItem
 import com.flipos.launcher.data.NotificationStore
 import com.flipos.launcher.service.NotificationCountService
 import com.flipos.launcher.ui.NoticeRowAdapter
+import com.flipos.launcher.util.openSettingsWithPath
 
 /**
  * A KaiOS-style "Notices" list standing in for the system notification shade,
@@ -49,11 +49,9 @@ class NoticesActivity : BaseListActivity() {
         softKeys.setLabels(
             getString(R.string.softkey_dismiss),
             getString(R.string.softkey_select),
-            getString(R.string.softkey_dismiss_all),
+            getString(R.string.softkey_options),
         )
-        softKeys.setOnLeftClick { dismissFocused() }
         softKeys.setOnCenterClick { openFocused() }
-        softKeys.setOnRightClick { dismissAll() }
     }
 
     override fun onResume() {
@@ -130,11 +128,7 @@ class NoticesActivity : BaseListActivity() {
     }
 
     private fun openNotificationAccessSettings() {
-        try {
-            startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-        } catch (e: Exception) {
-            Toast.makeText(this, R.string.toast_not_available, Toast.LENGTH_SHORT).show()
-        }
+        openSettingsWithPath(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS, R.string.path_notification_access)
     }
 
     /** Returns whether the Kyocera notification screen was actually launched. */
@@ -178,11 +172,13 @@ class NoticesActivity : BaseListActivity() {
             .show()
     }
 
-    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_SOFT_LEFT) {
-            dismissFocused()
-            return true
-        }
-        return super.onKeyDown(keyCode, event)
+    override fun onPrimaryKey() = dismissFocused()
+
+    override fun onOptionsKey() {
+        AlertDialog.Builder(this)
+            .setItems(arrayOf(getString(R.string.softkey_dismiss_all))) { _, which ->
+                if (which == 0) dismissAll()
+            }
+            .show()
     }
 }

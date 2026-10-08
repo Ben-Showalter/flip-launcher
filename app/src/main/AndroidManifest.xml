@@ -2,6 +2,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Keypad flip phones have no touchscreen (and some lack GPS/camera/mic);
+         none of these may be required or the APK won't install/list there. -->
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+
     <!-- Needed for WallpaperManager.setBitmap() in the bundled Wallpaper Picker. -->
     <uses-permission android:name="android.permission.SET_WALLPAPER" />
 
@@ -120,7 +127,7 @@
             android:icon="@drawable/settings_112"
             android:label="@string/title_settings"
             android:screenOrientation="portrait"
-            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize">
+            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize|screenLayout|smallestScreenSize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -131,74 +138,74 @@
             android:name=".activities.AppearanceSettingsActivity"
             android:exported="false"
             android:screenOrientation="portrait"
-            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize" />
+            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize|screenLayout|smallestScreenSize" />
 
         <activity
             android:name=".activities.NotificationSettingsActivity"
             android:exported="false"
             android:screenOrientation="portrait"
-            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize" />
+            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize|screenLayout|smallestScreenSize" />
 
         <activity
             android:name=".activities.HomeKeysSettingsActivity"
             android:exported="false"
             android:screenOrientation="portrait"
-            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize" />
+            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize|screenLayout|smallestScreenSize" />
 
         <activity
             android:name=".activities.AppsSettingsActivity"
             android:exported="false"
             android:screenOrientation="portrait"
-            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize" />
+            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize|screenLayout|smallestScreenSize" />
 
         <activity
             android:name=".activities.AppDrawerActivity"
             android:exported="false"
             android:theme="@style/Theme.FlipLauncher.Drawer"
             android:screenOrientation="portrait"
-            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize" />
+            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize|screenLayout|smallestScreenSize" />
 
         <activity
             android:name=".activities.HideAppsActivity"
             android:exported="false"
             android:screenOrientation="portrait"
-            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize" />
+            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize|screenLayout|smallestScreenSize" />
 
         <activity
             android:name=".activities.CallLogActivity"
             android:exported="false"
             android:screenOrientation="portrait"
-            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize" />
+            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize|screenLayout|smallestScreenSize" />
 
         <activity
             android:name=".activities.AppPickerActivity"
             android:exported="false"
             android:screenOrientation="portrait"
-            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize" />
+            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize|screenLayout|smallestScreenSize" />
 
         <activity
             android:name=".activities.ActivityPickerActivity"
             android:exported="false"
             android:screenOrientation="portrait"
-            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize" />
+            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize|screenLayout|smallestScreenSize" />
 
         <activity
             android:name=".activities.IconPackActivity"
             android:exported="false"
             android:screenOrientation="portrait"
-            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize" />
+            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize|screenLayout|smallestScreenSize" />
 
         <activity
             android:name=".activities.IconPickerActivity"
             android:exported="false"
             android:screenOrientation="portrait"
-            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize" />
+            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize|screenLayout|smallestScreenSize" />
 
         <activity
             android:name=".activities.WallpaperPickerActivity"
             android:exported="false"
             android:screenOrientation="portrait"
-            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize" />
+            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize|screenLayout|smallestScreenSize" />
 
         <!-- Exported with a LAUNCHER category so it also appears in the app
              drawer like a regular app, mirroring SettingsActivity below. -->
@@ -208,7 +215,7 @@
             android:icon="@drawable/notification_112"
             android:label="@string/softkey_notifications"
             android:screenOrientation="portrait"
-            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize">
+            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize|screenLayout|smallestScreenSize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

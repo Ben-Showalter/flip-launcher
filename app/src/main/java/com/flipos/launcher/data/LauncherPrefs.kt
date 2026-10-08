@@ -67,6 +67,10 @@ class LauncherPrefs(context: Context) {
     fun getCameraKeyApp(): String? = prefs.getString(KEY_CAMERA_KEY_APP, null)
     fun setCameraKeyApp(key: String?) = prefs.edit().putString(KEY_CAMERA_KEY_APP, key).apply()
 
+    /** App key launched by pressing the Mic/Assistant button on Home, or null if unconfigured. */
+    fun getAssistantKeyApp(): String? = prefs.getString(KEY_ASSISTANT_KEY_APP, null)
+    fun setAssistantKeyApp(key: String?) = prefs.edit().putString(KEY_ASSISTANT_KEY_APP, key).apply()
+
     // ---------------------------------------------------------- Icon size
 
     /** App drawer icon size as a percentage of the size that exactly fills a
@@ -386,6 +390,7 @@ class LauncherPrefs(context: Context) {
         private const val KEY_DPAD_LEFT_APP = "dpad_left_app"
         private const val KEY_DPAD_RIGHT_APP = "dpad_right_app"
         private const val KEY_CAMERA_KEY_APP = "camera_key_app"
+        private const val KEY_ASSISTANT_KEY_APP = "assistant_key_app"
         private const val KEY_ICON_SIZE_PERCENT = "icon_size_percent"
         private const val KEY_RIGHT_KEY_APP = "right_key_app"
         private const val KEY_LEFT_KEY_APP = "left_key_app"

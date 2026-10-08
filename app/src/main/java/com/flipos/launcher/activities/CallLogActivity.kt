@@ -46,13 +46,11 @@ class CallLogActivity : BaseListActivity() {
         listView.adapter = adapter
 
         softKeys.setLabels(
-            getString(R.string.softkey_back),
+            null,
             getString(R.string.softkey_call),
             getString(R.string.softkey_options),
         )
-        softKeys.setOnLeftClick { finish() }
         softKeys.setOnCenterClick { onCenterPressed() }
-        softKeys.setOnRightClick { adapter.itemAt(focusedPosition())?.let { showOptions(it) } }
     }
 
     override fun onResume() {
@@ -216,15 +214,32 @@ class CallLogActivity : BaseListActivity() {
             .show()
     }
 
+    override fun onOptionsKey() {
+        adapter.itemAt(focusedPosition())?.let { showOptions(it) }
+    }
+
+    /**
+     * The hardware CALL key works as "call the focused entry", on key UP so the
+     * UP can't reach the dialer. Only a press whose DOWN landed here counts -
+     * the CALL press that opened this screen from Home is consumed there.
+     */
+    private var callKeyDown = false
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        when (keyCode) {
-            KeyEvent.KEYCODE_SOFT_LEFT -> { finish(); return true }
-            KeyEvent.KEYCODE_SOFT_RIGHT -> {
-                adapter.itemAt(focusedPosition())?.let { showOptions(it) }
-                return true
-            }
+        if (keyCode == KeyEvent.KEYCODE_CALL) {
+            if (event.repeatCount == 0) callKeyDown = true
+            return true
         }
         return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_CALL) {
+            if (callKeyDown && !event.isCanceled) onCenterPressed()
+            callKeyDown = false
+            return true
+        }
+        return super.onKeyUp(keyCode, event)
     }
 
     companion object {

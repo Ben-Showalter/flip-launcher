@@ -4,8 +4,8 @@ import com.flipos.launcher.R
 
 import android.content.Intent
 import android.os.Bundle
-import android.view.KeyEvent
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
+import androidx.appcompat.app.AlertDialog
 import com.flipos.launcher.data.AppInfo
 import com.flipos.launcher.data.AppRepository
 import com.flipos.launcher.ui.ListRowAdapter
@@ -16,8 +16,8 @@ import com.flipos.launcher.util.BackgroundLoader
  * Pick-an-app dialog used when assigning a Home shortcut. Returns the chosen
  * app's [key] via [EXTRA_APP_KEY].
  *
- * Select an app to pin its main entry, or press the "Activities" soft key to
- * drill into that app and pin a specific activity instead. Lists all installed
+ * Select an app to pin its main entry, or pick "Choose activity" from Options
+ * to drill into that app and pin a specific activity instead. Lists all installed
  * apps (including hidden ones, so a hidden app can still be pinned to Home).
  */
 class AppPickerActivity : BaseListActivity() {
@@ -44,13 +44,11 @@ class AppPickerActivity : BaseListActivity() {
         listView.adapter = adapter
 
         softKeys.setLabels(
-            getString(R.string.softkey_back),
+            null,
             getString(R.string.softkey_select),
-            getString(R.string.softkey_activities),
+            getString(R.string.softkey_options),
         )
-        softKeys.setOnLeftClick { finish() }
         softKeys.setOnCenterClick { pick(focusedPosition()) }
-        softKeys.setOnRightClick { openActivities(focusedPosition()) }
 
         loadApps()
     }
@@ -87,12 +85,14 @@ class AppPickerActivity : BaseListActivity() {
         )
     }
 
-    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        when (keyCode) {
-            KeyEvent.KEYCODE_SOFT_LEFT -> { finish(); return true }
-            KeyEvent.KEYCODE_SOFT_RIGHT -> { openActivities(focusedPosition()); return true }
-        }
-        return super.onKeyDown(keyCode, event)
+    override fun onOptionsKey() {
+        val position = focusedPosition()
+        if (apps.getOrNull(position) == null) return
+        AlertDialog.Builder(this)
+            .setItems(arrayOf(getString(R.string.menu_choose_activity))) { _, which ->
+                if (which == 0) openActivities(position)
+            }
+            .show()
     }
 
     companion object {

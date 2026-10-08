@@ -4,13 +4,11 @@ import com.flipos.launcher.R
 
 import android.Manifest
 import android.content.ComponentName
-import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.service.notification.NotificationListenerService
 import android.speech.tts.Voice
-import android.view.KeyEvent
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import com.flipos.launcher.data.LauncherPrefs
@@ -21,6 +19,7 @@ import com.flipos.launcher.ui.Row
 import com.flipos.launcher.util.PermissionGate
 import com.flipos.launcher.util.ReadAloudSpeaker
 import com.flipos.launcher.util.openAppPermissionSettings
+import com.flipos.launcher.util.openSettingsWithPath
 
 /** Notification settings: access grant plus which badges appear on Home/icons. */
 class NotificationSettingsActivity : BaseListActivity() {
@@ -36,9 +35,9 @@ class NotificationSettingsActivity : BaseListActivity() {
         prefs = LauncherPrefs(this)
         titleView.text = getString(R.string.cat_notifications)
 
-        actions[ID_ACCESS] = { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }
+        actions[ID_ACCESS] = { openSettingsWithPath(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS, R.string.path_notification_access) }
         actions[ID_CALL_LOG_ACCESS] = { requestCallLogAccess() }
-        actions[ID_ACCESSIBILITY_ACCESS] = { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
+        actions[ID_ACCESSIBILITY_ACCESS] = { openSettingsWithPath(Settings.ACTION_ACCESSIBILITY_SETTINGS, R.string.path_accessibility) }
         actions[ID_CALLS] = {
             prefs.setCallBadgeEnabled(!prefs.isCallBadgeEnabled()); refreshRows()
         }
@@ -62,11 +61,10 @@ class NotificationSettingsActivity : BaseListActivity() {
         listView.adapter = adapter
 
         softKeys.setLabels(
-            getString(R.string.softkey_back),
+            null,
             getString(R.string.softkey_select),
             null,
         )
-        softKeys.setOnLeftClick { finish() }
         softKeys.setOnCenterClick { focusedPosition().takeIf { it >= 0 }?.let { dispatch(it) } }
         refreshRows()
         focusFirst()
@@ -264,14 +262,6 @@ class NotificationSettingsActivity : BaseListActivity() {
             },
             action = { refreshRows() },
         )
-    }
-
-    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_SOFT_LEFT) {
-            finish()
-            return true
-        }
-        return super.onKeyDown(keyCode, event)
     }
 
     companion object {

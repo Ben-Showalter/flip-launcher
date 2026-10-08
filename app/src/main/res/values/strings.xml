@@ -8,11 +8,10 @@
     <string name="softkey_messages">Messages</string>
     <string name="softkey_options">Options</string>
     <string name="softkey_open">Open</string>
-    <string name="softkey_back">Back</string>
     <string name="softkey_select">Select</string>
     <string name="softkey_toggle">Toggle</string>
     <string name="softkey_clear">Clear</string>
-    <string name="softkey_activities">Activities</string>
+    <string name="menu_choose_activity">Choose activity…</string>
     <string name="softkey_dismiss">Dismiss</string>
     <string name="softkey_dismiss_all">Dismiss All</string>
     <string name="softkey_call">Call</string>
@@ -67,13 +66,14 @@
     <string name="unrecognized_key_toast">Unrecognized key: code=%1$d scan=%2$d</string>
 
     <!-- D-pad / Camera Home shortcuts -->
-    <string name="sec_dpad_keys">D-pad &amp; Camera</string>
+    <string name="sec_dpad_keys">D-pad &amp; Side Buttons</string>
     <string name="opt_dpad_up">D-pad Up</string>
     <string name="opt_dpad_down">D-pad Down</string>
     <string name="opt_dpad_left">D-pad Left</string>
     <string name="opt_dpad_right">D-pad Right</string>
     <string name="opt_camera_key">Camera Button</string>
     <string name="opt_camera_key_default">Camera app (default)</string>
+    <string name="opt_assistant_key">Mic / Assistant Button</string>
 
     <!-- Outer buttons (identified by scan code, see MainActivity) - bound in
          the phone's own Settings, not by the launcher. -->
@@ -178,7 +178,7 @@
 
     <!-- Wallpaper picker -->
     <string name="title_wallpaper_picker">Choose Wallpaper</string>
-    <string name="wallpaper_picker_more">More…</string>
+    <string name="wallpaper_picker_more">More wallpapers…</string>
     <string name="wallpaper_set_toast">Wallpaper set</string>
     <string name="wallpaper_set_failed">Couldn\'t set wallpaper</string>
 
@@ -186,6 +186,11 @@
     <string name="toast_app_hidden">%1$s hidden</string>
     <string name="toast_uninstall_failed">Can\'t uninstall app</string>
     <string name="toast_not_available">Not available on this device</string>
+    <!-- Manual D-pad paths shown alongside (or instead of) system Settings screens. -->
+    <string name="toast_settings_manual_path">Couldn\'t open Settings. Go to: %1$s</string>
+    <string name="path_app_permissions">Select Flip Launcher, then Permissions</string>
+    <string name="path_notification_access">Select Flip Launcher under Notification access and turn it on</string>
+    <string name="path_accessibility">Select Flip Launcher under Accessibility and turn it on</string>
     <string name="toast_launch_failed">Couldn\'t open %1$s</string>
     <string name="toast_launch_unavailable">App is no longer available</string>
     <string name="toast_launch_denied">Can\'t open this app</string>

@@ -3,6 +3,8 @@ package com.flipos.launcher.activities
 import com.flipos.launcher.R
 
 import android.os.Bundle
+import android.view.KeyEvent
+import android.view.View
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -10,11 +12,19 @@ import androidx.recyclerview.widget.RecyclerView
 import com.flipos.launcher.data.LauncherPrefs
 import com.flipos.launcher.ui.SoftKeyBar
 import com.flipos.launcher.ui.listItemAnimator
+import com.flipos.launcher.util.SoftKeyRouter
+import com.flipos.launcher.util.applyFakeBold
+import com.flipos.launcher.util.hideNavigationBar
+import com.flipos.launcher.util.toastIfUnknownKey
 
 /**
  * Shared scaffolding for the vertical list screens (Options, Hide Apps,
- * Shortcuts, App Picker): a title bar, a focusable [RecyclerView] and the bottom
- * [SoftKeyBar]. Subclasses populate the adapter and wire up the soft keys.
+ * Shortcuts, App Picker): a title bar, a [RecyclerView] of focusable rows and
+ * the bottom [SoftKeyBar]. Subclasses populate the adapter and set the labels.
+ *
+ * Also owns the one key map every list screen shares: Left soft key runs
+ * [onPrimaryKey], Right soft key and MENU run [onOptionsKey], and the hardware
+ * Back key goes back. Subclasses override the hooks rather than onKeyDown.
  */
 abstract class BaseListActivity : AppCompatActivity() {
 
@@ -36,6 +46,8 @@ abstract class BaseListActivity : AppCompatActivity() {
      */
     protected var isRecreatingForAccent = false
         private set
+
+    private val softKeyRouter = SoftKeyRouter(onPrimary = { onPrimaryKey() }, onOptions = { onOptionsKey() })
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val prefs = LauncherPrefs(this)
@@ -60,6 +72,11 @@ abstract class BaseListActivity : AppCompatActivity() {
         titleView = findViewById(R.id.title)
         listView = findViewById(R.id.list)
         softKeys = findViewById(R.id.soft_keys)
+        softKeys.setOnLeftClick { onPrimaryKey() }
+        softKeys.setOnRightClick { onOptionsKey() }
+        findViewById<View>(android.R.id.content).applyFakeBold()
+        // Only the rows take focus; the container itself never should.
+        listView.isFocusable = false
         listView.layoutManager = LinearLayoutManager(this)
         // Short insert/remove/move animations when enabled; no change cross-fade
         // (rows rebind often on refresh and it would flicker). Null = instant.
@@ -75,7 +92,36 @@ abstract class BaseListActivity : AppCompatActivity() {
         if (prefs.getAccentColor() != appliedAccentColor || prefs.getThemeMode() != appliedThemeMode) {
             isRecreatingForAccent = true
             recreate()
+            return
         }
+        window.hideNavigationBar()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        softKeyRouter.reset()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) window.hideNavigationBar() else softKeyRouter.reset()
+    }
+
+    /** Left soft key: the screen's primary action. No-op by default (the label stays blank). */
+    protected open fun onPrimaryKey() {}
+
+    /** Right soft key (or MENU): the screen's Options. No-op by default (the label stays blank). */
+    protected open fun onOptionsKey() {}
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (softKeyRouter.onKeyDown(keyCode, event)) return true
+        toastIfUnknownKey(keyCode, event)
+        return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        if (softKeyRouter.onKeyUp(keyCode, event)) return true
+        return super.onKeyUp(keyCode, event)
     }
 
     /**

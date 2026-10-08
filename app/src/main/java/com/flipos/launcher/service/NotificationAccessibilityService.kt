@@ -1,6 +1,7 @@
 package com.flipos.launcher.service
 
 import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.Notification
 import android.content.pm.PackageManager
 import android.view.accessibility.AccessibilityEvent
@@ -40,6 +41,15 @@ class NotificationAccessibilityService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        // Mirror accessibility_service_config.xml in code too: some OEM builds
+        // ignore (parts of) the XML, which silently leaves this service
+        // receiving nothing.
+        serviceInfo = (serviceInfo ?: AccessibilityServiceInfo()).apply {
+            eventTypes = AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED or
+                AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+            feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
+            notificationTimeout = 100
+        }
         ReadAloud.attach(this)
     }
 

@@ -5,7 +5,6 @@ import com.flipos.launcher.R
 import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
-import android.view.KeyEvent
 import android.widget.Toast
 import com.flipos.launcher.data.IconPackRepository
 import com.flipos.launcher.data.LauncherPrefs
@@ -43,11 +42,10 @@ class AppearanceSettingsActivity : BaseListActivity() {
         listView.adapter = adapter
 
         softKeys.setLabels(
-            getString(R.string.softkey_back),
+            null,
             getString(R.string.softkey_select),
             null,
         )
-        softKeys.setOnLeftClick { finish() }
         softKeys.setOnCenterClick { focusedPosition().takeIf { it >= 0 }?.let { dispatch(it) } }
         refreshRows()
         focusFirst()
@@ -195,14 +193,6 @@ class AppearanceSettingsActivity : BaseListActivity() {
                 dialog.dismiss()
             }
             .show()
-    }
-
-    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_SOFT_LEFT) {
-            finish()
-            return true
-        }
-        return super.onKeyDown(keyCode, event)
     }
 
     companion object {

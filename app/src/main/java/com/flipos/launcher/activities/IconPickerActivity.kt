@@ -17,6 +17,10 @@ import com.flipos.launcher.data.LauncherPrefs
 import com.flipos.launcher.ui.IconGridAdapter
 import com.flipos.launcher.ui.SoftKeyBar
 import com.flipos.launcher.util.BackgroundLoader
+import com.flipos.launcher.util.SoftKeyRouter
+import com.flipos.launcher.util.applyFakeBold
+import com.flipos.launcher.util.hideNavigationBar
+import com.flipos.launcher.util.toastIfUnknownKey
 
 /**
  * Lets the user replace one app's icon with any icon from an installed icon
@@ -32,6 +36,9 @@ class IconPickerActivity : AppCompatActivity() {
     private lateinit var adapter: IconGridAdapter
     private var currentPack: String? = null
     private val loader = BackgroundLoader()
+
+    /** No primary action or Options here; still consumes both halves of each soft-key press. */
+    private val softKeyRouter = SoftKeyRouter(onPrimary = {}, onOptions = {})
 
     override fun onCreate(savedInstanceState: Bundle?) {
         prefs = LauncherPrefs(this)
@@ -58,6 +65,8 @@ class IconPickerActivity : AppCompatActivity() {
         titleView = findViewById(R.id.title)
         grid = findViewById(R.id.apps_grid)
         grid.itemAnimator = null
+        grid.isFocusable = false
+        findViewById<View>(android.R.id.content).applyFakeBold()
         findViewById<View>(R.id.page_indicator).visibility = View.GONE
         val softKeys = findViewById<SoftKeyBar>(R.id.soft_keys)
 
@@ -74,11 +83,36 @@ class IconPickerActivity : AppCompatActivity() {
         grid.layoutManager = GridLayoutManager(this, COLUMNS)
         grid.adapter = adapter
 
-        softKeys.setLabels(getString(R.string.softkey_back), null, null)
-        softKeys.setOnLeftClick { finish() }
+        softKeys.setLabels(null, null, null)
 
         titleView.text = getString(R.string.icon_picker_choose_pack)
         choosePack()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        window.hideNavigationBar()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        softKeyRouter.reset()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) window.hideNavigationBar() else softKeyRouter.reset()
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (softKeyRouter.onKeyDown(keyCode, event)) return true
+        toastIfUnknownKey(keyCode, event)
+        return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        if (softKeyRouter.onKeyUp(keyCode, event)) return true
+        return super.onKeyUp(keyCode, event)
     }
 
     override fun onDestroy() {
@@ -138,14 +172,6 @@ class IconPickerActivity : AppCompatActivity() {
         prefs.setIconOverride(appKey, pack, name)
         Toast.makeText(this, R.string.icon_picker_applied, Toast.LENGTH_SHORT).show()
         finish()
-    }
-
-    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_SOFT_LEFT) {
-            finish()
-            return true
-        }
-        return super.onKeyDown(keyCode, event)
     }
 
     companion object {

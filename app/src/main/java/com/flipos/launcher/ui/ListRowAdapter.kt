@@ -11,6 +11,7 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.flipos.launcher.R
 import com.flipos.launcher.util.accentColor
+import com.flipos.launcher.util.applyFakeBold
 
 /**
  * A single list entry. Can be a normal row (leading icon, title, optional
@@ -86,9 +87,9 @@ class ListRowAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         val inflater = LayoutInflater.from(parent.context)
         return if (viewType == TYPE_SECTION) {
-            SectionVH(inflater.inflate(R.layout.item_list_section, parent, false))
+            SectionVH(inflater.inflate(R.layout.item_list_section, parent, false).apply { applyFakeBold() })
         } else {
-            RowVH(inflater.inflate(R.layout.item_list_row, parent, false))
+            RowVH(inflater.inflate(R.layout.item_list_row, parent, false).apply { applyFakeBold() })
         }
     }
 

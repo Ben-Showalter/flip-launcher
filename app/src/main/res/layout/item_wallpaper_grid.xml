@@ -6,6 +6,7 @@
     android:background="@drawable/bg_item_focus"
     android:clickable="true"
     android:focusable="true"
+    android:focusableInTouchMode="false"
     android:padding="4dp">
 
     <ImageView
