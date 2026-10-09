@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.flipos.launcher.data.LauncherPrefs
 import com.flipos.launcher.ui.SoftKeyBar
+import com.flipos.launcher.util.ReadAloudSpeaker
 import com.flipos.launcher.util.SoftKeyRouter
 import com.flipos.launcher.util.applyFakeBold
 import com.flipos.launcher.util.hideNavigationBar
@@ -109,6 +110,12 @@ abstract class BaseListActivity : AppCompatActivity() {
 
     /** Right soft key (or MENU): the screen's Options. No-op by default (the label stays blank). */
     protected open fun onOptionsKey() {}
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        // A press while a message is being read only stops the readout.
+        if (ReadAloudSpeaker.interceptKey(event)) return true
+        return super.dispatchKeyEvent(event)
+    }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         if (softKeyRouter.onKeyDown(keyCode, event)) return true

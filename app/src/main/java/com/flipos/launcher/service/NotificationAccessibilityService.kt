@@ -4,11 +4,13 @@ import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.Notification
 import android.content.pm.PackageManager
+import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
 import com.flipos.launcher.data.NotificationCategorizer
 import com.flipos.launcher.data.NoticeItem
 import com.flipos.launcher.data.NotificationStore
 import com.flipos.launcher.util.ReadAloud
+import com.flipos.launcher.util.ReadAloudSpeaker
 
 /**
  * Fallback notification source for devices where NotificationListenerService
@@ -49,6 +51,8 @@ class NotificationAccessibilityService : AccessibilityService() {
                 AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
             feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
             notificationTimeout = 100
+            // Lets onKeyEvent see every button press, so one stops read-aloud.
+            flags = flags or AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS
         }
         ReadAloud.attach(this)
     }
@@ -103,6 +107,14 @@ class NotificationAccessibilityService : AccessibilityService() {
     }
 
     override fun onInterrupt() {}
+
+    /**
+     * Any button press anywhere (keypad, soft keys, side/outer buttons,
+     * Bluetooth headset keys) stops a readout in progress and is swallowed;
+     * otherwise keys pass straight through. Must stay cheap - it gates every
+     * key on the phone - which [ReadAloudSpeaker.interceptKey] is when idle.
+     */
+    override fun onKeyEvent(event: KeyEvent): Boolean = ReadAloudSpeaker.interceptKey(event)
 
     private fun appLabel(packageName: String): String = try {
         packageManager.getApplicationLabel(packageManager.getApplicationInfo(packageName, 0)).toString()

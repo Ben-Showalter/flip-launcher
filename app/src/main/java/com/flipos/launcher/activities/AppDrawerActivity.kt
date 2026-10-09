@@ -25,6 +25,7 @@ import com.flipos.launcher.ui.PageIndicatorView
 import com.flipos.launcher.ui.Row
 import com.flipos.launcher.ui.SoftKeyBar
 import com.flipos.launcher.util.BackgroundLoader
+import com.flipos.launcher.util.ReadAloudSpeaker
 import com.flipos.launcher.util.SoftKeyRouter
 import com.flipos.launcher.util.WallpaperContrast
 import com.flipos.launcher.util.applyFakeBold
@@ -648,6 +649,8 @@ class AppDrawerActivity : AppCompatActivity() {
      * its own directional keys.
      */
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        // A press while a message is being read only stops the readout.
+        if (ReadAloudSpeaker.interceptKey(event)) return true
         if (movingKey != null &&
             event.action == KeyEvent.ACTION_DOWN &&
             (event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER || event.keyCode == KeyEvent.KEYCODE_ENTER)

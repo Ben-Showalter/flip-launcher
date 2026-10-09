@@ -1,6 +1,7 @@
 package com.flipos.launcher.util
 
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.AudioAttributes
 import android.media.AudioDeviceInfo
@@ -14,6 +15,7 @@ import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.speech.tts.Voice
+import android.view.KeyEvent
 import com.flipos.launcher.data.LauncherPrefs
 import com.flipos.launcher.data.NoticeItem
 import com.flipos.launcher.data.NotificationKind
@@ -114,6 +116,14 @@ object ReadAloudSpeaker {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var inFlight = 0
 
+    /** True while anything is queued or being spoken - read from key paths, so kept cheap. */
+    @Volatile
+    var isSpeaking = false
+        private set
+
+    /** Keys whose DOWN stopped the readout, so their matching UP is swallowed too. */
+    private val swallowedKeys = HashSet<Int>()
+
     private var audioManager: AudioManager? = null
     private var mediaSession: MediaSession? = null
     private var focusRequest: AudioFocusRequest? = null
@@ -161,12 +171,16 @@ object ReadAloudSpeaker {
         when {
             ready -> speakNow(context.applicationContext, text)
             failed -> Unit
-            else -> pending.add(text) // flushed once the engine is ready
+            else -> {
+                pending.add(text) // flushed once the engine is ready
+                isSpeaking = true
+            }
         }
     }
 
     private fun speakNow(context: Context, text: String) {
         inFlight++
+        isSpeaking = true
         acquireFocusAndSession(context)
         tts?.speak(text, TextToSpeech.QUEUE_ADD, null, "fl_${System.nanoTime()}")
     }
@@ -175,6 +189,7 @@ object ReadAloudSpeaker {
         mainHandler.post {
             if (--inFlight <= 0) {
                 inFlight = 0
+                if (pending.isEmpty()) isSpeaking = false
                 releaseFocusAndSession()
             }
         }
@@ -190,13 +205,31 @@ object ReadAloudSpeaker {
     private fun acquireFocusAndSession(context: Context) {
         if (mediaSession == null) {
             mediaSession = MediaSession(context, "FlipLauncherReadAloud").apply {
+                // Needed for media buttons to reach the session before
+                // Android 8 (the E4610); deprecated and ignored from 8 on.
+                @Suppress("DEPRECATION")
+                setFlags(MediaSession.FLAG_HANDLES_MEDIA_BUTTONS or MediaSession.FLAG_HANDLES_TRANSPORT_CONTROLS)
                 setCallback(object : MediaSession.Callback() {
+                    // Any headset button stops the readout: most send
+                    // PLAY_PAUSE or HEADSETHOOK, which the default handling
+                    // ignores unless PLAY_PAUSE is advertised.
+                    override fun onMediaButtonEvent(mediaButtonIntent: Intent): Boolean {
+                        @Suppress("DEPRECATION")
+                        val key = mediaButtonIntent.getParcelableExtra<KeyEvent>(Intent.EXTRA_KEY_EVENT)
+                        if (key?.action == KeyEvent.ACTION_DOWN) stop()
+                        return true
+                    }
                     override fun onPause() = stop()
                     override fun onStop() = stop()
+                    override fun onPlay() = stop()
+                    override fun onSkipToNext() = stop()
+                    override fun onSkipToPrevious() = stop()
                 })
                 setPlaybackState(
                     PlaybackState.Builder()
-                        .setActions(PlaybackState.ACTION_PAUSE or PlaybackState.ACTION_STOP)
+                        .setActions(
+                            PlaybackState.ACTION_PAUSE or PlaybackState.ACTION_STOP or PlaybackState.ACTION_PLAY_PAUSE,
+                        )
                         .setState(PlaybackState.STATE_PLAYING, PlaybackState.PLAYBACK_POSITION_UNKNOWN, 1f)
                         .build(),
                 )
@@ -246,6 +279,7 @@ object ReadAloudSpeaker {
     }
 
     fun stop() {
+        isSpeaking = false
         mainHandler.post {
             tts?.stop()
             pending.clear()
@@ -253,6 +287,32 @@ object ReadAloudSpeaker {
             releaseFocusAndSession()
         }
     }
+
+    /**
+     * Any button press stops the readout - and only that: the stopping press
+     * (DOWN and its matching UP) is swallowed so it doesn't also open the
+     * dialer or an app. Volume keys pass through so the readout can still be
+     * turned up or down. Returns whether [event] was consumed. Called from
+     * the accessibility service's key filter (every app, flip closed too) and
+     * from the launcher's own screens; when nothing is speaking it's a single
+     * volatile read, as an accessibility onKeyEvent must stay cheap.
+     */
+    fun interceptKey(event: KeyEvent): Boolean {
+        val keyCode = event.keyCode
+        if (event.action == KeyEvent.ACTION_UP && swallowedKeys.remove(keyCode)) return true
+        if (!isSpeaking || keyCode in PASS_THROUGH_KEYS) return false
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            swallowedKeys.add(keyCode)
+            stop()
+        }
+        return true
+    }
+
+    private val PASS_THROUGH_KEYS = setOf(
+        KeyEvent.KEYCODE_VOLUME_UP,
+        KeyEvent.KEYCODE_VOLUME_DOWN,
+        KeyEvent.KEYCODE_VOLUME_MUTE,
+    )
 
     /**
      * Every offline voice the engine reports, this locale's language first,

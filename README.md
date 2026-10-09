@@ -90,7 +90,9 @@ Advanced.
   - **Speed Dial**
 - **Notifications**
   - **Home Banner** - which notifications show on Home, and hiding their text
-  - **Read Aloud** - when, which voice, how fast
+  - **Read Aloud** - when, which voice, how fast. Any button on the phone,
+    or a Bluetooth headset's pause/play button, stops a readout (that press
+    does nothing else; volume keys still adjust the volume)
   - **Icon Dots** on/off
 - **Advanced** - Set as Default Launcher, Accessibility, Notification Access,
   Call Log Access, Ask which Settings to open, Phone Settings

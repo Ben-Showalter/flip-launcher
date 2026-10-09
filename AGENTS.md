@@ -73,7 +73,14 @@ person's laptop.
   removal event. Home asks to turn it on at startup if it's off. Its store
   appends new items (the listener's is newest-first), so the Home banner
   and read-aloud pick the newest by `postTime` (`NotificationStore.newest`),
-  never list order.
+  never list order. The same service filters key events
+  (`flagRequestFilterKeyEvents`, set in XML and code) so any button press
+  stops a readout in progress and is swallowed (DOWN and UP), volume keys
+  excepted (`ReadAloudSpeaker.interceptKey`, also called from the
+  launcher's own `dispatchKeyEvent`s for when Accessibility is off). The
+  read-aloud MediaSession needs `FLAG_HANDLES_MEDIA_BUTTONS` on Android 7 and
+  an `onMediaButtonEvent` override, since headsets send PLAY_PAUSE /
+  HEADSETHOOK rather than PAUSE.
 
 - **Kyocera component names** (captured from logcat on the E4610; not yet
   verified on the E4810/E4811 - every launch falls back or toasts, never

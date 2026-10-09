@@ -41,6 +41,7 @@ import com.flipos.launcher.util.KEYCODE_ASSISTANT_RAW
 import com.flipos.launcher.util.KyoceraShortcuts
 import com.flipos.launcher.util.PermissionGate
 import com.flipos.launcher.util.ReadAloud
+import com.flipos.launcher.util.ReadAloudSpeaker
 import com.flipos.launcher.util.WallpaperContrast
 import com.flipos.launcher.util.accentColorAlpha
 import com.flipos.launcher.util.applyFakeBold
@@ -557,6 +558,8 @@ class MainActivity : AppCompatActivity() {
     // launcher, hence assigning them here.
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        // A press while a message is being read only stops the readout.
+        if (ReadAloudSpeaker.interceptKey(event)) return true
         val outerKey = outerKeyFor(event.scanCode)
         if (outerKey != null) {
             if (prefs.getExtraKeyApp(outerKey) == null) return false
