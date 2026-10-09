@@ -31,8 +31,8 @@ goes back.
 
 ### App Drawer ("All Apps")
 
-- Every installed, non-hidden app, in **grid** or **list** view (toggle in
-  **Settings → Apps & Drawer**):
+- Every installed, non-hidden app, in **grid** or **list** view (switch with
+  **Options → Switch to List / Grid View**):
   - **Grid**: a 3x3 icon page at a time, tracked by a column of dots on the
     right. Number keys 1-9 launch the matching icon on the current page, and
     the drawer opens with the center icon focused.
@@ -43,7 +43,7 @@ goes back.
   else A-Z. Move any app from its Options menu.
 - The Options soft key on any app offers:
   - **Move** it
-  - **Hide** it from the app list
+  - **Hide / Show Apps** - choose which apps the list shows
   - **Change Icon** (from an installed icon pack or the launcher's own bundled
     set, or back to the **Original icon**)
   - **Home Screen Settings**
@@ -88,7 +88,6 @@ Advanced.
   - **Other Buttons** - Camera, Mic/Assistant, SOS, outer END, outer Speaker,
     PTT
   - **Speed Dial**
-- **App List** - grid or list view, hide/show apps
 - **Notifications**
   - **Home Banner** - which notifications show on Home, and hiding their text
   - **Read Aloud** - when, which voice, how fast
@@ -147,8 +146,8 @@ their keycode, so you can learn a new phone's buttons without a computer.
   screen consistent and easy to retune.
 - Focus highlights follow the chosen accent color, and there's no motion:
   every screen change and list update is instant.
-- Every app icon is a squircle; plain (non-adaptive) icons sit on a solid
-  medium-dark gray tile that doesn't match any app's colors.
+- Every app icon is a squircle; plain (non-adaptive) icons sit on a dark tile
+  (75% opaque) that doesn't match any app's colors.
 - The phone's own soft-key label bar (the system navigation bar) is hidden on
   every screen in favor of the launcher's own labelled bar.
 

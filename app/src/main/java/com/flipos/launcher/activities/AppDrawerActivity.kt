@@ -8,7 +8,6 @@ import android.os.Bundle
 import android.view.KeyEvent
 import android.view.View
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.GridLayoutManager
@@ -471,7 +470,7 @@ class AppDrawerActivity : AppCompatActivity() {
         if (isFinishing || isDestroyed) return
         val items = listOf(
             ContextItem(getString(R.string.ctx_move)) { enterMoveMode(app) },
-            ContextItem(getString(R.string.ctx_hide)) { hideApp(app) },
+            ContextItem(getString(R.string.opt_hide_apps)) { startActivity(Intent(this, HideAppsActivity::class.java)) },
             ContextItem(getString(R.string.ctx_change_icon)) { changeIcon(app) },
             ContextItem(getString(R.string.ctx_home_settings)) { startActivity(Intent(this, SettingsActivity::class.java)) },
             ContextItem(getString(if (listMode) R.string.ctx_grid_view else R.string.ctx_list_view)) { toggleViewMode() },
@@ -497,12 +496,6 @@ class AppDrawerActivity : AppCompatActivity() {
 
     private fun changeIcon(app: AppInfo) {
         startActivity(Intent(this, IconPickerActivity::class.java).putExtra(IconPickerActivity.EXTRA_APP_KEY, app.key))
-    }
-
-    private fun hideApp(app: AppInfo) {
-        prefs.setHidden(app.key, true)
-        Toast.makeText(this, getString(R.string.toast_app_hidden, app.label), Toast.LENGTH_SHORT).show()
-        refresh()
     }
 
     // -------------------------------------------------------------- Move

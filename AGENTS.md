@@ -70,7 +70,10 @@ person's laptop.
   the same allowlist) - it feeds the Home banner and the app list's icon
   dots (`AppDrawerActivity.hasNotification` reads both sources), not
   Notices, since accessibility has no "list active notifications" or
-  removal event. Home asks to turn it on at startup if it's off.
+  removal event. Home asks to turn it on at startup if it's off. Its store
+  appends new items (the listener's is newest-first), so the Home banner
+  and read-aloud pick the newest by `postTime` (`NotificationStore.newest`),
+  never list order.
 
 - **Kyocera component names** (captured from logcat on the E4610; not yet
   verified on the E4810/E4811 - every launch falls back or toasts, never
@@ -155,8 +158,9 @@ Key pieces:
   accent-color theme-overlay-on-`onCreate` + recreate-on-resume-if-changed
   pattern — new list screens should extend it rather than reinventing this.
 - **Settings structure** (TurboText-style): `SettingsActivity` is a flat
-  list of categories (Appearance, Home Screen & Keys, App List,
-  Notifications, Advanced), each its own screen; long categories open to a
+  list of categories (Appearance, Home Screen & Keys, Notifications,
+  Advanced), each its own screen (grid/list and Hide / Show Apps are in the
+  app list's Options menu, not a category); long categories open to a
   short menu whose rows reopen the same activity with an `EXTRA_GROUP`
   (`HomeKeysSettingsActivity`: navigation / other; `NotificationSettingsActivity`:
   banner / read_aloud). No section headers. System hand-offs (default
@@ -182,7 +186,7 @@ Key pieces:
   behind it, which washed out icons drawn in that color.
 - `IconShapeRenderer` masks app icons into a fixed squircle (adaptive icons
   composite their own fg/bg layers then get clipped; legacy icons are drawn
-  on a solid medium-dark gray tile). Icon shape, the plain-icon background and
+  on a 75%-opaque dark gray tile). Icon shape, the plain-icon background and
   animations are deliberately not settings: always squircle, always the gray
   tile, never any motion (`ThemeOverlay.FlipLauncher.NoAnimations` is always
   applied, list item animators are off).

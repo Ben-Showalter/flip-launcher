@@ -24,7 +24,6 @@ class SettingsActivity : BaseListActivity() {
 
         actions[ID_APPEARANCE] = { open(AppearanceSettingsActivity::class.java) }
         actions[ID_HOME_KEYS] = { open(HomeKeysSettingsActivity::class.java) }
-        actions[ID_APPS_DRAWER] = { open(AppsSettingsActivity::class.java) }
         actions[ID_NOTIFICATIONS] = { open(NotificationSettingsActivity::class.java) }
         actions[ID_ADVANCED] = { open(AdvancedSettingsActivity::class.java) }
 
@@ -51,12 +50,6 @@ class SettingsActivity : BaseListActivity() {
             chevron = true,
         ),
         Row(
-            id = ID_APPS_DRAWER,
-            title = getString(R.string.cat_apps_drawer),
-            subtitle = getString(R.string.cat_apps_drawer_sub),
-            chevron = true,
-        ),
-        Row(
             id = ID_NOTIFICATIONS,
             title = getString(R.string.cat_notifications),
             subtitle = getString(R.string.cat_notifications_sub),
@@ -79,7 +72,6 @@ class SettingsActivity : BaseListActivity() {
     companion object {
         private const val ID_APPEARANCE = "appearance"
         private const val ID_HOME_KEYS = "home_keys"
-        private const val ID_APPS_DRAWER = "apps_drawer"
         private const val ID_NOTIFICATIONS = "notifications"
         private const val ID_ADVANCED = "advanced"
     }

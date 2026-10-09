@@ -42,6 +42,14 @@ object NotificationStore {
         listeners.remove(listener)
     }
 
+    /**
+     * The most recent item passing [filter], by post time. The listener keeps
+     * [items] newest-first but the accessibility fallback appends, so never
+     * rely on list order - always pick by [NoticeItem.postTime].
+     */
+    fun newest(filter: (NoticeItem) -> Boolean): NoticeItem? =
+        items.filter(filter).maxByOrNull { it.postTime }
+
     fun update(items: List<NoticeItem>) {
         this.items = items
         notifyListeners()

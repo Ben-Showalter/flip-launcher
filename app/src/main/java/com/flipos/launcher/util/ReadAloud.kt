@@ -51,7 +51,9 @@ object ReadAloud {
         val prefs = LauncherPrefs(context)
         val mode = prefs.getReadAloudMode()
         if (mode == LauncherPrefs.READ_ALOUD_NEVER) return
-        val item = NotificationStore.items.firstOrNull { prefs.isShownOnHome(it.kind) } ?: return
+        // The newest shown notification - read even while older ones are
+        // still pending (the same item the Home banner shows).
+        val item = NotificationStore.newest { prefs.isShownOnHome(it.kind) } ?: return
         // Anything already posted before we started listening isn't a new
         // arrival - don't read out a backlog after boot or a listener rebind.
         if (item.postTime < attachedAt - STARTUP_GRACE_MS) return

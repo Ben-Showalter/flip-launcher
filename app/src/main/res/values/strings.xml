@@ -27,7 +27,6 @@
 
     <!-- App drawer context options -->
     <string name="ctx_move">Move</string>
-    <string name="ctx_hide">Hide App</string>
     <string name="ctx_change_icon">Change Icon</string>
 
     <!-- Screen titles -->
@@ -116,8 +115,6 @@
     <string name="cat_notifications_sub">Home banner, read aloud, icon dots</string>
     <string name="cat_home_keys">Home Screen &amp; Keys</string>
     <string name="cat_home_keys_sub">Soft keys, buttons, speed dial</string>
-    <string name="cat_apps_drawer">App List</string>
-    <string name="cat_apps_drawer_sub">Grid or list, hidden apps</string>
 
     <!-- Settings section headers -->
     <string name="sec_wallpaper_color">Wallpaper &amp; Color</string>
@@ -133,7 +130,6 @@
     <!-- Settings row subtitles -->
     <string name="settings_wallpaper_sub">Choose a background image</string>
     <string name="settings_notif_access_sub">Let Flip Launcher read notifications</string>
-    <string name="settings_drawer_view_sub">Grid or list layout</string>
 
     <!-- Launcher Settings -->
     <string name="title_launcher_settings">Launcher Settings</string>
@@ -153,9 +149,6 @@
     <string name="settings_left_key_cleared">Left key reset to Contacts</string>
     <string name="settings_icon_size_set">Icon size set to %1$s</string>
     <string name="settings_icon_pack">Icon Pack</string>
-    <string name="settings_drawer_view">App Drawer View</string>
-    <string name="settings_drawer_view_grid">Grid</string>
-    <string name="settings_drawer_view_list">List</string>
     <string name="settings_accent_color">Accent Color</string>
     <string name="settings_accent_color_set">Accent color set to %1$s</string>
     <string name="accent_color_default">Cyan (default)</string>
@@ -183,7 +176,6 @@
     <string name="wallpaper_set_failed">Couldn\'t set wallpaper</string>
 
     <!-- Toasts -->
-    <string name="toast_app_hidden">%1$s hidden</string>
     <string name="toast_not_available">Not available on this device</string>
     <!-- Manual D-pad paths shown alongside (or instead of) system Settings screens. -->
     <string name="toast_settings_manual_path">Couldn\'t open Settings. Go to: %1$s</string>

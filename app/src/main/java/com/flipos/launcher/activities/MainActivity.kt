@@ -438,7 +438,8 @@ class MainActivity : AppCompatActivity() {
      */
     private fun updateNotifBanner() {
         notifBannerHandler.removeCallbacks(hideNotifBannerRunnable)
-        val item = NotificationStore.items.firstOrNull { prefs.isShownOnHome(it.kind) }
+        // The newest shown notification, even if older ones are still pending.
+        val item = NotificationStore.newest { prefs.isShownOnHome(it.kind) }
         if (item == null) {
             notifBanner.visibility = View.GONE
             return
