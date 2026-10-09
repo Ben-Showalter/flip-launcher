@@ -1,168 +1,164 @@
-# Flip Launcher — a KaiOS-style Android launcher
+# Flip Launcher for Kyocera flip phones
 
-A KaiOS-style Android launcher built for keypad flip phones (small,
-low-resolution, D-pad/soft-key driven, no touchscreen) rather than touch-first
-flagships. It's tested on the Kyocera DuraXV Extreme E4810 / E4811 and the
-E4610, and follows the house rules in
+A KaiOS-style Android Home screen for Kyocera keypad flip phones - the
+DuraXV Extreme **E4810 / E4811** and the **E4610**. It's a fork of
+[juliancruzsanchez/flip-launcher](https://github.com/juliancruzsanchez/flip-launcher),
+by way of AmberIsCoding's rework, adapted to these phones and following the
+house rules in
 [Flip-DumbPhoneGuide](https://github.com/Ben-Showalter/Flip-DumbPhoneGuide/blob/main/AGENTS.md).
-Navigation leans on the physical soft keys and D-pad: number keys 1-9 double
-as shortcuts everywhere they make sense, and every screen uses the same
-soft-key layout - **Left** runs the screen's main action, **Center/OK**
-selects, **Right** (or **Menu**) opens Options, and the **Back/Clear** key
-goes back.
 
-![Home Screen](reference/home.png)
+<p>
+  <img src="reference/home.png" alt="Home screen" width="240">
+  <img src="reference/apps.png" alt="App list" width="240">
+</p>
+
+## Why this fork
+
+The upstream launcher is a good KaiOS-style launcher, but it wasn't designed
+for Kyocera phones and didn't support all of the Home screen shortcuts these
+phones rely on - speed dial among them. Replacing Kyocera's own Home also
+switches off several things Kyocera Home was quietly doing. This fork puts
+them back:
+
+- **Speed dial.** Hold a digit on Home to dial that speed-dial number (hold 1
+  for voicemail). It reads the phone's own speed-dial list where it can; on
+  the E4610, where that list can't be read, it uses the launcher's own slots
+  under **Settings → Home Screen & Keys → Speed Dial**.
+- **Call key** opens the phone's own call log, like it does under Kyocera Home.
+- **Mic / Assistant key** works (it sends a different keycode depending on the
+  model and what has focus) and opens the voice assistant by default.
+- **Outer buttons** - SOS, outer END, outer Speaker and PTT. Their system
+  setting only works under Kyocera Home, so the launcher lets you assign each
+  one an app. A press opens it only while Home is showing, the screen is on and
+  the phone is unlocked, so nothing happens in a pocket.
+- **Kyocera's menus** - **Media Center**, **Tools** and **Quick Settings** -
+  are in the app list, and can be pinned to a key like any other app.
+- **Notifications on the E4810 / E4811.** Notification Access is blocked on
+  these models, so the launcher can also use Accessibility to show new
+  notifications on Home, put dots on app icons, and read messages aloud.
+- **Keys behave consistently.** Every screen uses the same soft-key layout,
+  actions fire when a key is released (so a press never spills into the next
+  screen), and the phone's own soft-key label bar is hidden in favor of the
+  launcher's.
+- **Unknown buttons announce themselves.** Pressing a key the launcher doesn't
+  recognize shows its keycode, so a new phone's buttons can be learned without
+  a computer.
 
 ## Features
 
-### Home screen
+### Home
 
-- A vertical rail of up to 9 shortcut icons on the left (mapped to number keys
-  1-9, top to bottom). The disc size adapts to the screen so all five visible
-  slots fit without clipping, even on a 240x320 display.
-- A large clock and date on the right.
-- Bottom soft keys: **Notices** (left), **All Apps** (center — press to open;
-  long-press for **Settings**), and a configurable right key (Contacts by
-  default).
-- A notification summary (missed calls / messages / other) under the clock,
-  each independently toggleable.
-- Typing a digit anywhere on Home jumps straight into the dialer, prefilled.
-- Long-pressing Back launches a configurable app.
+- A large clock and date, with the newest notification as a banner underneath.
+- **Left / Right soft keys** open an app each (Contacts and Messages by
+  default). **Center / OK** opens the app list; hold it for Settings.
+- Each **D-pad direction** opens an app, shown as icons around the center key.
+- Type a digit to open the dialer prefilled; hold a digit for speed dial.
+- **Call** opens the call log; **Camera**, **Mic** and the outer buttons open
+  their assigned apps.
+- Hold any assignable key for 5 seconds to pick its app on the spot.
 
-### App Drawer ("All Apps")
+### App list
 
-- Every installed, non-hidden app, in **grid** or **list** view (switch with
-  **Options → Switch to List / Grid View**):
-  - **Grid**: a 3x3 icon page at a time, tracked by a column of dots on the
-    right. Number keys 1-9 launch the matching icon on the current page, and
-    the drawer opens with the center icon focused.
-  - **List**: one continuous scroll, icon + label per row — no pages, no dots,
-    just normal scrolling.
+<p>
+  <img src="reference/options.png" alt="App Options menu" width="240">
+</p>
+
+- Grid view (3x3 pages, opening on the center icon, number keys 1-9 launch the
+  matching icon) or list view.
 - Default order: Contacts, Notices, Messaging, Gallery, Media Center, Notepad,
   Quick Settings, Settings, Tools (whichever the phone has), then everything
-  else A-Z. Move any app from its Options menu.
-- The Options soft key on any app offers:
-  - **Move** it
-  - **Hide / Show Apps** - choose which apps the list shows
-  - **Change Icon** (from an installed icon pack or the launcher's own bundled
-    set, or back to the **Original icon**)
-  - **Home Screen Settings**
-  - **Switch to List / Grid View**
-
-![App Drawer Grid](reference/apps.png)
-![App Drawer List](reference/list.png)
-
-- On Kyocera phones the drawer also lists **Media Center**, **Tools** and
-  **Quick Settings**, which open Kyocera's own Home menus. They can be pinned
-  to Home or a key like any other app, and are hidden on other phones.
+  else A-Z.
+- Dots on the icons of apps with unread notifications.
+- **Options** on any app: **Move**, **Hide / Show Apps**, **Change Icon**
+  (from an icon pack, the launcher's bundled set, or back to the original),
+  **Home Screen Settings**, **Switch to List / Grid View**.
+- The **Settings** entry asks whether you want **Phone Settings** or **Home
+  Screen Settings**, with a **Don't ask again** option.
 
 ### Notices
 
-A custom notification list standing in for the system shade, which isn't
-designed for a screen this small. Shows icon, title, body text and a relative
-timestamp ("2 minutes ago", "8:30 AM", …) per notification.
+A notification list sized for a small screen, standing in for the system
+shade: icon, title, text and time for each one. **Left** dismisses the focused
+notice, **Center** opens it, and **Options → Dismiss All** clears them all.
+Needs Notification Access (not available on the E4810 / E4811).
 
-- **Dismiss** (left soft key) — dismiss the focused notice
-- **Select** (center) — open the notice's action, then dismiss it
-- **Options** (right) — **Dismiss All** clears every active notification
+### Read Aloud
 
-Requires Notification Access, granted from **Settings → Notifications**.
-
-![Notices](reference/notices.png)
+New messages shown on Home can be read aloud - never, always, or only when a
+Bluetooth headset is connected - with a choice of voice and speed. Any button
+on the phone, or a headset's pause/play button, stops the reading (and does
+nothing else); volume keys still change the volume.
 
 ### Settings
 
-Settings is a short list where every row opens its own screen, so nothing is
-crowded onto one page. Open it by long-pressing the center soft key on Home,
-from an app's Options menu, or from the **Settings** entry in the app list -
-which asks whether you want **Phone Settings** (Wi-Fi, sound, display and the
-rest of the phone) or **Home Screen Settings** (this launcher). Choose
-**Don't ask again** to always open Phone Settings; turn the question back on in
-Advanced.
+<p>
+  <img src="reference/settings.png" alt="Home Screen Settings" width="240">
+</p>
 
-- **Appearance** - wallpaper, accent color, light/dark theme, icon pack, app
-  icon size
-- **Home Screen & Keys**
-  - **Navigation & Soft Keys** - left/right soft keys, D-pad directions,
-    long-press Back and Menu
-  - **Other Buttons** - Camera, Mic/Assistant, SOS, outer END, outer Speaker,
-    PTT
-  - **Speed Dial**
-- **Notifications**
-  - **Home Banner** - which notifications show on Home, and hiding their text
-  - **Read Aloud** - when, which voice, how fast. Any button on the phone,
-    or a Bluetooth headset's pause/play button, stops a readout (that press
-    does nothing else; volume keys still adjust the volume)
-  - **Icon Dots** on/off
-- **Advanced** - Set as Default Launcher, Accessibility, Notification Access,
-  Call Log Access, Ask which Settings to open, Phone Settings
+A short list where each row opens its own screen:
 
-On start, Home asks (once per start, one at a time) to make Flip Launcher the
-default Home app and to turn on Accessibility, if either isn't already.
+- **Appearance** - wallpaper, accent color, light/dark theme, icon pack, icon
+  size
+- **Home Screen & Keys** - soft keys and D-pad; other buttons (Camera, Mic,
+  SOS, outer END, outer Speaker, PTT); speed dial
+- **Notifications** - the Home banner, Read Aloud, icon dots
+- **Advanced** - set as default launcher, Accessibility, Notification Access,
+  Call Log Access, the Settings question, Phone Settings
 
-#### Home Shortcuts
+### Look
 
-Customize the ordered list of up to 9 Home rail shortcuts. Pick a shortcut row
-(or its number key) to reassign it, including pinning a specific *activity*
-inside an app rather than just its main entry point. The trailing "Add
-shortcut" row appends a new one; the Clear soft key removes the focused
-shortcut.
-
-#### Hide / Show Apps
-
-Lists every installed app with a "Hidden" badge; Center/OK toggles whether the
-focused app is hidden from Home and the App Drawer.
-
-#### Icon packs & built-in icons
-
-- Apply any installed icon-pack app launcher-wide from **Settings → Appearance
-  → Icon Pack**.
-- Override a single app's icon independently of the active pack, choosing from
-  that pack's full icon set or from the launcher's own bundled icon collection
-  — so there's always something to pick from even with no icon pack installed.
+- Built for 240x320 portrait screens and a keypad - no touch needed.
+- The wallpaper is dimmed automatically according to how bright it is, so
+  text and icons stay readable.
+- Every icon is a squircle; icons without a background of their own sit on a
+  dark gray tile. The focused icon gets a ring in its own color.
+- No animations - every screen change is instant.
 
 ### Key map
 
-| Key | Home | List screens / App Drawer |
+| Key | Home | Other screens |
 |---|---|---|
-| Left soft key | Notices (assignable) | Screen's main action (e.g. Dismiss) |
-| Center / OK | All Apps (hold: Settings) | Select the focused row |
-| Right soft key | Contacts (assignable) | Options |
-| Menu | All Apps (hold: assignable app) | Options |
-| Back / Clear | All Apps (hold: assignable app) | Back |
-| Call | The phone's own call log (falls back to the launcher's Recent Calls) | Call the focused entry (Recent Calls) |
-| 0-9, `*`, `#` | Open the dialer prefilled; hold 0/2-9 for speed dial (the phone's, or the launcher's own under **Settings → Home Keys → Speed Dial**), 1 for voicemail | 1-9 launch the matching app on the drawer's grid page |
+| Left soft key | Assignable app (Contacts) | Screen's main action |
+| Center / OK | App list (hold: Settings) | Select |
+| Right soft key | Assignable app (Messages) | Options |
+| Menu | App list (hold: assignable app) | Options |
+| Back / Clear | App list (hold: assignable app) | Back |
+| Call | Phone's call log | Call the focused entry (Recent Calls) |
+| 0-9, `*`, `#` | Dialer, prefilled; hold 2-9 / 0 for speed dial, 1 for voicemail | 1-9 launch apps on the grid page |
 | D-pad | Assignable app per direction | Move focus |
-| Camera / Mic (Assistant) | Assignable app (by default Camera opens the camera, Mic the voice assistant) | - |
-| SOS / outer END / outer Speaker / PTT | Press to open the assigned app - only while Home is showing with the screen on and the flip open, so pocket presses do nothing; unassigned, the phone's own button setting applies | Left to the phone |
+| Camera / Mic | Assignable app (camera / voice assistant) | - |
+| SOS / outer END / outer Speaker / PTT | Assigned app, only while Home is showing, the screen is on and the phone is unlocked | Left to the phone |
 
-Hold any assignable Home key for 5 seconds to pick its app on the spot. Keys
-the launcher doesn't recognize show a short "Unrecognized key" toast with
-their keycode, so you can learn a new phone's buttons without a computer.
+## Known limits
 
-## Built for small, non-touch screens
+- **E4810 / E4811:** Notification Access appears to turn on but never works
+  (a platform restriction), so Notices stays empty; turn on Accessibility for
+  the Home banner, icon dots and Read Aloud.
+- **Outer buttons** report only the press, not how long they're held, so they
+  have no long-press action.
+- Kyocera's internal screen names (call log, menus) were captured on the
+  E4610; if one differs on another model, the launcher falls back or shows a
+  message instead of crashing.
+- After updating, turn Flip Launcher's Accessibility switch **off and on**
+  once so new abilities (like stopping Read Aloud on any button) take effect.
 
-- Tuned for QVGA (~240x320) portrait displays driven by a D-pad, soft keys, and
-  a number pad — no touch required.
-- A shared design-token system (typography, spacing, corner radii) keeps every
-  screen consistent and easy to retune.
-- Focus highlights follow the chosen accent color, and there's no motion:
-  every screen change and list update is instant.
-- Every app icon is a squircle; plain (non-adaptive) icons sit on a dark tile
-  (75% opaque) that doesn't match any app's colors.
-- The phone's own soft-key label bar (the system navigation bar) is hidden on
-  every screen in favor of the launcher's own labelled bar.
+## Installing
 
-## Requirements
+These phones have no Play Store, so the APK is sideloaded:
 
-- Android 5.0 (API 21) or newer on the device.
-- An Android SDK with `platforms;android-36` and `build-tools;36.0.0` (point
-  the build at it via `local.properties` or `ANDROID_HOME`).
-- A JDK is **not** something you need to install or configure — the Gradle
-  toolchain auto-provisions JDK 17 for the build. Gradle itself runs on any
-  JDK 17-26.
+- **ADB:** `adb install -r app/build/outputs/apk/debug/app-debug.apk`, or
+- **USB copy / email:** put the APK on the phone, open it from the Files app,
+  and allow installs from that source when asked.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for a from-scratch environment setup.
+On first start Home asks to become the default Home app, then to turn on
+Accessibility. Everything else is under **Settings → Advanced**:
+
+1. **Set as Default Launcher** - pick **Flip Launcher**.
+2. **Accessibility** - turn on Flip Launcher (needed on the E4810 / E4811).
+3. **Notification Access** - for Notices and the Home banner on phones where
+   it works (e.g. the E4610).
+4. **Call Log Access** - for Recent Calls. If it was denied before, the phone
+   opens its app info: **Permissions → Call logs**.
 
 ## Building
 
@@ -172,33 +168,23 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for a from-scratch environment setup.
 
 The debug APK lands in `app/build/outputs/apk/debug/`.
 
-## Installing
+- Any JDK from 17 to 26 runs the build (Android Studio's bundled one is fine).
+- An Android SDK with `platforms;android-36` and `build-tools;36.0.0`, found
+  through `local.properties` (`sdk.dir=...`) or `ANDROID_HOME`.
+- The phone needs Android 5.0 (API 21) or newer.
 
-These phones have no Play Store, so the APK is sideloaded. Either:
-
-- **ADB:** `adb install -r app/build/outputs/apk/debug/app-debug.apk`, or
-- **USB copy / email:** put the APK on the phone, open it from the Files app,
-  and allow installs from that source when asked.
-
-Then, all with the D-pad:
-
-1. **Make it the Home app:** open Flip Launcher, hold **Center/OK** for
-   Settings, select **Set as Default Launcher**, pick **Flip Launcher** and
-   press OK.
-2. **Notification Access** (Notices + Home badges): **Settings →
-   Notifications → Notification Access**, select **Flip Launcher** and turn it
-   on. On the Kyocera E4810/E4811 this access never takes effect (a platform
-   restriction), so also turn on **Accessibility Fallback Access** from the same screen,
-   which feeds the Home banner instead.
-3. **Call Log access** (Recent Calls): **Settings → Notifications → Call Log
-   Access**, then allow it. If it was denied before, the phone opens its Apps
-   list: select **Flip Launcher → Permissions** and turn on Call logs.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for a from-scratch setup.
 
 ## Permissions
 
-- `BIND_NOTIFICATION_LISTENER_SERVICE` (via Notification Access, granted by the
-  user in system settings) — powers Notices and the Home badge summary.
-- `SET_WALLPAPER` — used by the bundled wallpaper picker.
+- **Notification Access** (`BIND_NOTIFICATION_LISTENER_SERVICE`) - Notices,
+  the Home banner and icon dots.
+- **Accessibility service** - the notification fallback on the E4810 / E4811,
+  and stopping Read Aloud on any button.
+- **Call log** (`READ_CALL_LOG`) - Recent Calls; asked for only when you use it.
+- `CALL_PHONE` - speed dial and voicemail place the call directly.
+- `READ_CONTACTS` - picking a contact for a speed-dial slot.
+- `SET_WALLPAPER` - the bundled wallpaper picker.
 
-No runtime permissions are requested at launch. App enumeration uses a
-`<queries>` declaration rather than `QUERY_ALL_PACKAGES`.
+App enumeration uses a `<queries>` declaration rather than
+`QUERY_ALL_PACKAGES`.
