@@ -5,7 +5,6 @@ import com.flipos.launcher.R
 import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
-import android.view.KeyEvent
 import android.widget.Toast
 import com.flipos.launcher.data.IconPackRepository
 import com.flipos.launcher.data.LauncherPrefs
@@ -26,27 +25,18 @@ class AppearanceSettingsActivity : BaseListActivity() {
 
         actions[ID_WALLPAPER] = { startActivity(Intent(this, WallpaperPickerActivity::class.java)) }
         actions[ID_ACCENT] = { chooseAccentColor() }
-        actions[ID_SHAPE] = { chooseIconShape() }
+        actions[ID_THEME] = { chooseTheme() }
         actions[ID_PACK] = { startActivity(Intent(this, IconPackActivity::class.java)) }
         actions[ID_SIZE] = { chooseIconSize() }
-        actions[ID_BACKGROUND] = {
-            prefs.setLegacyIconBackgroundEnabled(!prefs.isLegacyIconBackgroundEnabled())
-            refreshRows()
-        }
-        actions[ID_ANIMATIONS] = {
-            prefs.setAnimationsEnabled(!prefs.isAnimationsEnabled())
-            refreshRows()
-        }
 
         adapter = ListRowAdapter(onClick = { dispatch(it) })
         listView.adapter = adapter
 
         softKeys.setLabels(
-            getString(R.string.softkey_back),
+            null,
             getString(R.string.softkey_select),
             null,
         )
-        softKeys.setOnLeftClick { finish() }
         softKeys.setOnCenterClick { focusedPosition().takeIf { it >= 0 }?.let { dispatch(it) } }
         refreshRows()
         focusFirst()
@@ -73,7 +63,6 @@ class AppearanceSettingsActivity : BaseListActivity() {
 
         adapter.submit(
             listOf(
-                Row.section(getString(R.string.sec_wallpaper_color)),
                 Row(
                     id = ID_WALLPAPER,
                     title = getString(R.string.opt_set_wallpaper),
@@ -86,11 +75,10 @@ class AppearanceSettingsActivity : BaseListActivity() {
                     trailing = getString(prefs.getAccentColor().labelRes),
                     chevron = true,
                 ),
-                Row.section(getString(R.string.sec_icons)),
                 Row(
-                    id = ID_SHAPE,
-                    title = getString(R.string.settings_icon_shape),
-                    trailing = getString(prefs.getIconShape().labelRes),
+                    id = ID_THEME,
+                    title = getString(R.string.settings_theme),
+                    trailing = getString(prefs.getThemeMode().labelRes),
                     chevron = true,
                 ),
                 Row(
@@ -104,18 +92,6 @@ class AppearanceSettingsActivity : BaseListActivity() {
                     title = getString(R.string.settings_icon_size),
                     trailing = getString(R.string.settings_icon_current, iconSizeLabel, iconPercent),
                     chevron = true,
-                ),
-                Row(
-                    id = ID_BACKGROUND,
-                    title = getString(R.string.settings_icon_background),
-                    toggle = prefs.isLegacyIconBackgroundEnabled(),
-                ),
-                Row.section(getString(R.string.sec_motion)),
-                Row(
-                    id = ID_ANIMATIONS,
-                    title = getString(R.string.settings_animations),
-                    subtitle = getString(R.string.settings_animations_sub),
-                    toggle = prefs.isAnimationsEnabled(),
                 ),
             ),
         )
@@ -160,36 +136,26 @@ class AppearanceSettingsActivity : BaseListActivity() {
             .show()
     }
 
-    private fun chooseIconShape() {
-        val options = LauncherPrefs.IconShape.entries.toTypedArray()
+    private fun chooseTheme() {
+        val options = LauncherPrefs.ThemeMode.entries.toTypedArray()
         val labels = options.map { getString(it.labelRes) }.toTypedArray()
-        val checked = options.indexOf(prefs.getIconShape()).coerceAtLeast(0)
+        val checked = options.indexOf(prefs.getThemeMode()).coerceAtLeast(0)
         AlertDialog.Builder(this)
-            .setTitle(R.string.settings_icon_shape)
+            .setTitle(R.string.settings_theme)
             .setSingleChoiceItems(labels, checked) { dialog, which ->
-                prefs.setIconShape(options[which])
-                Toast.makeText(this, getString(R.string.settings_icon_shape_set, labels[which]), Toast.LENGTH_SHORT).show()
-                refreshRows()
+                prefs.setThemeMode(options[which])
+                Toast.makeText(this, getString(R.string.settings_theme_set, labels[which]), Toast.LENGTH_SHORT).show()
                 dialog.dismiss()
+                recreate()
             }
             .show()
-    }
-
-    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_SOFT_LEFT) {
-            finish()
-            return true
-        }
-        return super.onKeyDown(keyCode, event)
     }
 
     companion object {
         private const val ID_WALLPAPER = "wallpaper"
         private const val ID_ACCENT = "accent"
-        private const val ID_SHAPE = "shape"
+        private const val ID_THEME = "theme"
         private const val ID_PACK = "pack"
         private const val ID_SIZE = "size"
-        private const val ID_BACKGROUND = "background"
-        private const val ID_ANIMATIONS = "animations"
     }
 }

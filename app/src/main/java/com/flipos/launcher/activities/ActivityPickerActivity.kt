@@ -4,7 +4,6 @@ import com.flipos.launcher.R
 
 import android.content.Intent
 import android.os.Bundle
-import android.view.KeyEvent
 import com.flipos.launcher.data.AppInfo
 import com.flipos.launcher.data.AppRepository
 import com.flipos.launcher.ui.ListRowAdapter
@@ -32,11 +31,10 @@ class ActivityPickerActivity : BaseListActivity() {
         listView.adapter = adapter
 
         softKeys.setLabels(
-            getString(R.string.softkey_back),
+            null,
             getString(R.string.softkey_select),
             null,
         )
-        softKeys.setOnLeftClick { finish() }
         softKeys.setOnCenterClick { pick(focusedPosition()) }
 
         loadActivities()
@@ -69,14 +67,6 @@ class ActivityPickerActivity : BaseListActivity() {
 
     /** "com.app.ui.SettingsActivity" -> "SettingsActivity" to disambiguate rows. */
     private fun shortClassName(name: String) = name.substringAfterLast('.')
-
-    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_SOFT_LEFT) {
-            finish()
-            return true
-        }
-        return super.onKeyDown(keyCode, event)
-    }
 
     companion object {
         const val EXTRA_PACKAGE = "package"

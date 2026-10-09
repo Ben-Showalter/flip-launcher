@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PorterDuff
@@ -13,7 +12,6 @@ import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.os.Build
-import androidx.palette.graphics.Palette
 import kotlin.math.cos
 import kotlin.math.pow
 import kotlin.math.sin
@@ -24,15 +22,17 @@ import kotlin.math.sin
  * Adaptive icons are composited from their own foreground/background layers
  * (the app developer's intended look) and then clipped to the shape — the
  * shape is ours to pick, the artwork inside it stays theirs. Non-adaptive
- * (legacy) icons have no background layer of their own, so one is optionally
- * synthesized from a pale tint of the icon's dominant color.
+ * (legacy) icons have no background layer of their own, so they're drawn on
+ * a 75%-opaque near-black tile ([LEGACY_BACKGROUND]) - one dark, colorless
+ * backing for every plain icon that doesn't match any app's own colors, with
+ * just a little wallpaper showing through.
  */
 object IconShapeRenderer {
 
     /** Square canvas every icon is rendered onto, matching Android's standard adaptive icon size. */
     private const val CANVAS_DP = 108
 
-    /** Legacy icons are drawn smaller than the canvas so they read clearly against their tinted disc. */
+    /** Legacy icons are drawn smaller than the canvas so they read clearly against their gray tile. */
     private const val LEGACY_ICON_SCALE = 0.62f
 
     /**
@@ -44,8 +44,8 @@ object IconShapeRenderer {
      */
     private const val ADAPTIVE_ICON_SCALE = 1.5625f
 
-    /** How far each color channel is pushed toward white for the legacy icon background. */
-    private const val LEGACY_TINT_LIGHTEN = 0.82f
+    /** The tile every legacy (non-adaptive) icon sits on: dark gray at 75% opacity. */
+    private const val LEGACY_BACKGROUND = 0xBF1E2023.toInt()
 
     fun render(
         context: Context,
@@ -94,7 +94,7 @@ object IconShapeRenderer {
         val content = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(content)
         if (backgroundEnabled) {
-            canvas.drawColor(lightenedDominantColor(drawable))
+            canvas.drawColor(LEGACY_BACKGROUND)
         }
         val iconSize = (size * LEGACY_ICON_SCALE).toInt()
         val offset = (size - iconSize) / 2
@@ -117,21 +117,6 @@ object IconShapeRenderer {
         return output
     }
 
-    private fun lightenedDominantColor(drawable: Drawable): Int {
-        val sampleSize = 48
-        val sample = Bitmap.createBitmap(sampleSize, sampleSize, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(sample)
-        drawable.setBounds(0, 0, sampleSize, sampleSize)
-        drawable.draw(canvas)
-        val dominant = Palette.from(sample).generate().getDominantColor(Color.LTGRAY)
-        sample.recycle()
-        return lighten(dominant, LEGACY_TINT_LIGHTEN)
-    }
-
-    private fun lighten(color: Int, amount: Float): Int {
-        fun channel(c: Int) = c + ((255 - c) * amount).toInt()
-        return Color.rgb(channel(Color.red(color)), channel(Color.green(color)), channel(Color.blue(color)))
-    }
 
     private fun pathFor(shape: LauncherPrefs.IconShape, size: Int): Path {
         val s = size.toFloat()

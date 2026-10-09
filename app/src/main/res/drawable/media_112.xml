@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Media Center app-drawer icon (Kyocera shortcut, see
+     util/KyoceraShortcuts.kt): a violet play button with a transparent
+     triangle cut out. No baked-in background - shape/background is the
+     shared IconShapeRenderer pipeline's job, same as every other icon. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <path
+        android:fillColor="#9C6ADE"
+        android:fillType="evenOdd"
+        android:pathData="M54,18 a36,36 0 1,0 0.01,0 zM45,36 L45,72 L74,54 z" />
+
+</vector>

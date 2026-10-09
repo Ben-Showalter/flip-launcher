@@ -5,43 +5,38 @@
     <!-- Soft key labels -->
     <string name="softkey_notifications">Notices</string>
     <string name="softkey_contacts">Contacts</string>
+    <string name="softkey_messages">Messages</string>
     <string name="softkey_options">Options</string>
     <string name="softkey_open">Open</string>
-    <string name="softkey_back">Back</string>
     <string name="softkey_select">Select</string>
     <string name="softkey_toggle">Toggle</string>
     <string name="softkey_clear">Clear</string>
-    <string name="softkey_activities">Activities</string>
+    <string name="menu_choose_activity">Choose activity…</string>
     <string name="softkey_dismiss">Dismiss</string>
     <string name="softkey_dismiss_all">Dismiss All</string>
+    <string name="softkey_call">Call</string>
 
     <!-- Options menu -->
     <string name="opt_all_apps">All Apps</string>
-    <string name="opt_customize_shortcuts">Customize Home Shortcuts</string>
     <string name="opt_hide_apps">Hide / Show Apps</string>
     <string name="opt_set_wallpaper">Set Wallpaper</string>
     <string name="opt_default_launcher">Set as Default Launcher</string>
     <string name="opt_system_settings">System Settings</string>
     <string name="opt_back_longpress">Back Button (Long-Press)</string>
+    <string name="opt_menu_key">Menu Key (Long-Press)</string>
 
     <!-- App drawer context options -->
-    <string name="ctx_open">Open</string>
-    <string name="ctx_add_home">Add to Home Shortcuts</string>
-    <string name="ctx_hide">Hide App</string>
+    <string name="ctx_move">Move</string>
     <string name="ctx_change_icon">Change Icon</string>
-    <string name="ctx_reset_icon">Reset Icon</string>
-    <string name="ctx_disable_wrap">Don\'t Wrap Icon</string>
-    <string name="ctx_enable_wrap">Wrap Icon</string>
-    <string name="ctx_uninstall">Uninstall</string>
 
     <!-- Screen titles -->
     <string name="title_all_apps">All Apps</string>
     <string name="title_options">Options</string>
     <string name="title_hide_apps">Hide / Show Apps</string>
-    <string name="title_shortcuts">Home Shortcuts</string>
     <string name="title_pick_app">Choose an App</string>
     <string name="title_pick_activity">Pick Activity</string>
     <string name="title_notices">%1$d Notices</string>
+    <string name="title_call_log">Recent Calls</string>
 
     <!-- Notices screen -->
     <string name="notices_access_required">Turn on Notification Access in Settings to see notices here</string>
@@ -49,52 +44,92 @@
 
     <!-- Misc -->
     <string name="empty_slot">Empty</string>
-    <string name="add_shortcut">Add shortcut</string>
-    <string name="shortcut_slot_label">Key %1$d</string>
-    <string name="home_full">Home is full (9 shortcuts max)</string>
     <string name="content_apps">Open apps menu</string>
     <string name="hidden_badge">Hidden</string>
-    <string name="choose_home_app">Choose this app as your Home screen to finish setup.</string>
     <string name="back_longpress_not_set">Not set</string>
     <string name="back_longpress_choose">Choose App</string>
     <string name="back_longpress_clear">Clear</string>
     <string name="back_longpress_app_set">Long-press Back will open %1$s</string>
     <string name="back_longpress_app_cleared">Long-press Back is now unassigned</string>
     <string name="back_longpress_unset_toast">No app set for long-press Back. Configure it in Settings.</string>
+    <string name="menu_key_unset_toast">No app set for long-press Menu. Configure it in Settings.</string>
+    <string name="key_assigned_toast">%1$s will open on long-press</string>
+    <string name="directional_key_unset_toast">No app set for this key. Configure it in Settings.</string>
+    <string name="unrecognized_key_toast">Unrecognized key: code=%1$d scan=%2$d</string>
+
+    <!-- D-pad / Camera Home shortcuts -->
+    <string name="sec_dpad_keys">D-pad &amp; Side Buttons</string>
+    <string name="opt_dpad_up">D-pad Up</string>
+    <string name="opt_dpad_down">D-pad Down</string>
+    <string name="opt_dpad_left">D-pad Left</string>
+    <string name="opt_dpad_right">D-pad Right</string>
+    <string name="opt_camera_key">Camera Button</string>
+    <string name="opt_camera_key_default">Camera app (default)</string>
+    <string name="opt_assistant_key">Mic / Assistant Button</string>
+    <string name="opt_assistant_key_default">Voice assistant (default)</string>
+
+    <!-- Outer buttons (identified by scan code, see MainActivity) - bound in
+         the phone's own Settings, not by the launcher. -->
+    <string name="sec_extra_keys">Other Buttons</string>
+    <string name="opt_extra_key_1">SOS</string>
+    <string name="opt_extra_key_2">Outer END Key</string>
+    <string name="opt_extra_key_3">Outer Speaker Key</string>
+    <string name="opt_extra_key_4">PTT</string>
+    <string name="opt_extra_key_system">Phone default</string>
+    <string name="outer_key_blocked_locked">Unlock the phone to use this button</string>
+    <string name="outer_key_blocked_focus">Close the open menu to use this button</string>
+    <string name="extra_key_phone_setting">Use phone\'s own setting</string>
+    <string name="extra_key_system_toast">Set this button in the phone\'s Settings</string>
+
+    <!-- Speed dial (long-press digit keys 0, 2-9) - read from the phone's own
+         system speed dial data; see util/SystemSpeedDial.kt. -->
+    <string name="opt_speed_dial">Speed Dial</string>
+    <string name="title_speed_dial">Speed Dial</string>
+    <string name="shortcut_slot_label">Key %1$d</string>
+    <string name="speed_dial_not_set">Not set</string>
+    <string name="speed_dial_voicemail">Voicemail</string>
+    <string name="speed_dial_locked">Locked</string>
+    <string name="speed_dial_voicemail_locked_toast">Key 1 is reserved for voicemail</string>
+    <string name="speed_dial_pick_contact">Pick Contact</string>
+    <string name="speed_dial_enter_number">Enter Number Manually</string>
+    <string name="speed_dial_save">Save</string>
+    <string name="menu_phone_speed_dial">Phone\'s speed dial settings</string>
+    <string name="toast_no_contacts">No contacts app</string>
+    <string name="speed_dial_unset_shortcut_toast">Key %1$d isn\'t set — opening Speed Dial settings</string>
+
+    <!-- Recent Calls (Send key) -->
+    <string name="calllog_access_required">Turn on Call Log access to see recent calls here — press Select</string>
+    <string name="calllog_empty">No recent calls</string>
+    <string name="calllog_send_message">Send Message</string>
+    <string name="calllog_incoming">Incoming</string>
+    <string name="calllog_outgoing">Outgoing</string>
+    <string name="calllog_missed">Missed</string>
+    <string name="calllog_other">Call</string>
+    <string name="calllog_duration_format">%1$s · %2$s</string>
 
     <!-- Settings hub (unified Options + Launcher Settings) -->
-    <string name="title_settings">Settings</string>
+    <string name="title_settings">Home Screen Settings</string>
     <string name="cat_appearance">Appearance</string>
     <string name="cat_appearance_sub">Wallpaper, colors, icons</string>
     <string name="cat_notifications">Notifications</string>
-    <string name="cat_notifications_sub">Badges and access</string>
+    <string name="cat_notifications_sub">Home banner, read aloud, icon dots</string>
     <string name="cat_home_keys">Home Screen &amp; Keys</string>
-    <string name="cat_home_keys_sub">Soft keys and shortcuts</string>
-    <string name="cat_apps_drawer">Apps &amp; Drawer</string>
-    <string name="cat_apps_drawer_sub">Drawer layout, hidden apps</string>
+    <string name="cat_home_keys_sub">Soft keys, buttons, speed dial</string>
 
     <!-- Settings section headers -->
-    <string name="sec_personalize">Personalize</string>
-    <string name="sec_home_apps">Home &amp; Apps</string>
-    <string name="sec_system">System</string>
     <string name="sec_wallpaper_color">Wallpaper &amp; Color</string>
     <string name="sec_icons">Icons</string>
     <string name="sec_notif_access">Access</string>
     <string name="sec_notif_home">Show on Home</string>
     <string name="sec_soft_keys">Soft Keys</string>
     <string name="sec_buttons">Buttons</string>
-    <string name="sec_shortcuts">Shortcuts</string>
     <string name="sec_app_drawer">App Drawer</string>
-    <string name="sec_motion">Motion</string>
 
     <!-- Animations -->
-    <string name="settings_animations">Animations</string>
-    <string name="settings_animations_sub">Turn off to speed up older phones</string>
 
     <!-- Settings row subtitles -->
     <string name="settings_wallpaper_sub">Choose a background image</string>
     <string name="settings_notif_access_sub">Let Flip Launcher read notifications</string>
-    <string name="settings_drawer_view_sub">Grid or list layout</string>
 
     <!-- Launcher Settings -->
     <string name="title_launcher_settings">Launcher Settings</string>
@@ -105,18 +140,15 @@
     <string name="settings_icon_large">Large</string>
     <string name="settings_icon_current">%1$s (%2$d%%)</string>
     <string name="settings_right_key">Home Right Key</string>
-    <string name="settings_right_key_contacts">Contacts (default)</string>
+    <string name="settings_right_key_sms">Messaging app (default)</string>
     <string name="settings_right_key_set">Right key will open %1$s</string>
-    <string name="settings_right_key_cleared">Right key reset to Contacts</string>
+    <string name="settings_right_key_cleared">Right key reset to the default messaging app</string>
     <string name="settings_left_key">Home Left Key</string>
-    <string name="settings_left_key_notices">Notices (default)</string>
+    <string name="settings_left_key_contacts">Contacts (default)</string>
     <string name="settings_left_key_set">Left key will open %1$s</string>
-    <string name="settings_left_key_cleared">Left key reset to Notices</string>
+    <string name="settings_left_key_cleared">Left key reset to Contacts</string>
     <string name="settings_icon_size_set">Icon size set to %1$s</string>
     <string name="settings_icon_pack">Icon Pack</string>
-    <string name="settings_drawer_view">App Drawer View</string>
-    <string name="settings_drawer_view_grid">Grid</string>
-    <string name="settings_drawer_view_list">List</string>
     <string name="settings_accent_color">Accent Color</string>
     <string name="settings_accent_color_set">Accent color set to %1$s</string>
     <string name="accent_color_default">Cyan (default)</string>
@@ -127,36 +159,34 @@
     <string name="accent_color_blue">Blue</string>
     <string name="accent_color_indigo">Indigo</string>
     <string name="accent_color_violet">Violet</string>
-    <string name="settings_icon_shape">Icon Shape</string>
-    <string name="settings_icon_shape_set">Icon shape set to %1$s</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_theme_set">Theme set to %1$s</string>
+    <string name="theme_mode_dark">Dark (default)</string>
+    <string name="theme_mode_light">Light</string>
     <string name="icon_shape_squircle">Squircle</string>
     <string name="icon_shape_square">Square</string>
     <string name="icon_shape_circle">Circle</string>
     <string name="icon_shape_rounded_square">Rounded Square</string>
     <string name="icon_shape_none">None</string>
-    <string name="settings_icon_background">Background for Plain Icons</string>
 
     <!-- Wallpaper picker -->
     <string name="title_wallpaper_picker">Choose Wallpaper</string>
-    <string name="wallpaper_picker_more">More…</string>
+    <string name="wallpaper_picker_more">More wallpapers…</string>
     <string name="wallpaper_set_toast">Wallpaper set</string>
     <string name="wallpaper_set_failed">Couldn\'t set wallpaper</string>
 
     <!-- Toasts -->
-    <string name="toast_already_on_home">Already on Home</string>
-    <string name="toast_added_to_home">Added to Home</string>
-    <string name="toast_app_hidden">%1$s hidden</string>
-    <string name="toast_uninstall_failed">Can\'t uninstall app</string>
     <string name="toast_not_available">Not available on this device</string>
+    <!-- Manual D-pad paths shown alongside (or instead of) system Settings screens. -->
+    <string name="toast_settings_manual_path">Couldn\'t open Settings. Go to: %1$s</string>
+    <string name="path_app_permissions">Select Flip Launcher, then Permissions</string>
+    <string name="path_notification_access">Select Flip Launcher under Notification access and turn it on</string>
+    <string name="path_accessibility">Select Flip Launcher under Accessibility and turn it on</string>
     <string name="toast_launch_failed">Couldn\'t open %1$s</string>
     <string name="toast_launch_unavailable">App is no longer available</string>
     <string name="toast_launch_denied">Can\'t open this app</string>
     <string name="toast_no_dialer">No dialer available</string>
-    <string name="toast_no_contacts">No contacts app</string>
-
-    <!-- Home rail long-press menu -->
-    <string name="railitem_change_app">Change app</string>
-    <string name="railitem_remove">Remove from Home</string>
+    <string name="toast_no_messaging_app">No messaging app available</string>
 
     <!-- Notices empty state / confirmations -->
     <string name="notices_empty">No notices</string>
@@ -176,15 +206,88 @@
 
     <!-- Notification badges -->
     <string name="settings_notif_access">Notification Access</string>
+    <string name="settings_calllog_access">Call Log Access</string>
+    <string name="settings_calllog_access_sub">Let Flip Launcher read your call history for Recent Calls</string>
+    <string name="settings_notif_accessibility_access">Accessibility Fallback Access</string>
+    <string name="settings_notif_accessibility_access_sub">Backup way to show notifications on Home when standard Notification Access doesn\'t work on this device</string>
+    <string name="accessibility_service_description">Lets Flip Launcher show incoming notifications on the Home screen on devices where standard Notification Access is restricted.</string>
     <string name="settings_notif_access_granted">Granted</string>
     <string name="settings_notif_access_denied">Not granted — tap to enable</string>
     <string name="settings_notif_calls">Show Missed Calls</string>
     <string name="settings_notif_messages">Show Messages</string>
     <string name="settings_notif_other">Show Other Notifications</string>
+    <string name="settings_notif_hide_text">Hide Message Text</string>
+    <string name="settings_notif_hide_text_sub">Show only the app name on Home, not the message content</string>
     <string name="settings_notif_icon_dots">Notification Dots on Icons</string>
+
+    <!-- Read aloud (speaks the Home notification banner, see util/ReadAloud.kt) -->
+    <string name="sec_read_aloud">Read Aloud</string>
+    <string name="settings_read_aloud">Read Home Messages Aloud</string>
+    <string name="settings_read_aloud_sub">Speaks each new message shown on Home. Needs Notification or Accessibility access above.</string>
+    <string name="read_aloud_never">Never</string>
+    <string name="read_aloud_always">Always</string>
+    <string name="read_aloud_bluetooth">Only on Bluetooth</string>
+    <string name="settings_read_aloud_voice">Voice</string>
+    <string name="settings_read_aloud_voice_default">Default</string>
+    <string name="settings_read_aloud_no_voices">This phone\'s text-to-speech engine offers no other voices</string>
+    <string name="settings_read_aloud_voice_preview">This is the selected voice.</string>
+    <string name="settings_read_aloud_rate">Speech Rate</string>
+    <string name="settings_read_aloud_rate_preview">This is the speech rate.</string>
+    <string name="read_aloud_rate_slower">Slower</string>
+    <string name="read_aloud_rate_normal">Normal</string>
+    <string name="read_aloud_rate_faster">Faster</string>
+    <string name="voice_quality_very_high">Very High</string>
+    <string name="voice_quality_high">High</string>
+    <string name="voice_quality_normal">Normal</string>
+    <string name="voice_quality_low">Low</string>
     <string name="settings_toggle_on">On</string>
     <string name="settings_toggle_off">Off</string>
     <string name="cd_notif_calls">Missed calls</string>
     <string name="cd_notif_messages">Messages</string>
     <string name="cd_notif_other">Other notifications</string>
+
+    <!-- Drawer shortcuts into Kyocera's own Home menus (util/KyoceraShortcuts.kt). -->
+    <string name="shortcut_media_center">Media Center</string>
+    <string name="shortcut_tools">Tools</string>
+    <string name="shortcut_quick_settings">Quick Settings</string>
+
+    <!-- Settings structure (hub → category → group) -->
+    <string name="cat_advanced">Advanced</string>
+    <string name="cat_advanced_sub">Default launcher, access, phone settings</string>
+    <string name="keys_group_navigation">Navigation &amp; Soft Keys</string>
+    <string name="keys_group_navigation_sub">Soft keys, D-pad, Back and Menu</string>
+    <string name="keys_group_other">Other Buttons</string>
+    <string name="keys_group_other_sub">Camera, Mic, SOS, outer buttons</string>
+    <string name="notif_group_banner">Home Banner</string>
+    <string name="notif_group_banner_sub">Which notifications show on Home</string>
+
+    <!-- Advanced -->
+    <string name="settings_default_launcher_yes">Yes</string>
+    <string name="settings_default_launcher_no">No — select to set</string>
+    <string name="settings_accessibility_access">Accessibility</string>
+    <string name="settings_accessibility_access_sub">Shows new notifications on Home and as icon dots on this phone, and reads messages aloud</string>
+    <string name="settings_settings_chooser">Ask which Settings to open</string>
+    <string name="settings_settings_chooser_sub">When opening Settings, choose Phone or Home Screen settings</string>
+    <string name="settings_phone_settings">Phone Settings</string>
+    <string name="path_default_launcher">Select Flip Launcher as the Home app</string>
+
+    <!-- Settings chooser -->
+    <string name="settings_chooser_title">Open which Settings?</string>
+    <string name="settings_chooser_phone">Phone Settings — Wi-Fi, sound, display and the rest of the phone</string>
+    <string name="settings_chooser_home">Home Screen Settings — this launcher\'s look, keys and app list</string>
+    <string name="settings_chooser_dont_ask">Don\'t ask again</string>
+
+    <!-- Startup prompts -->
+    <string name="prompt_default_title">Set Flip Launcher as your Home screen?</string>
+    <string name="prompt_default_message">Flip Launcher isn\'t your Home screen yet, so pressing the Home or End key won\'t bring you back here. Choose Flip Launcher on the next screen.</string>
+    <string name="prompt_accessibility_title">Turn on Accessibility?</string>
+    <string name="prompt_accessibility_message">On this phone, Flip Launcher needs Accessibility to show new notifications on the Home screen and as dots on app icons, and to read messages aloud. Select Flip Launcher on the next screen and turn it on.</string>
+    <string name="prompt_open_settings">Open Settings</string>
+    <string name="prompt_not_now">Not now</string>
+
+    <!-- App list Options menu -->
+    <string name="ctx_home_settings">Home Screen Settings</string>
+    <string name="ctx_list_view">Switch to List View</string>
+    <string name="ctx_grid_view">Switch to Grid View</string>
+    <string name="icon_picker_original">Original icon</string>
 </resources>

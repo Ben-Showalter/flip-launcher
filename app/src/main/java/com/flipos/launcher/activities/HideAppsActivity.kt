@@ -3,7 +3,6 @@ package com.flipos.launcher.activities
 import com.flipos.launcher.R
 
 import android.os.Bundle
-import android.view.KeyEvent
 import com.flipos.launcher.data.AppInfo
 import com.flipos.launcher.data.AppRepository
 import com.flipos.launcher.data.LauncherPrefs
@@ -31,11 +30,10 @@ class HideAppsActivity : BaseListActivity() {
         listView.adapter = adapter
 
         softKeys.setLabels(
-            getString(R.string.softkey_back),
+            null,
             getString(R.string.softkey_toggle),
             null,
         )
-        softKeys.setOnLeftClick { finish() }
         softKeys.setOnCenterClick { toggle(focusedPosition()) }
     }
 
@@ -72,13 +70,5 @@ class HideAppsActivity : BaseListActivity() {
         val app = apps.getOrNull(position) ?: return
         prefs.setHidden(app.key, !prefs.isHidden(app.key))
         adapter.updateRow(position, rowFor(app))
-    }
-
-    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_SOFT_LEFT) {
-            finish()
-            return true
-        }
-        return super.onKeyDown(keyCode, event)
     }
 }

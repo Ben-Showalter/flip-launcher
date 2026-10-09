@@ -4,9 +4,10 @@ import com.flipos.launcher.R
 
 import android.content.ComponentName
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import android.view.KeyEvent
+import android.service.notification.NotificationListenerService
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -14,6 +15,7 @@ import com.flipos.launcher.data.NoticeItem
 import com.flipos.launcher.data.NotificationStore
 import com.flipos.launcher.service.NotificationCountService
 import com.flipos.launcher.ui.NoticeRowAdapter
+import com.flipos.launcher.util.openSettingsWithPath
 
 /**
  * A KaiOS-style "Notices" list standing in for the system notification shade,
@@ -30,6 +32,16 @@ class NoticesActivity : BaseListActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Some Kyocera builds report notification access as "granted" but the
+        // listener never actually binds; on those, fall back to this
+        // hardware's own notification screen (built for keypad/flip devices,
+        // unlike the generic touch-driven system shade) instead of showing an
+        // empty/non-functional list.
+        if (NotificationCountService.instance == null && tryOpenKyoceraNotificationScreen()) {
+            finish()
+            return
+        }
+
         adapter = NoticeRowAdapter(onClick = { openNotice(it) })
         listView.adapter = adapter
         emptyView = findViewById(R.id.empty_view)
@@ -37,11 +49,9 @@ class NoticesActivity : BaseListActivity() {
         softKeys.setLabels(
             getString(R.string.softkey_dismiss),
             getString(R.string.softkey_select),
-            getString(R.string.softkey_dismiss_all),
+            getString(R.string.softkey_options),
         )
-        softKeys.setOnLeftClick { dismissFocused() }
         softKeys.setOnCenterClick { openFocused() }
-        softKeys.setOnRightClick { dismissAll() }
     }
 
     override fun onResume() {
@@ -50,6 +60,8 @@ class NoticesActivity : BaseListActivity() {
         NotificationStore.addListener(storeListener)
         if (!isNotificationAccessGranted()) {
             Toast.makeText(this, R.string.notices_access_required, Toast.LENGTH_LONG).show()
+        } else {
+            requestRebindIfStale()
         }
         refresh()
     }
@@ -84,6 +96,27 @@ class NoticesActivity : BaseListActivity() {
         }
     }
 
+    /**
+     * The OS doesn't always redeliver onListenerConnected() after an app
+     * update/reinstall, even though access was already granted -
+     * isNotificationAccessGranted() still reads true (it only checks the
+     * Settings.Secure string) but NotificationCountService.instance stays
+     * null forever, silently keeping this list empty. Detect that state here
+     * and proactively ask the framework to rebind, exactly like
+     * NotificationCountService.onListenerDisconnected() already does for a
+     * mid-session drop; [storeListener] picks up the result once it lands.
+     */
+    private fun requestRebindIfStale() {
+        if (NotificationCountService.instance != null) return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            try {
+                NotificationListenerService.requestRebind(ComponentName(this, NotificationCountService::class.java))
+            } catch (e: Exception) {
+                // Best-effort; the framework rebinds on its own schedule anyway.
+            }
+        }
+    }
+
     private fun openFocused() {
         // With no access there are no notices to open; make Select a shortcut to
         // the system screen where the user grants it.
@@ -95,11 +128,19 @@ class NoticesActivity : BaseListActivity() {
     }
 
     private fun openNotificationAccessSettings() {
-        try {
-            startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-        } catch (e: Exception) {
-            Toast.makeText(this, R.string.toast_not_available, Toast.LENGTH_SHORT).show()
-        }
+        openSettingsWithPath(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS, R.string.path_notification_access)
+    }
+
+    /** Returns whether the Kyocera notification screen was actually launched. */
+    private fun tryOpenKyoceraNotificationScreen(): Boolean = try {
+        startActivity(
+            Intent(Intent.ACTION_MAIN).setComponent(
+                ComponentName("com.android.systemui", "com.android.systemui.kc.notification.NotificationActivity"),
+            ),
+        )
+        true
+    } catch (e: Exception) {
+        false
     }
 
     private fun openNotice(item: NoticeItem) {
@@ -131,11 +172,13 @@ class NoticesActivity : BaseListActivity() {
             .show()
     }
 
-    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_SOFT_LEFT) {
-            dismissFocused()
-            return true
-        }
-        return super.onKeyDown(keyCode, event)
+    override fun onPrimaryKey() = dismissFocused()
+
+    override fun onOptionsKey() {
+        AlertDialog.Builder(this)
+            .setItems(arrayOf(getString(R.string.softkey_dismiss_all))) { _, which ->
+                if (which == 0) dismissAll()
+            }
+            .show()
     }
 }

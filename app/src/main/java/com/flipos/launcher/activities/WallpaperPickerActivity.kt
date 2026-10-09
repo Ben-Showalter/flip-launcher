@@ -7,8 +7,8 @@ import android.content.Intent
 import android.content.res.Resources
 import android.graphics.BitmapFactory
 import android.os.Bundle
-import android.view.KeyEvent
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.recyclerview.widget.GridLayoutManager
 import com.flipos.launcher.data.BuiltInWallpapers
 import com.flipos.launcher.ui.WallpaperGridAdapter
@@ -28,9 +28,7 @@ class WallpaperPickerActivity : BaseListActivity() {
         listView.adapter = adapter
         adapter.submit(BuiltInWallpapers.names())
 
-        softKeys.setLabels(getString(R.string.softkey_back), null, getString(R.string.wallpaper_picker_more))
-        softKeys.setOnLeftClick { finish() }
-        softKeys.setOnRightClick { openSystemChooser() }
+        softKeys.setLabels(null, null, getString(R.string.softkey_options))
         focusFirst()
     }
 
@@ -93,12 +91,12 @@ class WallpaperPickerActivity : BaseListActivity() {
         }
     }
 
-    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_SOFT_LEFT) {
-            finish()
-            return true
-        }
-        return super.onKeyDown(keyCode, event)
+    override fun onOptionsKey() {
+        AlertDialog.Builder(this)
+            .setItems(arrayOf(getString(R.string.wallpaper_picker_more))) { _, which ->
+                if (which == 0) openSystemChooser()
+            }
+            .show()
     }
 
     companion object {

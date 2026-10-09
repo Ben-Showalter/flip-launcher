@@ -13,12 +13,18 @@ person's laptop.
   ./gradlew :app:assembleDebug
   ```
   Output: `app/build/outputs/apk/debug/app-debug.apk`.
-- **JDK is auto-provisioned.** The build declares a Java toolchain
-  (`kotlin { jvmToolchain(17) }` in `app/build.gradle.kts`) and applies the
-  Foojay resolver in `settings.gradle.kts`, so Gradle downloads/selects JDK 17
-  for compilation regardless of the machine's default JDK. There is no need to
-  set `JAVA_HOME` or prefix Gradle commands. Gradle itself (9.6.x) runs on any
-  JDK from 17 to 26.
+- **No specific JDK is required.** Compilation runs on whichever JDK launches
+  Gradle (Android Studio's own bundled JBR when building from the IDE, or
+  `JAVA_HOME`/`PATH` on the command line) — any version 17 through 26. The
+  app's `android.compileOptions.sourceCompatibility`/`targetCompatibility`
+  (`app/build.gradle.kts`) pin the compiled bytecode to Java 17 regardless of
+  which of those JDKs actually runs the compiler; with AGP 9's built-in
+  Kotlin support that alone also pins Kotlin's own `jvmTarget`, so there's no
+  separate `jvmToolchain(...)` declaration to satisfy. `gradle.properties`
+  also disables toolchain auto-download
+  (`org.gradle.java.installations.auto-download=false`) as defense in depth,
+  so nothing here ever requires reaching `api.foojay.io` — important behind
+  proxies/VPNs that break TLS to it.
 - **Android SDK is required** and is the one thing not auto-provisioned. Point
   the build at an SDK either via `local.properties` (`sdk.dir=/path/to/sdk`,
   gitignored) or the `ANDROID_HOME` environment variable. You need
@@ -47,6 +53,99 @@ person's laptop.
   state (stale/non-monotonic). Prefer `exec-out screencap -p` with ~0.5-0.8s
   settle time after the triggering input, or cross-check
   `dumpsys window | grep mCurrentFocus` for the foregrounded Activity.
+- **Notification listener access is non-functional on Kyocera Android 9+
+  builds** (confirmed on the E4810 and E4811). `Settings.Secure` and
+  `adb shell cmd notification allow_listener` both appear to succeed - our
+  component shows up in `settings get secure enabled_notification_listeners`
+  - but `adb shell dumpsys notification | grep -i listener` shows the
+  "Allowed"/"Live" listener registry never actually includes us, with zero
+  log trace even during an explicit grant attempt; only the OEM's own two
+  listener components (`jp.kyocera.server.sublcd.NotificationListener`,
+  `jp.kyocera.kyocerahome.notification.NotificationListener`) ever bind. The
+  same app code works fine on the older Kyocera 4610 (Android 7), so this is
+  a platform-level restriction on the newer device lineage, not a bug in our
+  manifest/service/grant flow - don't re-diagnose it from scratch.
+  `service/NotificationAccessibilityService.kt` is the fallback (a separate
+  OS subsystem, `AccessibilityService`'s notification events, not gated by
+  the same allowlist) - it feeds the Home banner and the app list's icon
+  dots (`AppDrawerActivity.hasNotification` reads both sources), not
+  Notices, since accessibility has no "list active notifications" or
+  removal event. Home asks to turn it on at startup if it's off. Its store
+  appends new items (the listener's is newest-first), so the Home banner
+  and read-aloud pick the newest by `postTime` (`NotificationStore.newest`),
+  never list order. The same service filters key events
+  (`flagRequestFilterKeyEvents`, set in XML and code) so any button press
+  stops a readout in progress and is swallowed (DOWN and UP), volume keys
+  excepted (`ReadAloudSpeaker.interceptKey`, also called from the
+  launcher's own `dispatchKeyEvent`s for when Accessibility is off). The
+  read-aloud MediaSession needs `FLAG_HANDLES_MEDIA_BUTTONS` on Android 7 and
+  an `onMediaButtonEvent` override, since headsets send PLAY_PAUSE /
+  HEADSETHOOK rather than PAUSE.
+
+- **Kyocera component names** (captured from logcat on the E4610; not yet
+  verified on the E4810/E4811 - every launch falls back or toasts, never
+  crashes): the dialer's call log is `com.android.dialer/.calllog.CallLogActivityKc`
+  on the E4610 and `.app.calllog.CallLogActivityKc` on newer models (both are
+  tried, see `MainActivity.openCallLog`). Kyocera's Home menus are
+  `jp.kyocera.kyocerahome/.MediaCenterMenuActivity`, `.ToolsMenuActivity` and
+  `.QuickSettingsActivity`, exposed as drawer shortcuts via `<activity-alias>`
+  entries of `KyoceraShortcutActivity` (see `util/KyoceraShortcuts.kt`; add a
+  new one there and in the manifest). The Mic/Assistant key reports keycode
+  287 (scan 171) on the E4610, even with the launcher focused; other builds
+  send `KEYCODE_F4`, so both are handled.
+- **E4610 speed dial and outer keys** (Android 7): `content://speed_dial`
+  holds nothing the dialer's own Speed Dial screen
+  (`com.android.dialer/.speeddial.SpeedDialActivity` there, `.app.speeddial.`
+  on newer models) saves, so `util/SystemSpeedDial.kt` reports it
+  `Unsupported` and Home falls back to the launcher's own slots
+  (`SpeedDialSettingsActivity`). The outer buttons' system assignment
+  (`com.android.settings/.afp.PttSettings`, action
+  `kyocera.intent.action.PTT_SETTINGS`) is a Kyocera Home feature that never
+  fires under another launcher, so Home assigns them itself (scan codes →
+  `LauncherPrefs.KEYCODE_EXTRA_1..4`); an unassigned one is still reported
+  unhandled. These phones report only the press of an outer button, never
+  how long it's held, so a long press can't be detected (a hold timer never
+  fires - tried and reverted). Instead an assigned one opens its app on a
+  single press, but only while Home has focus, the screen is on, the
+  keyguard is down (`MainActivity.outerKeyBlockReason`; a closed flip turns the
+  screen off, and the keyboard-hidden flag is unreliable on these keypads),
+  so a phone in a pocket does nothing. No hold-to-assign. Other screens
+  leave them to the phone, with no unknown-key toast.
+- **Category lookups** (`CategoryApps`): `resolveActivity()` returns
+  Android's chooser (package `android`) when several apps match with no
+  default - treat that as unresolved. The drawer's default order picks each
+  slot from known packages, then all handlers, then label
+  (`AppRepository.pickApp`), searching hidden apps too and unhiding what it
+  picks (the old hide-unlisted default hid Gallery/Settings on the E4610).
+  The E4610 dialer's call-log drawer entry has an empty label; labels fall
+  back to "Call Log", then the app label (`AppRepository.labelFor`).
+
+## Flip-DumbPhoneGuide conventions
+
+This app follows the house rules in
+[Flip-DumbPhoneGuide/AGENTS.md](https://github.com/Ben-Showalter/Flip-DumbPhoneGuide/blob/main/AGENTS.md)
+(written from testing on these same Kyocera phones). Read it before changing
+key handling, focus, or layout. Decisions taken here:
+
+- **Soft keys:** Left = the screen's primary action (blank if none), Center/OK
+  = select, Right *and* `KEYCODE_MENU` = Options, hardware Back/Clear = back.
+  No "Back" label on Left. `BaseListActivity` owns this map via
+  `util/Keys.kt`'s `SoftKeyRouter`; list screens override `onPrimaryKey()` /
+  `onOptionsKey()`, never `onKeyDown` for soft keys. Home (`MainActivity`) is
+  the one exception: its soft keys and D-pad are user-assignable app slots.
+- **Act on key UP, consume both halves.** Anything that finishes the screen or
+  launches another app/screen fires on UP, and only for a press whose DOWN
+  this window saw - otherwise the stray UP lands in the next window (e.g. Home
+  opening Notices). Digit launches in the drawer, CALL/`*`/`#` on Home, and all
+  soft keys follow this.
+- **The system navigation bar is hidden** on every screen
+  (`util/SystemBars.kt`, from `onResume()` and `onWindowFocusChanged(true)`).
+- **Bold** uses fake bold (`util/FakeBold.kt`'s `applyFakeBold()` after
+  inflating) because the stock font doesn't render real bold.
+- **Settings screens:** open general list screens via `openSettingsWithPath()`
+  (never a per-app deep link) so a toast always tells the user the D-pad path.
+- **Unknown keys** show a keycode toast on every screen (`toastIfUnknownKey`).
+  Add a keycode to `KNOWN_KEYS` in `util/Keys.kt` once the app handles it.
 
 ## Project structure
 
@@ -65,15 +164,39 @@ Key pieces:
   Hide Apps, Shortcuts, App/Activity Picker, Notices). It also owns the
   accent-color theme-overlay-on-`onCreate` + recreate-on-resume-if-changed
   pattern — new list screens should extend it rather than reinventing this.
+- **Settings structure** (TurboText-style): `SettingsActivity` is a flat
+  list of categories (Appearance, Home Screen & Keys, Notifications,
+  Advanced), each its own screen (grid/list and Hide / Show Apps are in the
+  app list's Options menu, not a category); long categories open to a
+  short menu whose rows reopen the same activity with an `EXTRA_GROUP`
+  (`HomeKeysSettingsActivity`: navigation / other; `NotificationSettingsActivity`:
+  banner / read_aloud). No section headers. System hand-offs (default
+  launcher, accessibility, notification and call-log access, phone settings)
+  live in `AdvancedSettingsActivity`. The hub isn't in the app list; the
+  phone's Settings entry asks Phone vs Home Screen Settings
+  (`util/Launch.kt`, off via "Don't ask again", back on in Advanced). Home
+  shows a default-launcher prompt, then an Accessibility prompt, at startup
+  (`MainActivity.maybeShowStartupPrompts`; checks in `util/AccessChecks.kt`).
 - `ListRowAdapter` + `Row` is the generic one-line-or-icon-row adapter reused
   across those list screens; `AppGridAdapter` is the App Drawer's icon grid;
   `NoticeRowAdapter` is the richer 3-line notice row.
 - `LauncherPrefs` is the single SharedPreferences wrapper — all settings
   (icon size/shape/pack, accent color, drawer view mode, badges, shortcuts,
   hidden apps, per-app icon overrides) live there.
-- `IconShapeRenderer` masks app icons into the user's chosen shape (adaptive
-  icons composite their own fg/bg layers then get clipped; legacy icons get
-  an optional synthesized tinted background disc).
+- `util/WallpaperContrast.kt` measures the wallpaper's brightness (cached
+  per wallpaper, off the main thread) and scales Home's and the App
+  Drawer's window scrim to it, so text and icons keep their contrast over
+  bright wallpapers without darkening dark ones. The status bar itself is
+  transparent; the scrim's top fade (`TopFadeScrim`) puts ~98% black behind
+  it and fades out ~48dp below, so there's no hard edge. The drawer's focused icon
+  gets a ring in its own color (`SquircleDrawable` ring mode), never a fill
+  behind it, which washed out icons drawn in that color.
+- `IconShapeRenderer` masks app icons into a fixed squircle (adaptive icons
+  composite their own fg/bg layers then get clipped; legacy icons are drawn
+  on a 75%-opaque dark gray tile). Icon shape, the plain-icon background and
+  animations are deliberately not settings: always squircle, always the gray
+  tile, never any motion (`ThemeOverlay.FlipLauncher.NoAnimations` is always
+  applied, list item animators are off).
 
 ## Bundled icons & wallpapers
 

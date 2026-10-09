@@ -4,17 +4,14 @@ import com.flipos.launcher.R
 
 import android.content.Intent
 import android.os.Bundle
-import android.provider.Settings
-import android.view.KeyEvent
-import android.widget.Toast
 import com.flipos.launcher.ui.ListRowAdapter
 import com.flipos.launcher.ui.Row
 
 /**
- * The launcher's single, unified settings hub, reached from the Home screen
- * (long-press the center key) and also listed in the app drawer. Groups every
- * launcher preference into a few clear categories that drill into their own
- * screens, plus quick access to the relevant system screens.
+ * The launcher's settings hub ("Home Screen Settings"), reached from Home
+ * (long-press the center key), the app list's Options menu and the Settings
+ * chooser. A short flat list, TurboText-style: each row opens its own
+ * category screen, with system hand-offs collected under Advanced.
  */
 class SettingsActivity : BaseListActivity() {
 
@@ -26,32 +23,30 @@ class SettingsActivity : BaseListActivity() {
         titleView.text = getString(R.string.title_settings)
 
         actions[ID_APPEARANCE] = { open(AppearanceSettingsActivity::class.java) }
-        actions[ID_NOTIFICATIONS] = { open(NotificationSettingsActivity::class.java) }
         actions[ID_HOME_KEYS] = { open(HomeKeysSettingsActivity::class.java) }
-        actions[ID_APPS_DRAWER] = { open(AppsSettingsActivity::class.java) }
-        actions[ID_DEFAULT_LAUNCHER] = { startSafely(Intent(Settings.ACTION_HOME_SETTINGS)) }
-        actions[ID_SYSTEM_SETTINGS] = { startSafely(Intent(Settings.ACTION_SETTINGS)) }
+        actions[ID_NOTIFICATIONS] = { open(NotificationSettingsActivity::class.java) }
+        actions[ID_ADVANCED] = { open(AdvancedSettingsActivity::class.java) }
 
         adapter = ListRowAdapter(onClick = { dispatch(it) })
         listView.adapter = adapter
         adapter.submit(buildRows())
 
-        softKeys.setLabels(
-            getString(R.string.softkey_back),
-            getString(R.string.softkey_select),
-            null,
-        )
-        softKeys.setOnLeftClick { finish() }
+        softKeys.setLabels(null, getString(R.string.softkey_select), null)
         softKeys.setOnCenterClick { focusedPosition().takeIf { it >= 0 }?.let { dispatch(it) } }
         focusFirst()
     }
 
     private fun buildRows(): List<Row> = listOf(
-        Row.section(getString(R.string.sec_personalize)),
         Row(
             id = ID_APPEARANCE,
             title = getString(R.string.cat_appearance),
             subtitle = getString(R.string.cat_appearance_sub),
+            chevron = true,
+        ),
+        Row(
+            id = ID_HOME_KEYS,
+            title = getString(R.string.cat_home_keys),
+            subtitle = getString(R.string.cat_home_keys_sub),
             chevron = true,
         ),
         Row(
@@ -60,22 +55,12 @@ class SettingsActivity : BaseListActivity() {
             subtitle = getString(R.string.cat_notifications_sub),
             chevron = true,
         ),
-        Row.section(getString(R.string.sec_home_apps)),
         Row(
-            id = ID_HOME_KEYS,
-            title = getString(R.string.cat_home_keys),
-            subtitle = getString(R.string.cat_home_keys_sub),
+            id = ID_ADVANCED,
+            title = getString(R.string.cat_advanced),
+            subtitle = getString(R.string.cat_advanced_sub),
             chevron = true,
         ),
-        Row(
-            id = ID_APPS_DRAWER,
-            title = getString(R.string.cat_apps_drawer),
-            subtitle = getString(R.string.cat_apps_drawer_sub),
-            chevron = true,
-        ),
-        Row.section(getString(R.string.sec_system)),
-        Row(id = ID_DEFAULT_LAUNCHER, title = getString(R.string.opt_default_launcher), chevron = true),
-        Row(id = ID_SYSTEM_SETTINGS, title = getString(R.string.opt_system_settings), chevron = true),
     )
 
     private fun dispatch(position: Int) {
@@ -84,28 +69,10 @@ class SettingsActivity : BaseListActivity() {
 
     private fun open(cls: Class<*>) = startActivity(Intent(this, cls))
 
-    private fun startSafely(intent: Intent) {
-        try {
-            startActivity(intent)
-        } catch (e: Exception) {
-            Toast.makeText(this, R.string.toast_not_available, Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_SOFT_LEFT) {
-            finish()
-            return true
-        }
-        return super.onKeyDown(keyCode, event)
-    }
-
     companion object {
         private const val ID_APPEARANCE = "appearance"
-        private const val ID_NOTIFICATIONS = "notifications"
         private const val ID_HOME_KEYS = "home_keys"
-        private const val ID_APPS_DRAWER = "apps_drawer"
-        private const val ID_DEFAULT_LAUNCHER = "default_launcher"
-        private const val ID_SYSTEM_SETTINGS = "system_settings"
+        private const val ID_NOTIFICATIONS = "notifications"
+        private const val ID_ADVANCED = "advanced"
     }
 }

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Quick Settings app-drawer icon (Kyocera shortcut, see
+     util/KyoceraShortcuts.kt): two green toggle switches, one on and one
+     off, with a gear badge in the bottom-right corner - the same gear as
+     settings_112.xml, so it reads as "settings". No baked-in background -
+     shape/background is the shared IconShapeRenderer pipeline's job, same
+     as every other icon. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Top switch: on (green track, knob cut out on the right). -->
+    <path
+        android:fillColor="#3FD17A"
+        android:fillType="evenOdd"
+        android:pathData="M23,12h32a11,11 0 0,1 0,22h-32a11,11 0 0,1 0,-22zM55,16a7,7 0 1,0 0.01,0z" />
+
+    <!-- Bottom switch: off (gray track, green knob on the left). -->
+    <path
+        android:fillColor="#B8C2CC"
+        android:pathData="M23,40h32a11,11 0 0,1 0,22h-32a11,11 0 0,1 0,-22z" />
+    <path
+        android:fillColor="#3FD17A"
+        android:pathData="M23,44a7,7 0 1,0 0.01,0z" />
+
+    <!-- Gear badge: body with a transparent center hole (evenOdd) + 8 teeth
+         (rotated copies of one tooth), same style as settings_112.xml. -->
+    <path
+        android:fillColor="#B8C2CC"
+        android:fillType="evenOdd"
+        android:pathData="M80,68a14,14 0 1,0 0.01,0zM80,76a6,6 0 1,0 0.01,0z" />
+
+    <group android:pivotX="80" android:pivotY="82" android:rotation="0">
+        <path android:fillColor="#B8C2CC" android:pathData="M78,63h4v6h-4z" />
+    </group>
+    <group android:pivotX="80" android:pivotY="82" android:rotation="45">
+        <path android:fillColor="#B8C2CC" android:pathData="M78,63h4v6h-4z" />
+    </group>
+    <group android:pivotX="80" android:pivotY="82" android:rotation="90">
+        <path android:fillColor="#B8C2CC" android:pathData="M78,63h4v6h-4z" />
+    </group>
+    <group android:pivotX="80" android:pivotY="82" android:rotation="135">
+        <path android:fillColor="#B8C2CC" android:pathData="M78,63h4v6h-4z" />
+    </group>
+    <group android:pivotX="80" android:pivotY="82" android:rotation="180">
+        <path android:fillColor="#B8C2CC" android:pathData="M78,63h4v6h-4z" />
+    </group>
+    <group android:pivotX="80" android:pivotY="82" android:rotation="225">
+        <path android:fillColor="#B8C2CC" android:pathData="M78,63h4v6h-4z" />
+    </group>
+    <group android:pivotX="80" android:pivotY="82" android:rotation="270">
+        <path android:fillColor="#B8C2CC" android:pathData="M78,63h4v6h-4z" />
+    </group>
+    <group android:pivotX="80" android:pivotY="82" android:rotation="315">
+        <path android:fillColor="#B8C2CC" android:pathData="M78,63h4v6h-4z" />
+    </group>
+
+</vector>
