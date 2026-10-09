@@ -26,6 +26,13 @@
          separate copy. Requested at runtime the first time it's needed. -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />
 
+    <!-- Self-update from GitHub Releases (data/UpdateChecker.kt): fetch the
+         latest release + APK, check for Wi-Fi to note it's preferred, and hand
+         the APK to the system installer. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
     <!--
       A launcher only needs to see launchable activities and the dialer.
       Using a <queries> block keeps us off the sensitive QUERY_ALL_PACKAGES
@@ -320,6 +327,17 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service_config" />
         </service>
+
+        <!-- Shares a downloaded update APK with the system installer (Android 7+). -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
     </application>
 

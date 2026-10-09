@@ -30,11 +30,13 @@ import androidx.activity.result.contract.ActivityResultContracts.StartActivityFo
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
 import com.flipos.launcher.data.AppRepository
 import com.flipos.launcher.data.IconShapeRenderer
 import com.flipos.launcher.data.LauncherPrefs
 import com.flipos.launcher.data.NotificationKind
 import com.flipos.launcher.data.NotificationStore
+import com.flipos.launcher.data.UpdateChecker
 import com.flipos.launcher.util.BackgroundLoader
 import com.flipos.launcher.util.CategoryApps
 import com.flipos.launcher.util.KEYCODE_ASSISTANT_RAW
@@ -55,6 +57,7 @@ import com.flipos.launcher.util.placeCall
 import com.flipos.launcher.util.SystemSpeedDialResult
 import com.flipos.launcher.util.openSystemSpeedDial
 import com.flipos.launcher.util.openSettingsWithPath
+import com.flipos.launcher.util.showUpdatePrompt
 import com.flipos.launcher.util.systemSpeedDial
 import com.flipos.launcher.util.toastIfUnknownKey
 import java.text.SimpleDateFormat
@@ -197,6 +200,9 @@ class MainActivity : AppCompatActivity() {
     /** Measures the wallpaper for [applyWallpaperScrim]; separate from [loader] so neither cancels the other. */
     private val scrimLoader = BackgroundLoader()
 
+    /** Separate from [loader] so its other loads can't supersede an update check/download. */
+    private val updateLoader = BackgroundLoader()
+
     private val timeReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) = updateClock()
     }
@@ -304,7 +310,7 @@ class MainActivity : AppCompatActivity() {
         // theme overlays only apply at onCreate, so recreate to pick it up. Done last
         // (after registering the receiver/listener above) so onPause's matching
         // unregister calls below still have something to unregister.
-        if (prefs.getAccentColor() != appliedAccentColor) recreate()
+        if (prefs.getAccentColor() != appliedAccentColor) recreate() else maybeCheckForUpdate()
     }
 
     override fun onPause() {
@@ -364,6 +370,7 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         loader.cancel()
         scrimLoader.cancel()
+        updateLoader.cancel()
         super.onDestroy()
     }
 
@@ -1008,6 +1015,50 @@ class MainActivity : AppCompatActivity() {
                 if (!opened) maybeShowStartupPrompts()
             }
             .show()
+    }
+
+    // ---------------------------------------------------------------- Updates
+
+    /**
+     * Checks GitHub for a newer release about once a week (Home resumes
+     * constantly, so no background scheduler is needed) and, if there is one,
+     * asks the user whether to install it. Settings > Advanced has a manual check too.
+     */
+    private fun maybeCheckForUpdate() {
+        val now = System.currentTimeMillis()
+        val last = prefs.getLastUpdateCheckAt()
+        // A last-check time in the future means the clock was turned back; check anyway.
+        if (now - last in 0 until UpdateChecker.CHECK_INTERVAL_MS) return
+        // Let the startup prompts finish first; the next resume checks instead.
+        if (startupPrompt?.isShowing == true) return
+        // Recorded up front so resumes while the check is in flight don't start another.
+        prefs.setLastUpdateCheckAt(now)
+        updateLoader.load(
+            produce = {
+                try {
+                    Result.success(UpdateChecker.fetchLatest(this))
+                } catch (e: Exception) {
+                    Result.failure(e)
+                }
+            },
+            consume = { result ->
+                result.onFailure {
+                    // Offline or rate-limited: try again in a day rather than a week.
+                    prefs.setLastUpdateCheckAt(
+                        now - UpdateChecker.CHECK_INTERVAL_MS + UpdateChecker.RETRY_AFTER_FAILURE_MS,
+                    )
+                }
+                val release = result.getOrNull() ?: return@load
+                if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) &&
+                    startupPrompt?.isShowing != true
+                ) {
+                    showUpdatePrompt(release, updateLoader)
+                } else {
+                    // Home was left (or a startup prompt came up) mid-check; ask on the next resume instead.
+                    prefs.setLastUpdateCheckAt(0L)
+                }
+            },
+        )
     }
 
     companion object {

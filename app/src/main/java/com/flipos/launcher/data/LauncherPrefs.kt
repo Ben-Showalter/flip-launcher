@@ -13,6 +13,12 @@ class LauncherPrefs(context: Context) {
     private val prefs = context.applicationContext
         .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
+    // ---------------------------------------------------------------- Updates
+
+    /** When Home last started an automatic update check (epoch ms, 0 = never). */
+    fun getLastUpdateCheckAt(): Long = prefs.getLong(KEY_LAST_UPDATE_CHECK, 0L)
+    fun setLastUpdateCheckAt(time: Long) = prefs.edit().putLong(KEY_LAST_UPDATE_CHECK, time).apply()
+
     // ---------------------------------------------------------------- Hidden
 
     fun getHiddenKeys(): MutableSet<String> =
@@ -476,6 +482,7 @@ class LauncherPrefs(context: Context) {
         private const val KEY_SETTINGS_SEED_FIXED = "app_order_settings_seed_fixed"
         private const val KEY_BUILT_IN_ICONS_APPLIED = "built_in_icons_applied"
         private const val KEY_UNLISTED_APPS_HIDDEN = "unlisted_apps_hidden"
+        private const val KEY_LAST_UPDATE_CHECK = "last_update_check_at"
         private const val APP_ORDER_SEPARATOR = "\n"
     }
 }
