@@ -296,6 +296,7 @@
     <!-- In-app updates (data/UpdateChecker.kt, util/UpdatePrompt.kt) -->
     <string name="update_available_title">Update available: v%1$s</string>
     <string name="update_available_message">A new version of Flip Launcher is ready to install (%1$s MB).\n\nA Wi-Fi connection is preferred for downloading updates.</string>
+    <string name="update_on_mobile_data">You are currently on mobile data.</string>
     <string name="update_install">Install</string>
     <string name="update_later">Later</string>
     <string name="update_downloading">Downloading update…</string>
