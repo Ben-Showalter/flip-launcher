@@ -2,6 +2,7 @@ package com.flipos.launcher.util
 
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 
 /**
@@ -13,6 +14,13 @@ import android.content.pm.PackageManager
  *
  * Component names were captured on the E4610; other Kyocera models may lack
  * some of them, in which case the trampoline just toasts "Not available".
+ *
+ * On Android 9+ (E4810/E4811) Kyocera Home's Quick Settings menu can't open
+ * Airplane mode, Bluetooth or Hotspot unless Kyocera Home is the default
+ * launcher, so there the Quick Settings alias opens Kyocera Settings' own copy
+ * of the menu first ([settingsQuickSettingsIntent]) - the one the phone's
+ * programmable-key shortcut opens, which works under any launcher. The E4610
+ * keeps Kyocera Home's menu, which works there.
  */
 object KyoceraShortcuts {
 
@@ -21,6 +29,15 @@ object KyoceraShortcuts {
     const val MEDIA_CENTER_ALIAS = "com.flipos.launcher.activities.MediaCenterShortcut"
     const val TOOLS_ALIAS = "com.flipos.launcher.activities.ToolsShortcut"
     const val QUICK_SETTINGS_ALIAS = "com.flipos.launcher.activities.QuickSettingsShortcut"
+
+    /**
+     * Kyocera Settings' Quick Settings menu, sent exactly as the phone's own
+     * programmable-key shortcut sends it (captured from logcat on Android 9+).
+     */
+    fun settingsQuickSettingsIntent(): Intent =
+        Intent("jp.kyocera.settings.programmablekey.action.SHORTCUTS").setComponent(
+            ComponentName("jp.kyocera.settings.nfp", "jp.kyocera.settings.nfp.core.Settings\$QuickSettingsActivity"),
+        )
 
     /** Fully-qualified alias names, as they appear in ActivityInfo.name. */
     val ALIASES = setOf(MEDIA_CENTER_ALIAS, TOOLS_ALIAS, QUICK_SETTINGS_ALIAS)

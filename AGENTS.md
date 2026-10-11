@@ -90,8 +90,14 @@ person's laptop.
   `jp.kyocera.kyocerahome/.MediaCenterMenuActivity`, `.ToolsMenuActivity` and
   `.QuickSettingsActivity`, exposed as drawer shortcuts via `<activity-alias>`
   entries of `KyoceraShortcutActivity` (see `util/KyoceraShortcuts.kt`; add a
-  new one there and in the manifest). The Mic/Assistant key reports keycode
-  287 (scan 171) on the E4610, even with the launcher focused; other builds
+  new one there and in the manifest). On Android 9+ Kyocera Home's Quick
+  Settings menu (and the same rows in the phone's Settings) can't open
+  Airplane mode, Bluetooth or Hotspot unless Kyocera Home is the default
+  launcher, so there the alias opens Kyocera Settings' own copy first,
+  `jp.kyocera.settings.nfp/.core.Settings$QuickSettingsActivity` (action
+  `jp.kyocera.settings.programmablekey.action.SHORTCUTS`, what the phone's
+  programmable-key shortcut sends), which works under any launcher. The
+  Mic/Assistant key reports keycode 287 (scan 171) on the E4610, even with the launcher focused; other builds
   send `KEYCODE_F4`, so both are handled.
 - **E4610 speed dial and outer keys** (Android 7): `content://speed_dial`
   holds nothing the dialer's own Speed Dial screen
