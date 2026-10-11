@@ -16,10 +16,7 @@ import java.util.Locale
  */
 fun Activity.showUpdatePrompt(release: UpdateRelease, loader: BackgroundLoader) {
     val sizeMb = String.format(Locale.getDefault(), "%.1f", release.apkSizeBytes / 1_048_576.0)
-    var message = getString(R.string.update_available_message, sizeMb)
-    if (!UpdateChecker.isOnWifi(this)) {
-        message += "\n\n" + getString(R.string.update_on_mobile_data)
-    }
+    val message = getString(R.string.update_available_message, sizeMb)
     AlertDialog.Builder(this)
         .setTitle(getString(R.string.update_available_title, release.versionName))
         .setMessage(message)

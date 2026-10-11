@@ -27,10 +27,8 @@
     <uses-permission android:name="android.permission.READ_CONTACTS" />
 
     <!-- Self-update from GitHub Releases (data/UpdateChecker.kt): fetch the
-         latest release + APK, check for Wi-Fi to note it's preferred, and hand
-         the APK to the system installer. -->
+         latest release + APK and hand it to the system installer. -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!--
