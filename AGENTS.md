@@ -70,8 +70,13 @@ person's laptop.
   the same allowlist) - it feeds the Home banner and the app list's icon
   dots (`AppDrawerActivity.hasNotification` reads both sources), not
   Notices, since accessibility has no "list active notifications" or
-  removal event. Home asks to turn it on at startup if it's off. Its store
-  appends new items (the listener's is newest-first), so the Home banner
+  removal event. Every notification is posted, even from the app in front;
+  an app's entries are dismissed when the user leaves it. Only the app's own
+  Activity windows count as it being open (outer-screen popups such as
+  TurboText's fire window events just before the notification, which used to
+  mark the app "in front" and drop the message), and with the screen off the
+  app left open counts as closed. Home asks to turn it on at startup if it's
+  off. Its store appends new items (the listener's is newest-first), so the Home banner
   and read-aloud pick the newest by `postTime` (`NotificationStore.newest`),
   never list order. The same service filters key events
   (`flagRequestFilterKeyEvents`, set in XML and code) so any button press

@@ -3,7 +3,10 @@ package com.flipos.launcher.service
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.Notification
+import android.content.ComponentName
+import android.content.Context
 import android.content.pm.PackageManager
+import android.os.PowerManager
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
 import com.flipos.launcher.data.NotificationCategorizer
@@ -26,20 +29,23 @@ import com.flipos.launcher.util.ReadAloudSpeaker
  * this keeps a small stack of the most recent pending notification per app
  * (see MAX_PENDING), rather than one global "currently active" set.
  *
- * An app's own entry also clears whenever the user opens it via the launcher
- * (see Context.launchAppByKey in util/Launch.kt) - but that only catches
- * launcher-mediated opens. This service additionally tracks the actual
- * foreground app itself via TYPE_WINDOW_STATE_CHANGED, so an app opened any
- * other way (a notification tap, task switcher, etc.) still gets its pending
- * entry cleared: never shown at all while the app is the one in front (a
- * banner for an app you're already looking at is just noise), and cleared on
- * exit as a safety net for anything the app posted about itself while still
- * in front (e.g. "download complete") that a background-only check would
- * otherwise leave stranded until the next unrelated notification event.
+ * Every notification is posted, whatever app is in front (which ones the
+ * Home banner and read-aloud then use is LauncherPrefs.isShownOnHome's
+ * call). An app's entries are dismissed when the user leaves that app: this
+ * tracks the foreground app via TYPE_WINDOW_STATE_CHANGED, counting only
+ * windows that are one of the app's own Activities - other windows (dialogs,
+ * toasts, the keyboard, SystemUI, and outer-screen popups like TurboText's,
+ * which fire just before the app's notification) would otherwise look like
+ * the app opening and closing and wipe the message it just posted. With the
+ * screen off (flip closed) nothing counts as in front: the app left open
+ * when the flip closed is treated as closed then.
  */
 class NotificationAccessibilityService : AccessibilityService() {
 
     private var foregroundPackage: String? = null
+
+    /** "pkg/class" -> whether it's one of that package's Activities; window events repeat, so cache. */
+    private val isActivityCache = HashMap<String, Boolean>()
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -69,22 +75,35 @@ class NotificationAccessibilityService : AccessibilityService() {
 
     private fun handleForegroundChange(event: AccessibilityEvent) {
         val packageName = event.packageName?.toString() ?: return
-        if (packageName == foregroundPackage) return
-        // Leaving the previous foreground app - drop anything it posted about
-        // itself while it had the user's attention.
+        val className = event.className?.toString() ?: return
+        if (packageName == foregroundPackage || !isActivity(packageName, className)) return
+        // The previous app was closed (left) - dismiss what it posted.
         foregroundPackage?.let { NotificationStore.removeItemsForPackage(it) }
         foregroundPackage = packageName
-        // Entering this app - it shouldn't be showing its own stale banner.
-        NotificationStore.removeItemsForPackage(packageName)
     }
+
+    private fun isActivity(packageName: String, className: String): Boolean =
+        isActivityCache.getOrPut("$packageName/$className") {
+            try {
+                packageManager.getActivityInfo(ComponentName(packageName, className), 0)
+                true
+            } catch (e: PackageManager.NameNotFoundException) {
+                false
+            }
+        }
 
     private fun handleNotificationPosted(event: AccessibilityEvent) {
         val notification = event.parcelableData as? Notification ?: return
         if (notification.flags and Notification.FLAG_GROUP_SUMMARY != 0) return
         val packageName = event.packageName?.toString() ?: return
-        // Already in front - no point banner-ing a notification for the app
-        // the user is currently looking at.
-        if (packageName == foregroundPackage) return
+        // Screen off (flip closed): whatever app was left in front counts as
+        // closed, so its old entries go now - not when Home appears on the
+        // next flip open, which would also take this new one with them.
+        val power = getSystemService(Context.POWER_SERVICE) as? PowerManager
+        if (power?.isInteractive == false) {
+            foregroundPackage?.let { NotificationStore.removeItemsForPackage(it) }
+            foregroundPackage = null
+        }
         val extras = notification.extras
         val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
         val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty()
