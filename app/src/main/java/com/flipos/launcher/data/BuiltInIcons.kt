@@ -13,7 +13,7 @@ import com.flipos.launcher.util.CategoryApps
 /**
  * Icons bundled with the launcher itself (res/drawable-nodpi), offered in the
  * per-app icon picker. The generated "ic_" set (tools/icons, see
- * [BuiltInIconMap]) comes first: large gradient-colored glyphs with no tile
+ * [BuiltInIconMap]) comes first: large flat-colored glyphs with no tile
  * behind them, which the one-time
  * "Use Flip Launcher icons" action ([autoAssignments]) puts on matching apps. The
  * older hand-made icons follow.

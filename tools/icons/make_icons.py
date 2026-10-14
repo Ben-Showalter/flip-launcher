@@ -2,8 +2,8 @@
 """Renders Flip Launcher's built-in "ic_" icons from icons.csv.
 
 Each icon is a large glyph from Material Design Icons (Pictogrammers,
-Apache-2.0) filled with a rich diagonal gradient and a faint top sheen, over
-a soft shadow, on a transparent background - no tile behind it. Writes
+Apache-2.0) in one flat color, on a transparent background - no tile, no
+gradient, no shadow. Writes
 app/src/main/res/drawable-nodpi/ic_<name>.png and
 app/src/main/java/com/flipos/launcher/data/BuiltInIconMap.kt.
 
@@ -24,7 +24,7 @@ import sys
 import urllib.request
 
 import cairosvg
-from PIL import Image, ImageFilter
+from PIL import Image
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 CSV_PATH = os.path.join(os.path.dirname(__file__), "icons.csv")
@@ -35,33 +35,26 @@ GLYPH_URL = "https://raw.githubusercontent.com/Templarian/MaterialDesign/master/
 SIZE = 192  # px; drawable-nodpi, scaled down by the launcher
 GLYPH_FRACTION = 0.86  # glyph box as a share of the canvas (MDI glyphs carry their own padding)
 
-# Gradient start (top-left) / end (bottom-right) filling each glyph: rich,
-# slightly desaturated tones with a small hue shift. The neutrals are kept
+# One flat color per key: clean, slightly muted tones. The neutrals are kept
 # light enough to read over the dimmed wallpaper.
 PALETTE = {
-    "yellow": ("#F9C74F", "#E89A12"),
-    "amber": ("#F4B544", "#D9820F"),
-    "orange": ("#F59A55", "#D9601E"),
-    "red": ("#EE6A65", "#C2353A"),
-    "pink": ("#EC6C9C", "#B93A70"),
-    "purple": ("#A174E0", "#6A42B5"),
-    "indigo": ("#7A72E6", "#463CB0"),
-    "blue": ("#4F8DEB", "#2357C2"),
-    "sky": ("#4DB4E8", "#1F7FC2"),
-    "teal": ("#3FC2A2", "#12876E"),
-    "green": ("#5CC27A", "#2A8C4A"),
-    "brown": ("#D3A07A", "#9C6A43"),
-    "navy": ("#7D9BD0", "#46649A"),
-    "slate": ("#AEBACB", "#72809A"),
-    "gray": ("#C9CDD3", "#8C9199"),
-    "charcoal": ("#A4AAB2", "#666C75"),
+    "yellow": "#F2B320",
+    "amber": "#E9A23B",
+    "orange": "#EE7B30",
+    "red": "#E5484D",
+    "pink": "#E25C93",
+    "purple": "#9161D6",
+    "indigo": "#6A5FDB",
+    "blue": "#3B82F0",
+    "sky": "#2EA8E0",
+    "teal": "#22B08F",
+    "green": "#3FB466",
+    "brown": "#BE8A62",
+    "navy": "#6F8FCB",
+    "slate": "#9EABBE",
+    "gray": "#B5BAC1",
+    "charcoal": "#959CA5",
 }
-
-SHEEN_ALPHA = 0.18  # white sheen at the top of the glyph, fading out by SHEEN_END
-SHEEN_END = 0.5
-SHADOW_ALPHA = 0.35  # soft shadow under the glyph, so it lifts off the wallpaper
-SHADOW_BLUR = 0.02  # as a share of SIZE
-SHADOW_OFFSET = 0.015
 
 CATEGORIES = {"dialer", "sms", "contacts", "camera", "gallery", "calendar", "email", "music", "settings"}
 
@@ -91,22 +84,6 @@ def hex_rgb(value):
     return tuple(int(value[i:i + 2], 16) for i in (0, 2, 4))
 
 
-def gradient_fill(start, end, size):
-    """Diagonal gradient (mostly top to bottom) with a soft white sheen up top."""
-    start, end = hex_rgb(start), hex_rgb(end)
-    fill = Image.new("RGBA", (size, size))
-    pixels = fill.load()
-    last = size - 1
-    for y in range(size):
-        sheen = max(0.0, 1 - (y / last) / SHEEN_END) ** 2 * SHEEN_ALPHA
-        for x in range(size):
-            t = 0.82 * (y / last) + 0.18 * (x / last)
-            t = t * t * (3 - 2 * t)  # smoothstep: gentler ends
-            base = [start[i] + (end[i] - start[i]) * t for i in range(3)]
-            pixels[x, y] = tuple(round(c + (255 - c) * sheen) for c in base) + (255,)
-    return fill
-
-
 def glyph_mask(svg):
     """The glyph's coverage (alpha) at its final size."""
     svg = re.sub(r"<path ", '<path fill="#000000" ', svg)
@@ -115,15 +92,11 @@ def glyph_mask(svg):
     return Image.open(io.BytesIO(png)).convert("RGBA").getchannel("A")
 
 
-def compose(mask, colors):
-    """The glyph filled with [colors]' gradient, centered on a transparent canvas over a soft shadow."""
+def compose(mask, color):
+    """The glyph in one flat [color], centered on a transparent canvas."""
     offset = (SIZE - mask.width) // 2
     canvas = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
-    shadow_layer = Image.new("RGBA", mask.size, (0, 0, 0, 255))
-    shadow_layer.putalpha(mask.point(lambda a: round(a * SHADOW_ALPHA)))
-    canvas.alpha_composite(shadow_layer, (offset, offset + round(SIZE * SHADOW_OFFSET)))
-    canvas = canvas.filter(ImageFilter.GaussianBlur(SIZE * SHADOW_BLUR))
-    glyph = gradient_fill(*colors, mask.width)
+    glyph = Image.new("RGBA", mask.size, hex_rgb(color) + (255,))
     glyph.putalpha(mask)
     canvas.alpha_composite(glyph, (offset, offset))
     return canvas

@@ -5,9 +5,8 @@
 `app/src/main/java/com/flipos/launcher/data/BuiltInIconMap.kt`.
 
 Each icon is a 192px transparent canvas with a large glyph from
-[Material Design Icons](https://pictogrammers.com/library/mdi/) (Apache-2.0),
-filled with a diagonal color gradient and a faint top sheen, over a soft
-shadow. There's no tile behind it.
+[Material Design Icons](https://pictogrammers.com/library/mdi/) (Apache-2.0)
+in one flat color. There's no tile, gradient or shadow.
 
 ## Add or change an icon
 
