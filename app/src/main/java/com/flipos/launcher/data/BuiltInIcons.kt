@@ -55,6 +55,13 @@ object BuiltInIcons {
         "calendar_112", "camera_112", "email_112", "music_112",
     )
 
+    /**
+     * Icons the first version of "Use Flip Launcher icons" put on the
+     * launcher's own entries, which keep their own icons now - see
+     * AppRepository's one-time [LauncherPrefs.isOwnEntryIconsReset] cleanup.
+     */
+    val OWN_ENTRY_AUTO_NAMES = setOf("ic_notices", "ic_tools", "ic_media_center", "ic_quick_settings")
+
     fun names(): List<String> = BuiltInIconMap.ENTRIES.map { it.name } + LEGACY_NAMES
 
     fun loadIcon(context: Context, name: String): Drawable? {
@@ -132,6 +139,8 @@ object BuiltInIcons {
                 }
                 for (key in keys) {
                     if (key !in launchable || key in result || userPicked(key)) continue
+                    // The launcher's own entries (Notices, Kyocera menus) keep their own icons.
+                    if (ComponentName.unflattenFromString(key)?.packageName == context.packageName) continue
                     result[key] = entry.name
                 }
             }

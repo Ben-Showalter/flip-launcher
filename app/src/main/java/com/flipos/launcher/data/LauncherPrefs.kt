@@ -211,6 +211,10 @@ class LauncherPrefs(context: Context) {
      * Whether the one-time cleanup that removes the built-in icons the old
      * automatic pass ([isBuiltInIconsApplied]) put on common apps has run.
      */
+    /** Whether the one-time reset of the launcher's own entries to their own icons has run. */
+    fun isOwnEntryIconsReset(): Boolean = prefs.getBoolean(KEY_OWN_ENTRY_ICONS_RESET, false)
+    fun setOwnEntryIconsReset() = prefs.edit().putBoolean(KEY_OWN_ENTRY_ICONS_RESET, true).apply()
+
     fun isAutoIconsReverted(): Boolean = prefs.getBoolean(KEY_AUTO_ICONS_REVERTED, false)
 
     fun setAutoIconsReverted() {
@@ -465,6 +469,7 @@ class LauncherPrefs(context: Context) {
         private const val SPEED_DIAL_SEPARATOR = "::"
         private const val KEY_APP_ORDER_V4_SEEDED = "app_order_v4_seeded"
         private const val KEY_AUTO_ICONS_REVERTED = "auto_icons_reverted"
+        private const val KEY_OWN_ENTRY_ICONS_RESET = "own_entry_icons_reset"
         private const val KEY_SETTINGS_CHOOSER = "settings_chooser"
         private const val KEY_ICON_SIZE_PERCENT = "icon_size_percent"
         private const val KEY_RIGHT_KEY_APP = "right_key_app"

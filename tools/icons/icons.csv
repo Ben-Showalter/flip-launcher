@@ -4,7 +4,9 @@
 #   pkg:<package>   the package's main entry
 #   cmp:<package>/<class>   one exact drawer entry
 #   label:<Drawer_Label>   any entry with that label (_ for a space), for phones whose packages aren't listed
-# Rows are grouped; the picker keeps this order.
+# Rows are grouped; the picker keeps this order. The launcher's own entries
+# (Notices, Quick Settings, Media Center, Tools) are never matched: they keep
+# their own icons.
 phone,phone,green,cat:dialer label:Phone
 dialpad,dialpad,green,
 call_log,phone-log,teal,cmp:com.android.dialer/com.android.dialer.calllog.CallLogActivityKc cmp:com.android.dialer/com.android.dialer.app.calllog.CallLogActivityKc label:Call_Log label:Call_History label:Recent_Calls
@@ -14,7 +16,7 @@ messages,message-text,teal,cat:sms pkg:com.android.mms pkg:com.android.messaging
 chat,chat,sky,pkg:com.turbotext.app
 group_chat,forum,indigo,pkg:org.matchat.client
 email,email,red,cat:email label:Email
-notices,bell,orange,cmp:com.flipos.launcher/com.flipos.launcher.activities.NoticesActivity label:Notices
+notices,bell,orange,
 alarm,alarm,yellow,pkg:com.kyocera.alarm pkg:com.android.deskclock label:Alarm label:Alarm_Clock label:Clock
 clock,clock-outline,navy,
 timer,timer-sand,orange,pkg:com.kyocera.timer label:Timer
@@ -30,14 +32,14 @@ converter,ruler,green,
 translate,translate,blue,pkg:com.turbotranslate.app label:Translate
 compass,compass,red,
 qr_scanner,qrcode-scan,charcoal,
-tools,toolbox,orange,cmp:com.flipos.launcher/com.flipos.launcher.activities.ToolsShortcut label:Tools
+tools,toolbox,orange,
 wrench,wrench,gray,
 camera,camera,gray,cat:camera pkg:jp.kyocera.camera label:Camera
 gallery,image-multiple,purple,cat:gallery pkg:jp.kyocera.gallery.launcher pkg:jp.kyocera.gallery pkg:com.android.gallery3d label:Gallery label:Photos label:Pictures
 photos,image,sky,
 video,play-circle,purple,label:Videos label:Video_Player
 movies,movie-open,red,
-media_center,play-box-multiple,purple,cmp:com.flipos.launcher/com.flipos.launcher.activities.MediaCenterShortcut label:Media_Center
+media_center,play-box-multiple,purple,
 music,music-note,orange,cat:music pkg:com.kyocera.musicplayer label:Music label:Music_Player
 headphones,headphones,indigo,
 radio,radio,red,pkg:com.android.fmradio pkg:com.caf.fmradio label:FM_Radio label:Radio
@@ -54,7 +56,7 @@ hotspot,access-point,orange,
 airplane_mode,airplane,sky,
 cloud,cloud,sky,
 settings,cog,slate,cat:settings pkg:jp.kyocera.settings.nfp pkg:com.android.settings label:Settings
-quick_settings,tune-vertical,teal,cmp:com.flipos.launcher/com.flipos.launcher.activities.QuickSettingsShortcut label:Quick_Settings
+quick_settings,tune-vertical,teal,
 apps,apps,indigo,
 files,folder,amber,pkg:jp.kyocera.filemanager.launcher pkg:com.android.documentsui label:Files label:File_Manager label:My_Files
 downloads,download,green,label:Downloads

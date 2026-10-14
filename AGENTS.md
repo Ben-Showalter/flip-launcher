@@ -234,7 +234,9 @@ Icon.
   `FullBleedIcon`, which `IconShapeRenderer` draws at full size with no gray
   legacy tile behind it. The match rules feed Appearance →
   App Icons → Use Flip Launcher icons, a one-time action that writes ordinary
-  per-app overrides (skipping apps with one already); App Icons → Restore
+  per-app overrides (skipping apps with one already, and never the
+  launcher's own entries - Notices, Quick Settings, Media Center, Tools keep
+  their own icons); App Icons → Restore
   system icons clears every override. There is no automatic or on/off icon
   theming.
 - **Older icons and wallpapers**: drop the PNG/JPG in, then add the filename

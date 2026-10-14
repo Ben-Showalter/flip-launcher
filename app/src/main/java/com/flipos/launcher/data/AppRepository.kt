@@ -80,6 +80,20 @@ object AppRepository {
             if (prefs.isBuiltInIconsApplied()) revertAutoIcons(context, prefs, resolveInfos)
             prefs.setAutoIconsReverted()
         }
+        if (!prefs.isOwnEntryIconsReset()) {
+            // Our own entries (Notices, Kyocera menus) went back to their own
+            // icons; undo what the first "Use Flip Launcher icons" put on them.
+            for (ri in resolveInfos) {
+                val ai = ri.activityInfo ?: continue
+                if (ai.packageName != self) continue
+                val key = ComponentName(ai.packageName, ai.name).flattenToString()
+                val override = prefs.getIconOverride(key) ?: continue
+                if (override.first == BuiltInIcons.PACK_ID && override.second in BuiltInIcons.OWN_ENTRY_AUTO_NAMES) {
+                    prefs.clearIconOverride(key)
+                }
+            }
+            prefs.setOwnEntryIconsReset()
+        }
         if (!prefs.isUnlistedAppsHidden()) {
             applyDefaultHiddenApps(context, prefs, resolveInfos)
             prefs.setUnlistedAppsHidden()
