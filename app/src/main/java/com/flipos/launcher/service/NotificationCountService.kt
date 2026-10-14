@@ -92,6 +92,7 @@ class NotificationCountService : NotificationListenerService() {
             postTime = sbn.postTime,
             icon = loadSmallIcon(sbn),
             kind = kind,
+            contentIntent = sbn.notification.contentIntent,
         )
     }
 

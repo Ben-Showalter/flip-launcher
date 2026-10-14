@@ -129,8 +129,8 @@
 
         <ImageView
             android:id="@+id/notif_banner_icon"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
             android:layout_marginEnd="12dp"
             android:contentDescription="@null"
             android:scaleType="fitCenter" />

@@ -184,6 +184,10 @@ class LauncherPrefs(context: Context) {
      * real system Settings app in an already-seeded order ([AppRepository])
      * has already run.
      */
+    /** Whether [com.flipos.launcher.data.AppRepository]'s one-time Settings-slot repair (Hotspot -> Settings) has run. */
+    fun isSettingsSlotFixedV2(): Boolean = prefs.getBoolean(KEY_SETTINGS_SLOT_FIXED_V2, false)
+    fun setSettingsSlotFixedV2() = prefs.edit().putBoolean(KEY_SETTINGS_SLOT_FIXED_V2, true).apply()
+
     fun isSettingsSeedFixed(): Boolean = prefs.getBoolean(KEY_SETTINGS_SEED_FIXED, false)
 
     fun setSettingsSeedFixed() {
@@ -480,6 +484,7 @@ class LauncherPrefs(context: Context) {
         private const val KEY_APP_ORDER = "app_order"
         private const val KEY_APP_ORDER_SEEDED = "app_order_seeded"
         private const val KEY_SETTINGS_SEED_FIXED = "app_order_settings_seed_fixed"
+        private const val KEY_SETTINGS_SLOT_FIXED_V2 = "app_order_settings_slot_fixed_v2"
         private const val KEY_BUILT_IN_ICONS_APPLIED = "built_in_icons_applied"
         private const val KEY_UNLISTED_APPS_HIDDEN = "unlisted_apps_hidden"
         private const val KEY_LAST_UPDATE_CHECK = "last_update_check_at"

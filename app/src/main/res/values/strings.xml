@@ -49,11 +49,12 @@
     <string name="content_apps">Open apps menu</string>
     <string name="hidden_badge">Hidden</string>
     <string name="back_longpress_not_set">Not set</string>
+    <string name="back_longpress_default">Launcher Settings</string>
+    <string name="toast_no_notifications">No notifications</string>
     <string name="back_longpress_choose">Choose App</string>
     <string name="back_longpress_clear">Clear</string>
     <string name="back_longpress_app_set">Long-press Back will open %1$s</string>
     <string name="back_longpress_app_cleared">Long-press Back is now unassigned</string>
-    <string name="back_longpress_unset_toast">No app set for long-press Back. Configure it in Settings.</string>
     <string name="menu_key_unset_toast">No app set for long-press Menu. Configure it in Settings.</string>
     <string name="key_assigned_toast">%1$s will open on long-press</string>
     <string name="directional_key_unset_toast">No app set for this key. Configure it in Settings.</string>

@@ -116,6 +116,7 @@ class NotificationAccessibilityService : AccessibilityService() {
             postTime = System.currentTimeMillis(),
             icon = null,
             kind = NotificationCategorizer.kindOf(notification.category),
+            contentIntent = notification.contentIntent,
         )
         // Replace this app's own prior pending entry, but keep every other app's -
         // a notification from one app shouldn't silently erase another's.

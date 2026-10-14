@@ -196,9 +196,11 @@ object AppRepository {
             prefs.setAppOrderSeeded()
             prefs.setAppOrderV4Seeded()
             prefs.setSettingsSeedFixed()
+            prefs.setSettingsSlotFixedV2()
         } else if (!prefs.isSettingsSeedFixed()) {
             fixSettingsSeed(context, prefs, apps)
         }
+        if (!prefs.isSettingsSlotFixedV2()) fixSettingsSlot(context, prefs, apps)
         val order = prefs.getAppOrder()
         if (order.isEmpty()) return apps
         val position = HashMap<String, Int>(order.size)
@@ -251,9 +253,7 @@ object AppRepository {
             activityKey(KyoceraShortcuts.QUICK_SETTINGS_ALIAS),
             pickApp(
                 context, visible,
-                packages = listOfNotNull(
-                    "jp.kyocera.settings.nfp", "com.android.settings", CategoryApps.systemSettingsPackage(context),
-                ),
+                packages = settingsPackages(context),
                 intent = Intent(Settings.ACTION_SETTINGS),
                 label = "Settings",
             ),
@@ -280,7 +280,7 @@ object AppRepository {
         label: String,
     ): String? {
         for (pkg in packages) {
-            visible.firstOrNull { it.packageName == pkg }?.let { return it.key }
+            mainEntryKey(context, visible, pkg, label)?.let { return it }
         }
         if (intent != null) {
             val handlers = try {
@@ -298,8 +298,48 @@ object AppRepository {
     }
 
     /** Matches [packageName] against [apps] by package, resolving a category resolver's result to a real entry's component key. */
-    private fun packageNameKey(apps: List<AppInfo>, packageName: String?): String? =
-        packageName?.let { pkg -> apps.firstOrNull { it.packageName == pkg }?.key }
+    private fun packageNameKey(context: Context, apps: List<AppInfo>, packageName: String?): String? =
+        packageName?.let { mainEntryKey(context, apps, it, label = null) }
+
+    /**
+     * [packageName]'s main drawer entry: its launch activity, else one
+     * labeled [label], else its first. Some packages have several entries -
+     * Kyocera's Settings app also lists Hotspot, which the first-entry pick
+     * put in the Settings slot.
+     */
+    private fun mainEntryKey(context: Context, apps: List<AppInfo>, packageName: String, label: String?): String? {
+        val entries = apps.filter { it.packageName == packageName }
+        if (entries.isEmpty()) return null
+        val launchKey = try {
+            context.packageManager.getLaunchIntentForPackage(packageName)?.component?.flattenToString()
+        } catch (e: Exception) {
+            null
+        }
+        return (entries.firstOrNull { it.key == launchKey }
+            ?: label?.let { l -> entries.firstOrNull { it.label.equals(l, ignoreCase = true) } }
+            ?: entries.first()).key
+    }
+
+    /**
+     * One-time repair (see [LauncherPrefs.isSettingsSlotFixedV2]) for phones
+     * seeded while slots took a package's first entry: puts each settings
+     * package's main entry in place of a non-main one (Hotspot), at the same
+     * position, keeping any manual ordering.
+     */
+    private fun fixSettingsSlot(context: Context, prefs: LauncherPrefs, apps: List<AppInfo>) {
+        val order = prefs.getAppOrder().toMutableList()
+        for (pkg in settingsPackages(context)) {
+            val main = mainEntryKey(context, apps, pkg, "Settings") ?: continue
+            if (main in order) continue
+            val index = order.indexOfFirst { key -> apps.any { it.key == key && it.packageName == pkg } }
+            if (index >= 0) order[index] = main
+        }
+        prefs.setAppOrder(order)
+        prefs.setSettingsSlotFixedV2()
+    }
+
+    private fun settingsPackages(context: Context): List<String> =
+        listOfNotNull("jp.kyocera.settings.nfp", "com.android.settings", CategoryApps.systemSettingsPackage(context)).distinct()
 
     /**
      * One-time correction for a device that already seeded (see
@@ -326,7 +366,7 @@ object AppRepository {
             prefs.setSettingsSeedFixed()
             return
         }
-        val systemSettingsKey = packageNameKey(apps, CategoryApps.systemSettingsPackage(context)) ?: return
+        val systemSettingsKey = packageNameKey(context, apps, CategoryApps.systemSettingsPackage(context)) ?: return
         if (systemSettingsKey in order) return
         prefs.setAppOrder(order.toMutableList().apply { set(position, systemSettingsKey) })
         prefs.setSettingsSeedFixed()

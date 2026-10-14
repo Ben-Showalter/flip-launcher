@@ -128,6 +128,9 @@ person's laptop.
   slot from known packages, then all handlers, then label
   (`AppRepository.pickApp`), searching hidden apps too and unhiding what it
   picks (the old hide-unlisted default hid Gallery/Settings on the E4610).
+  A package can have several drawer entries (Kyocera's Settings app also
+  lists Hotspot), so a slot takes the package's launch activity
+  (`AppRepository.mainEntryKey`), never just its first entry.
   The E4610 dialer's call-log drawer entry has an empty label; labels fall
   back to "Call Log", then the app label (`AppRepository.labelFor`).
 
@@ -144,6 +147,10 @@ key handling, focus, or layout. Decisions taken here:
   `util/Keys.kt`'s `SoftKeyRouter`; list screens override `onPrimaryKey()` /
   `onOptionsKey()`, never `onKeyDown` for soft keys. Home (`MainActivity`) is
   the one exception: its soft keys and D-pad are user-assignable app slots.
+  On Home, OK taps open the app drawer and an OK hold (timed by hand) opens
+  the newest banner notification (its `contentIntent`, else its app); a
+  Clr/Back hold opens the assigned app, launcher settings when none is set.
+  The banner shows the posting app's own icon.
 - **Act on key UP, consume both halves.** Anything that finishes the screen or
   launches another app/screen fires on UP, and only for a press whose DOWN
   this window saw - otherwise the stray UP lands in the next window (e.g. Home
