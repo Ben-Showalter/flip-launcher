@@ -17,7 +17,8 @@ its squircle. There's no gradient or shadow.
    - `color` is a key of `PALETTE` in `make_icons.py`.
    - `match` (optional, space-separated) decides which apps get it from
      Appearance → App Icons → Use Flip Launcher icons: `cat:<dialer|sms|contacts|camera|gallery|calendar|email|music|settings>`,
-     `pkg:<package>` (that app's main entry) or `cmp:<package>/<class>` (one exact entry).
+     `pkg:<package>` (that app's main entry), `cmp:<package>/<class>` (one exact entry)
+     or `label:<Drawer_Label>` (any entry with that label, `_` for a space).
    Row order is the order in the Change Icon picker; the first matching row wins.
 2. Render:
    ```

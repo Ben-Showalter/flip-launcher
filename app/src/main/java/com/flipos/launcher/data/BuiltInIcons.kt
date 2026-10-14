@@ -44,6 +44,17 @@ object BuiltInIcons {
         "video_112",
     )
 
+    /**
+     * Icons a since-removed automatic pass put on common apps (see
+     * AppRepository.revertAutoIcons). That cleanup misses some phones - the
+     * gallery's category entry isn't always its drawer entry - so one still
+     * set is treated as not chosen by the user and gets replaced.
+     */
+    private val OLD_AUTO_NAMES = setOf(
+        "call_log_112", "sms_112", "contact_112", "gallery_84",
+        "calendar_112", "camera_112", "email_112", "music_112",
+    )
+
     fun names(): List<String> = BuiltInIconMap.ENTRIES.map { it.name } + LEGACY_NAMES
 
     fun loadIcon(context: Context, name: String): Drawable? {
@@ -62,19 +73,34 @@ object BuiltInIcons {
      * What the "Use Flip Launcher icons" action would set: drawer entry key -> icon
      * name, for every launchable entry a [BuiltInIconMap] rule matches that
      * doesn't already have an icon the user picked. Each entry gets the first
-     * matching icon in picker order.
+     * matching icon in picker order. A `label:` rule matches drawer labels
+     * (`_` for a space), for phones whose package names aren't listed.
      */
     @Suppress("DEPRECATION") // int-flags overload kept for minSdk 21 compatibility
     fun autoAssignments(context: Context, prefs: LauncherPrefs): Map<String, String> {
         val pm = context.packageManager
-        val launchable = pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0)
-            .mapNotNull { ri -> ri.activityInfo?.let { ComponentName(it.packageName, it.name).flattenToString() } }
-            .toSet()
+        val labels = HashMap<String, String>() // drawer entry key -> lowercased label
+        for (ri in pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0)) {
+            val ai = ri.activityInfo ?: continue
+            labels[ComponentName(ai.packageName, ai.name).flattenToString()] =
+                ri.loadLabel(pm)?.toString()?.trim()?.lowercase().orEmpty()
+        }
+        val launchable = labels.keys
+        // Only the user's own picks are kept: not an icon from a since-removed
+        // icon pack (no longer shown), nor one the old automatic pass set.
+        fun userPicked(key: String): Boolean {
+            val (source, name) = prefs.getIconOverride(key) ?: return false
+            return source == PACK_ID && name !in OLD_AUTO_NAMES
+        }
         fun mainKey(packageName: String?): String? =
             packageName?.let { pm.getLaunchIntentForPackage(it)?.component?.flattenToString() }
-        fun resolve(rule: String): String? {
-            val (kind, value) = rule.split(":", limit = 2).takeIf { it.size == 2 } ?: return null
-            return when (kind) {
+        fun resolve(rule: String): List<String> {
+            val (kind, value) = rule.split(":", limit = 2).takeIf { it.size == 2 } ?: return emptyList()
+            if (kind == "label") {
+                val wanted = value.replace('_', ' ').lowercase()
+                return labels.filterValues { it == wanted }.keys.toList()
+            }
+            return listOfNotNull(when (kind) {
                 "pkg" -> mainKey(value)
                 "cmp" -> ComponentName.unflattenFromString(value)?.flattenToString()
                 "cat" -> when (value) {
@@ -88,20 +114,26 @@ object BuiltInIcons {
                     "music" -> CategoryApps.musicKey(context)
                     "settings" -> mainKey(CategoryApps.systemSettingsPackage(context))
                     else -> null
+                }?.let { key ->
+                    // A category can resolve to a screen that isn't in the
+                    // app list (the gallery's often is); use its app's entry.
+                    if (key in launchable) key else mainKey(ComponentName.unflattenFromString(key)?.packageName)
                 }
                 else -> null
-            }
+            })
         }
         val result = LinkedHashMap<String, String>()
         for (entry in BuiltInIconMap.ENTRIES) {
             for (rule in entry.rules) {
-                val key = try {
+                val keys = try {
                     resolve(rule)
                 } catch (e: Exception) {
-                    null
-                } ?: continue
-                if (key !in launchable || key in result || prefs.getIconOverride(key) != null) continue
-                result[key] = entry.name
+                    emptyList()
+                }
+                for (key in keys) {
+                    if (key !in launchable || key in result || userPicked(key)) continue
+                    result[key] = entry.name
+                }
             }
         }
         return result

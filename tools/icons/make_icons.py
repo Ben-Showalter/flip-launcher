@@ -114,7 +114,7 @@ def read_rows():
             rules = match.split()
             for rule in rules:
                 kind, _, value = rule.partition(":")
-                if kind not in ("cat", "pkg", "cmp") or not value or (kind == "cat" and value not in CATEGORIES):
+                if kind not in ("cat", "pkg", "cmp", "label") or not value or (kind == "cat" and value not in CATEGORIES):
                     sys.exit(f"{name}: bad match rule '{rule}'")
             rows.append((name, glyph, color, rules))
     names = [r[0] for r in rows]
@@ -132,7 +132,8 @@ def write_kotlin(rows):
         " * The launcher's generated \"ic_\" icons, in picker order, each with the",
         " * rules that match it to installed apps for the one-time \"Replace app",
         " * icons\" action (see [BuiltInIcons.autoAssignments]): `cat:` a CategoryApps",
-        " * category, `pkg:` a package's main entry, `cmp:` one exact component.",
+        " * category, `pkg:` a package's main entry, `cmp:` one exact component,",
+        " * `label:` a drawer label (`_` for a space).",
         " */",
         "object BuiltInIconMap {",
         "",
