@@ -13,7 +13,7 @@ messages,message-text,teal,cat:sms pkg:com.android.mms pkg:com.android.messaging
 chat,chat,sky,pkg:com.turbotext.app
 group_chat,forum,indigo,pkg:org.matchat.client
 email,email,red,cat:email
-notices,bell,red,cmp:com.flipos.launcher/com.flipos.launcher.activities.NoticesActivity
+notices,bell,orange,cmp:com.flipos.launcher/com.flipos.launcher.activities.NoticesActivity
 alarm,alarm,yellow,pkg:com.kyocera.alarm pkg:com.android.deskclock
 clock,clock-outline,navy,
 timer,timer-sand,orange,pkg:com.kyocera.timer
@@ -46,7 +46,7 @@ tv,television,navy,
 browser,web,blue,pkg:com.android.browser
 navigation,navigation,blue,
 maps,map-marker,green,
-weather,weather-partly-cloudy,sky,pkg:com.flipweather.app
+weather,weather-partly-cloudy,white,pkg:com.flipweather.app
 wifi,wifi,blue,
 bluetooth,bluetooth,navy,
 hotspot,access-point,orange,

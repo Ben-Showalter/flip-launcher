@@ -55,6 +55,7 @@ PALETTE = {
     "slate": "#9EABBE",
     "gray": "#B5BAC1",
     "charcoal": "#959CA5",
+    "white": "#F2F4F7",
 }
 
 CATEGORIES = {"dialer", "sms", "contacts", "camera", "gallery", "calendar", "email", "music", "settings"}
