@@ -2,8 +2,8 @@
 """Renders Flip Launcher's built-in "ic_" icons from icons.csv.
 
 Each icon is a large glyph from Material Design Icons (Pictogrammers,
-Apache-2.0) in one flat color, on a transparent background - no tile, no
-gradient, no shadow. Writes
+Apache-2.0) in one flat color on a 50% transparent black tile that fills the
+canvas (the launcher clips it to its squircle) - no gradient, no shadow. Writes
 app/src/main/res/drawable-nodpi/ic_<name>.png and
 app/src/main/java/com/flipos/launcher/data/BuiltInIconMap.kt.
 
@@ -33,7 +33,8 @@ KOTLIN_PATH = os.path.join(ROOT, "app", "src", "main", "java", "com", "flipos", 
 GLYPH_URL = "https://raw.githubusercontent.com/Templarian/MaterialDesign/master/svg/{}.svg"
 
 SIZE = 192  # px; drawable-nodpi, scaled down by the launcher
-GLYPH_FRACTION = 0.86  # glyph box as a share of the canvas (MDI glyphs carry their own padding)
+GLYPH_FRACTION = 0.74  # glyph box as a share of the canvas (MDI glyphs carry their own padding)
+BACKGROUND = (0, 0, 0, 128)  # 50% black tile, clipped to the squircle by the launcher
 
 # One flat color per key: clean, slightly muted tones. The neutrals are kept
 # light enough to read over the dimmed wallpaper.
@@ -93,9 +94,9 @@ def glyph_mask(svg):
 
 
 def compose(mask, color):
-    """The glyph in one flat [color], centered on a transparent canvas."""
+    """The glyph in one flat [color], centered on a 50% black tile."""
     offset = (SIZE - mask.width) // 2
-    canvas = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
+    canvas = Image.new("RGBA", (SIZE, SIZE), BACKGROUND)
     glyph = Image.new("RGBA", mask.size, hex_rgb(color) + (255,))
     glyph.putalpha(mask)
     canvas.alpha_composite(glyph, (offset, offset))

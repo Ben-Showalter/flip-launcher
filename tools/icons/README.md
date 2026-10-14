@@ -6,7 +6,8 @@
 
 Each icon is a 192px transparent canvas with a large glyph from
 [Material Design Icons](https://pictogrammers.com/library/mdi/) (Apache-2.0)
-in one flat color. There's no tile, gradient or shadow.
+in one flat color, on a 50% transparent black tile that the launcher clips to
+its squircle. There's no gradient or shadow.
 
 ## Add or change an icon
 

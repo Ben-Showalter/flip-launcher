@@ -225,8 +225,8 @@ supported (removed); the launcher's own icons are the only choice in Change
 Icon.
 
 - **Generated icons (`ic_*`)**: large Material Design Icons glyphs
-  (Apache-2.0), each in one flat color, on a transparent background (no
-  tile, gradient or shadow).
+  (Apache-2.0), each in one flat color, on a 50% transparent black tile
+  (no gradient or shadow).
   Don't hand-edit them: add or change a row in `tools/icons/icons.csv` (name,
   glyph, palette color, match rules) and run `tools/icons/make_icons.py` (see
   `tools/icons/README.md`), which rewrites the PNGs and
