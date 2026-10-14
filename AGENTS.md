@@ -224,14 +224,15 @@ Built-in icons and wallpapers live directly in
 supported (removed); the launcher's own icons are the only choice in Change
 Icon.
 
-- **Generated icons (`ic_*`)**: full-bleed gradient tiles with a white
-  Material Design Icons glyph (Apache-2.0), matching the stock Kyocera tiles.
+- **Generated icons (`ic_*`)**: large Material Design Icons glyphs
+  (Apache-2.0) filled with a color gradient over a soft shadow, on a
+  transparent background (no tile).
   Don't hand-edit them: add or change a row in `tools/icons/icons.csv` (name,
   glyph, palette color, match rules) and run `tools/icons/make_icons.py` (see
   `tools/icons/README.md`), which rewrites the PNGs and
   `data/BuiltInIconMap.kt`. `BuiltInIcons.loadIcon` returns them as
-  `FullBleedIcon`, which `IconShapeRenderer` masks at full size instead of
-  insetting on the gray legacy tile. The match rules feed Appearance →
+  `FullBleedIcon`, which `IconShapeRenderer` draws at full size with no gray
+  legacy tile behind it. The match rules feed Appearance →
   App Icons → Use Flip Launcher icons, a one-time action that writes ordinary
   per-app overrides (skipping apps with one already); App Icons → Restore
   system icons clears every override. There is no automatic or on/off icon

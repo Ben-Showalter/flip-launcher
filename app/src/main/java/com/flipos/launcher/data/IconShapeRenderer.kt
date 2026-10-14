@@ -87,7 +87,7 @@ object IconShapeRenderer {
         return applyMask(content, shape, size)
     }
 
-    /** A [FullBleedIcon] fills the whole canvas, then gets the shape mask - no gray tile, no inset. */
+    /** A [FullBleedIcon] is drawn over the whole canvas, then masked - no gray tile, no inset. */
     private fun renderFullBleed(drawable: Drawable, size: Int, shape: LauncherPrefs.IconShape): Bitmap {
         val content = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         drawable.setBounds(0, 0, size, size)

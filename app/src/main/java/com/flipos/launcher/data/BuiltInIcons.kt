@@ -13,8 +13,8 @@ import com.flipos.launcher.util.CategoryApps
 /**
  * Icons bundled with the launcher itself (res/drawable-nodpi), offered in the
  * per-app icon picker. The generated "ic_" set (tools/icons, see
- * [BuiltInIconMap]) comes first: full-bleed gradient tiles that the launcher
- * clips to its squircle like the stock Kyocera icons, and that the one-time
+ * [BuiltInIconMap]) comes first: large gradient-colored glyphs with no tile
+ * behind them, which the one-time
  * "Use Flip Launcher icons" action ([autoAssignments]) puts on matching apps. The
  * older hand-made icons follow.
  */
@@ -115,8 +115,8 @@ object BuiltInIcons {
 }
 
 /**
- * A generated tile that fills the whole icon shape, like a stock adaptive
- * icon - [IconShapeRenderer] masks it at full size instead of insetting it
- * on the gray legacy tile.
+ * A generated icon, already sized and colored for the launcher -
+ * [IconShapeRenderer] draws it at full size instead of insetting it on the
+ * gray legacy tile.
  */
 class FullBleedIcon(resources: Resources, bitmap: Bitmap) : BitmapDrawable(resources, bitmap)

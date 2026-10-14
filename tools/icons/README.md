@@ -4,10 +4,10 @@
 `app/src/main/res/drawable-nodpi/` and regenerates
 `app/src/main/java/com/flipos/launcher/data/BuiltInIconMap.kt`.
 
-Each icon is a 192px full-bleed tile (a deep diagonal gradient with a faint top
-sheen) and a white glyph, over a soft shadow, from
-[Material Design Icons](https://pictogrammers.com/library/mdi/) (Apache-2.0).
-The launcher clips it to its squircle, like the stock Kyocera tiles.
+Each icon is a 192px transparent canvas with a large glyph from
+[Material Design Icons](https://pictogrammers.com/library/mdi/) (Apache-2.0),
+filled with a diagonal color gradient and a faint top sheen, over a soft
+shadow. There's no tile behind it.
 
 ## Add or change an icon
 

@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """Renders Flip Launcher's built-in "ic_" icons from icons.csv.
 
-Each icon is a full-bleed square - a deep diagonal gradient with a faint top
-sheen - and a white glyph from Material Design Icons (Pictogrammers,
-Apache-2.0) over a soft shadow. The launcher clips it to its squircle,
-matching the stock Kyocera tiles. Writes
+Each icon is a large glyph from Material Design Icons (Pictogrammers,
+Apache-2.0) filled with a rich diagonal gradient and a faint top sheen, over
+a soft shadow, on a transparent background - no tile behind it. Writes
 app/src/main/res/drawable-nodpi/ic_<name>.png and
 app/src/main/java/com/flipos/launcher/data/BuiltInIconMap.kt.
 
@@ -34,10 +33,11 @@ KOTLIN_PATH = os.path.join(ROOT, "app", "src", "main", "java", "com", "flipos", 
 GLYPH_URL = "https://raw.githubusercontent.com/Templarian/MaterialDesign/master/svg/{}.svg"
 
 SIZE = 192  # px; drawable-nodpi, scaled down by the launcher
-GLYPH_FRACTION = 0.50  # glyph box as a share of the tile
+GLYPH_FRACTION = 0.86  # glyph box as a share of the canvas (MDI glyphs carry their own padding)
 
-# Gradient start (top-left) / end (bottom-right) per color: deep, slightly
-# desaturated tones with a small hue shift, rather than flat neon.
+# Gradient start (top-left) / end (bottom-right) filling each glyph: rich,
+# slightly desaturated tones with a small hue shift. The neutrals are kept
+# light enough to read over the dimmed wallpaper.
 PALETTE = {
     "yellow": ("#F9C74F", "#E89A12"),
     "amber": ("#F4B544", "#D9820F"),
@@ -50,18 +50,18 @@ PALETTE = {
     "sky": ("#4DB4E8", "#1F7FC2"),
     "teal": ("#3FC2A2", "#12876E"),
     "green": ("#5CC27A", "#2A8C4A"),
-    "brown": ("#B98A64", "#7E5636"),
-    "navy": ("#52698F", "#26364F"),
-    "slate": ("#8794A6", "#525D6E"),
-    "gray": ("#A2A7AF", "#686D75"),
-    "charcoal": ("#5E636B", "#2E3237"),
+    "brown": ("#D3A07A", "#9C6A43"),
+    "navy": ("#7D9BD0", "#46649A"),
+    "slate": ("#AEBACB", "#72809A"),
+    "gray": ("#C9CDD3", "#8C9199"),
+    "charcoal": ("#A4AAB2", "#666C75"),
 }
 
-SHEEN_ALPHA = 0.16  # white sheen at the very top, fading out by SHEEN_END
-SHEEN_END = 0.55
-SHADOW_ALPHA = 0.30  # soft shadow under the glyph
-SHADOW_BLUR = 0.022  # as a share of SIZE
-SHADOW_OFFSET = 0.018
+SHEEN_ALPHA = 0.18  # white sheen at the top of the glyph, fading out by SHEEN_END
+SHEEN_END = 0.5
+SHADOW_ALPHA = 0.35  # soft shadow under the glyph, so it lifts off the wallpaper
+SHADOW_BLUR = 0.02  # as a share of SIZE
+SHADOW_OFFSET = 0.015
 
 CATEGORIES = {"dialer", "sms", "contacts", "camera", "gallery", "calendar", "email", "music", "settings"}
 
@@ -91,43 +91,42 @@ def hex_rgb(value):
     return tuple(int(value[i:i + 2], 16) for i in (0, 2, 4))
 
 
-def tile_background(start, end):
+def gradient_fill(start, end, size):
     """Diagonal gradient (mostly top to bottom) with a soft white sheen up top."""
     start, end = hex_rgb(start), hex_rgb(end)
-    tile = Image.new("RGBA", (SIZE, SIZE))
-    pixels = tile.load()
-    last = SIZE - 1
-    for y in range(SIZE):
+    fill = Image.new("RGBA", (size, size))
+    pixels = fill.load()
+    last = size - 1
+    for y in range(size):
         sheen = max(0.0, 1 - (y / last) / SHEEN_END) ** 2 * SHEEN_ALPHA
-        for x in range(SIZE):
+        for x in range(size):
             t = 0.82 * (y / last) + 0.18 * (x / last)
             t = t * t * (3 - 2 * t)  # smoothstep: gentler ends
             base = [start[i] + (end[i] - start[i]) * t for i in range(3)]
-            color = tuple(round(c + (255 - c) * sheen) for c in base)
-            pixels[x, y] = color + (255,)
-    return tile
+            pixels[x, y] = tuple(round(c + (255 - c) * sheen) for c in base) + (255,)
+    return fill
 
 
-def white_glyph(svg):
-    # MDI paths carry no fill; make every shape white.
-    svg = re.sub(r"<path ", '<path fill="#FFFFFF" ', svg)
+def glyph_mask(svg):
+    """The glyph's coverage (alpha) at its final size."""
+    svg = re.sub(r"<path ", '<path fill="#000000" ', svg)
     box = round(SIZE * GLYPH_FRACTION)
     png = cairosvg.svg2png(bytestring=svg.encode("utf-8"), output_width=box, output_height=box)
-    return Image.open(io.BytesIO(png)).convert("RGBA")
+    return Image.open(io.BytesIO(png)).convert("RGBA").getchannel("A")
 
 
-def compose(background, glyph):
-    """Centers [glyph] on [background] over a soft drop shadow."""
-    offset = (SIZE - glyph.width) // 2
-    alpha = glyph.getchannel("A").point(lambda a: round(a * SHADOW_ALPHA))
-    shadow = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
-    shadow_layer = Image.new("RGBA", glyph.size, (0, 0, 0, 255))
-    shadow_layer.putalpha(alpha)
-    shadow.alpha_composite(shadow_layer, (offset, offset + round(SIZE * SHADOW_OFFSET)))
-    shadow = shadow.filter(ImageFilter.GaussianBlur(SIZE * SHADOW_BLUR))
-    background.alpha_composite(shadow)
-    background.alpha_composite(glyph, (offset, offset))
-    return background
+def compose(mask, colors):
+    """The glyph filled with [colors]' gradient, centered on a transparent canvas over a soft shadow."""
+    offset = (SIZE - mask.width) // 2
+    canvas = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
+    shadow_layer = Image.new("RGBA", mask.size, (0, 0, 0, 255))
+    shadow_layer.putalpha(mask.point(lambda a: round(a * SHADOW_ALPHA)))
+    canvas.alpha_composite(shadow_layer, (offset, offset + round(SIZE * SHADOW_OFFSET)))
+    canvas = canvas.filter(ImageFilter.GaussianBlur(SIZE * SHADOW_BLUR))
+    glyph = gradient_fill(*colors, mask.width)
+    glyph.putalpha(mask)
+    canvas.alpha_composite(glyph, (offset, offset))
+    return canvas
 
 
 def read_rows():
@@ -179,7 +178,7 @@ def main():
     context = ssl_context()
     os.makedirs(OUT_DIR, exist_ok=True)
     for name, glyph, color, _ in rows:
-        tile = compose(tile_background(*PALETTE[color]), white_glyph(fetch_glyph(glyph, context)))
+        tile = compose(glyph_mask(fetch_glyph(glyph, context)), PALETTE[color])
         tile.save(os.path.join(OUT_DIR, f"ic_{name}.png"), optimize=True)
         print(f"ic_{name}.png")
     write_kotlin(rows)
