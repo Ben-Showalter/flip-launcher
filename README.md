@@ -70,7 +70,7 @@ them back:
   else A-Z.
 - Dots on the icons of apps with unread notifications.
 - **Options** on any app: **Move**, **Hide / Show Apps**, **Change Icon**
-  (from an icon pack, the launcher's bundled set, or back to the original),
+  (from the launcher's own icons, or back to the original),
   **Home Screen Settings**, **Switch to List / Grid View**.
 - The **Settings** entry asks whether you want **Phone Settings** or **Home
   Screen Settings**, with a **Don't ask again** option.
@@ -97,8 +97,9 @@ nothing else); volume keys still change the volume.
 
 A short list where each row opens its own screen:
 
-- **Appearance** - wallpaper, accent color, light/dark theme, icon pack, icon
-  size
+- **Appearance** - wallpaper, accent color, light/dark theme, **Replace App
+  Icons** (a one-time switch of every matching app to the launcher's own
+  icons, each still changeable later), icon size
 - **Home Screen & Keys** - soft keys and D-pad; other buttons (Camera, Mic,
   SOS, outer END, outer Speaker, PTT); speed dial
 - **Notifications** - the Home banner, Read Aloud, icon dots
@@ -188,3 +189,10 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for a from-scratch setup.
 
 App enumeration uses a `<queries>` declaration rather than
 `QUERY_ALL_PACKAGES`.
+
+## Icon credits
+
+The launcher's generated icons (`ic_*` in `app/src/main/res/drawable-nodpi/`)
+use glyphs from [Material Design Icons](https://pictogrammers.com/library/mdi/)
+by Pictogrammers, licensed under the Apache License 2.0. They're rendered by
+`tools/icons/make_icons.py`.

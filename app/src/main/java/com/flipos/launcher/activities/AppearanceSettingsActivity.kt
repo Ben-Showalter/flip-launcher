@@ -6,7 +6,7 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
-import com.flipos.launcher.data.IconPackRepository
+import com.flipos.launcher.data.BuiltInIcons
 import com.flipos.launcher.data.LauncherPrefs
 import com.flipos.launcher.ui.ListRowAdapter
 import com.flipos.launcher.ui.Row
@@ -26,7 +26,7 @@ class AppearanceSettingsActivity : BaseListActivity() {
         actions[ID_WALLPAPER] = { startActivity(Intent(this, WallpaperPickerActivity::class.java)) }
         actions[ID_ACCENT] = { chooseAccentColor() }
         actions[ID_THEME] = { chooseTheme() }
-        actions[ID_PACK] = { startActivity(Intent(this, IconPackActivity::class.java)) }
+        actions[ID_REPLACE_ICONS] = { replaceAppIcons() }
         actions[ID_SIZE] = { chooseIconSize() }
 
         adapter = ListRowAdapter(onClick = { dispatch(it) })
@@ -49,11 +49,6 @@ class AppearanceSettingsActivity : BaseListActivity() {
     }
 
     private fun refreshRows() {
-        val activePack = prefs.getActiveIconPack()
-        val packLabel = activePack?.let { pkg ->
-            IconPackRepository.getInstalledIconPacks(this).find { it.packageName == pkg }?.label
-        } ?: getString(R.string.icon_pack_default)
-
         val iconPercent = prefs.getIconSizePercent()
         val iconSizeLabel = when {
             iconPercent <= 80 -> getString(R.string.settings_icon_small)
@@ -82,10 +77,9 @@ class AppearanceSettingsActivity : BaseListActivity() {
                     chevron = true,
                 ),
                 Row(
-                    id = ID_PACK,
-                    title = getString(R.string.settings_icon_pack),
-                    trailing = packLabel,
-                    chevron = true,
+                    id = ID_REPLACE_ICONS,
+                    title = getString(R.string.settings_replace_icons),
+                    subtitle = getString(R.string.settings_replace_icons_sub),
                 ),
                 Row(
                     id = ID_SIZE,
@@ -99,6 +93,28 @@ class AppearanceSettingsActivity : BaseListActivity() {
 
     private fun dispatch(position: Int) {
         adapter.rowAt(position)?.id?.let { actions[it]?.invoke() }
+    }
+
+    /**
+     * One-time action: puts the launcher's own icon on every app one matches
+     * (see [BuiltInIcons.autoAssignments]), as ordinary per-app choices that
+     * Change Icon can undo; apps with an icon the user picked are left alone.
+     */
+    private fun replaceAppIcons() {
+        val assignments = BuiltInIcons.autoAssignments(this, prefs)
+        if (assignments.isEmpty()) {
+            Toast.makeText(this, R.string.replace_icons_none, Toast.LENGTH_SHORT).show()
+            return
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.replace_icons_confirm_title)
+            .setMessage(getString(R.string.replace_icons_confirm_message, assignments.size))
+            .setPositiveButton(R.string.replace_icons_confirm) { _, _ ->
+                BuiltInIcons.applyAssignments(prefs, assignments)
+                Toast.makeText(this, getString(R.string.replace_icons_done, assignments.size), Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun chooseIconSize() {
@@ -155,7 +171,7 @@ class AppearanceSettingsActivity : BaseListActivity() {
         private const val ID_WALLPAPER = "wallpaper"
         private const val ID_ACCENT = "accent"
         private const val ID_THEME = "theme"
-        private const val ID_PACK = "pack"
+        private const val ID_REPLACE_ICONS = "replace_icons"
         private const val ID_SIZE = "size"
     }
 }

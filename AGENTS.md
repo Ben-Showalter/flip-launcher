@@ -199,7 +199,7 @@ Key pieces:
   across those list screens; `AppGridAdapter` is the App Drawer's icon grid;
   `NoticeRowAdapter` is the richer 3-line notice row.
 - `LauncherPrefs` is the single SharedPreferences wrapper — all settings
-  (icon size/shape/pack, accent color, drawer view mode, badges, shortcuts,
+  (icon size, accent color, drawer view mode, badges, shortcuts,
   hidden apps, per-app icon overrides) live there.
 - `util/WallpaperContrast.kt` measures the wallpaper's brightness (cached
   per wallpaper, off the main thread) and scales Home's and the App
@@ -219,14 +219,23 @@ Key pieces:
 ## Bundled icons & wallpapers
 
 Built-in icons and wallpapers live directly in
-`app/src/main/res/drawable-nodpi/` — that folder is the single source of truth
-(there are no separate staging folders). To add one:
+`app/src/main/res/drawable-nodpi/`; that folder is the single source of truth
+(there are no separate staging folders). Third-party icon packs are not
+supported (removed); the launcher's own icons are the only choice in Change
+Icon.
 
-1. Drop the PNG (icon) or JPG (wallpaper) into
-   `app/src/main/res/drawable-nodpi/`.
-2. Add the filename (no extension) to the matching registry:
-   `BuiltInIcons.NAMES` in `data/BuiltInIcons.kt` or `BuiltInWallpapers.NAMES`
-   in `data/BuiltInWallpapers.kt`.
-
-Resources aren't auto-discovered, so step 2 is required for the asset to show
-up in the picker.
+- **Generated icons (`ic_*`)**: full-bleed gradient tiles with a white
+  Material Design Icons glyph (Apache-2.0), matching the stock Kyocera tiles.
+  Don't hand-edit them: add or change a row in `tools/icons/icons.csv` (name,
+  glyph, palette color, match rules) and run `tools/icons/make_icons.py` (see
+  `tools/icons/README.md`), which rewrites the PNGs and
+  `data/BuiltInIconMap.kt`. `BuiltInIcons.loadIcon` returns them as
+  `FullBleedIcon`, which `IconShapeRenderer` masks at full size instead of
+  insetting on the gray legacy tile. The match rules feed Appearance →
+  Replace App Icons, a one-time action that writes ordinary per-app overrides
+  (skipping apps with one already) - there is no automatic or on/off icon
+  theming.
+- **Older icons and wallpapers**: drop the PNG/JPG in, then add the filename
+  (no extension) to `BuiltInIcons.LEGACY_NAMES` in `data/BuiltInIcons.kt` or
+  `BuiltInWallpapers.NAMES` in `data/BuiltInWallpapers.kt`. Resources aren't
+  auto-discovered, so the registry step is required.

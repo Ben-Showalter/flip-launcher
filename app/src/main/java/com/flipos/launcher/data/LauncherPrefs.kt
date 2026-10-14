@@ -281,17 +281,9 @@ class LauncherPrefs(context: Context) {
     fun getReadAloudRate(): Float = prefs.getFloat(KEY_READ_ALOUD_RATE, 1.0f)
     fun setReadAloudRate(rate: Float) = prefs.edit().putFloat(KEY_READ_ALOUD_RATE, rate).apply()
 
-    // ------------------------------------------------------------- Icon packs
+    // ------------------------------------------------------------ App icons
 
-    /** Icon pack package applied launcher-wide, or null for default icons. */
-    fun getActiveIconPack(): String? = prefs.getString(KEY_ACTIVE_ICON_PACK, null)
-
-    fun setActiveIconPack(packageName: String?) {
-        prefs.edit().putString(KEY_ACTIVE_ICON_PACK, packageName).apply()
-        AppRepository.invalidateIconCaches()
-    }
-
-    /** Per-app icon override as (icon pack package, drawable name), or null if unset. */
+    /** Per-app icon override as (source, drawable name) - source is [BuiltInIcons.PACK_ID] - or null if unset. */
     fun getIconOverride(appKey: String): Pair<String, String>? {
         val raw = prefs.getString(iconOverrideKey(appKey), null) ?: return null
         val parts = raw.split(ICON_OVERRIDE_SEPARATOR, limit = 2)
@@ -474,7 +466,6 @@ class LauncherPrefs(context: Context) {
         private const val KEY_READ_ALOUD_MODE = "read_aloud_mode"
         private const val KEY_READ_ALOUD_VOICE = "read_aloud_voice"
         private const val KEY_READ_ALOUD_RATE = "read_aloud_rate"
-        private const val KEY_ACTIVE_ICON_PACK = "active_icon_pack"
         private const val KEY_DRAWER_LIST_VIEW = "drawer_list_view"
         private const val KEY_ICON_OVERRIDE_PREFIX = "icon_override_"
         private const val KEY_ACCENT_COLOR = "accent_color"

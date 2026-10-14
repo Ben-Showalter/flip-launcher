@@ -151,7 +151,14 @@
     <string name="settings_left_key_set">Left key will open %1$s</string>
     <string name="settings_left_key_cleared">Left key reset to Contacts</string>
     <string name="settings_icon_size_set">Icon size set to %1$s</string>
-    <string name="settings_icon_pack">Icon Pack</string>
+    <string name="settings_replace_icons">Replace App Icons</string>
+    <string name="settings_replace_icons_sub">Use Flip Launcher\'s icons for matching apps</string>
+    <string name="replace_icons_confirm_title">Replace app icons?</string>
+    <string name="replace_icons_confirm_message">%1$d apps will get Flip Launcher\'s icon. Icons you picked yourself stay. You can change any icon later with Change Icon.</string>
+    <string name="replace_icons_confirm">Replace</string>
+    <string name="replace_icons_none">No app icons to replace</string>
+    <string name="replace_icons_done">Replaced %1$d icons</string>
+    <string name="icon_picker_change">Change Icon</string>
     <string name="settings_accent_color">Accent Color</string>
     <string name="settings_accent_color_set">Accent color set to %1$s</string>
     <string name="accent_color_default">Cyan (default)</string>
@@ -197,12 +204,7 @@
     <string name="notices_dismiss_all_confirm">Dismiss All</string>
     <string name="notices_dismiss_all_cancel">Cancel</string>
 
-    <!-- Icon packs -->
-    <string name="title_icon_packs">Icon Packs</string>
-    <string name="icon_pack_default">Default (No Pack)</string>
-    <string name="icon_pack_reset">Icons reset to default</string>
-    <string name="icon_pack_applied">Applied %1$s</string>
-    <string name="icon_picker_choose_pack">Choose Icon Pack</string>
+    <!-- Change Icon -->
     <string name="icon_picker_built_in">Built-in Icons</string>
     <string name="icon_picker_applied">Icon updated</string>
     <string name="icon_picker_reset">Icon reset to default</string>

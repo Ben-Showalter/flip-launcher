@@ -37,7 +37,7 @@ object AppRepository {
      * shape + background + density), so a re-query doesn't re-run the whole
      * Palette + multi-bitmap render pipeline for every app. Stores bitmaps (not
      * Drawables) and re-wraps a fresh [BitmapDrawable] per request so callers get
-     * independent bounds. Cleared via [invalidateIconCaches] on icon/pack/package
+     * independent bounds. Cleared via [invalidateIconCaches] on icon/override/package
      * changes.
      */
     private const val ICON_CACHE_SIZE = 400
@@ -51,7 +51,6 @@ object AppRepository {
     fun invalidateIconCaches() {
         renderedIconCache.evictAll()
         NotificationDotColor.clear()
-        IconPackRepository.clearCaches()
     }
 
     /**
@@ -433,7 +432,7 @@ object AppRepository {
 
     /**
      * Resolves [key] to its icon exactly like [resolveComponent] (per-app
-     * override / active icon pack, falling back to the app's own icon), but
+     * own-icon override, falling back to the app's own icon), but
      * skips the final shape-masking step — for callers that need to apply a
      * *different* shape than the user's global [LauncherPrefs.IconShape]
      * (e.g. the Home D-pad shortcut pod, always squircle regardless of the
@@ -489,24 +488,19 @@ object AppRepository {
         legacyBg: Boolean,
     ): String {
         val override = prefs.getIconOverride(componentKey)
-        val pack = prefs.getActiveIconPack()
         val dpi = context.resources.displayMetrics.densityDpi
-        return "$componentKey|ovr=${override?.first}:${override?.second}|pack=$pack|shape=$shape|bg=$legacyBg|dpi=$dpi"
+        return "$componentKey|ovr=${override?.first}:${override?.second}|shape=$shape|bg=$legacyBg|dpi=$dpi"
     }
 
     private fun rawIcon(context: Context, prefs: LauncherPrefs, componentKey: String, fallback: Drawable): Drawable {
         val override = prefs.getIconOverride(componentKey) ?: packageIconOverride(context, prefs, componentKey)
-        override?.let { (pack, name) ->
-            val drawable = if (pack == BuiltInIcons.PACK_ID) {
-                BuiltInIcons.loadIcon(context, name)
-            } else {
-                IconPackRepository.loadIcon(context, pack, name)
-            }
-            drawable?.let { return it }
+        // Only the launcher's own icons are offered now; a pick made from an
+        // installed icon pack before that support was removed shows the
+        // app's own icon.
+        override?.takeIf { it.first == BuiltInIcons.PACK_ID }?.let { (_, name) ->
+            BuiltInIcons.loadIcon(context, name)?.let { return it }
         }
-        val activePack = prefs.getActiveIconPack() ?: return fallback
-        val name = IconPackRepository.iconNameFor(context, activePack, componentKey) ?: return fallback
-        return IconPackRepository.loadIcon(context, activePack, name) ?: fallback
+        return fallback
     }
 
     /**
