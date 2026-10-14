@@ -232,8 +232,9 @@ Icon.
   `data/BuiltInIconMap.kt`. `BuiltInIcons.loadIcon` returns them as
   `FullBleedIcon`, which `IconShapeRenderer` masks at full size instead of
   insetting on the gray legacy tile. The match rules feed Appearance →
-  Replace App Icons, a one-time action that writes ordinary per-app overrides
-  (skipping apps with one already) - there is no automatic or on/off icon
+  App Icons → Use Flip Launcher icons, a one-time action that writes ordinary
+  per-app overrides (skipping apps with one already); App Icons → Restore
+  system icons clears every override. There is no automatic or on/off icon
   theming.
 - **Older icons and wallpapers**: drop the PNG/JPG in, then add the filename
   (no extension) to `BuiltInIcons.LEGACY_NAMES` in `data/BuiltInIcons.kt` or

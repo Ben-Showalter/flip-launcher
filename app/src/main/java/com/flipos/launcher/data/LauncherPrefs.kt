@@ -316,6 +316,17 @@ class LauncherPrefs(context: Context) {
         AppRepository.invalidateIconCaches()
     }
 
+    /** How many apps have a custom icon. */
+    fun iconOverrideCount(): Int = prefs.all.keys.count { it.startsWith(KEY_ICON_OVERRIDE_PREFIX) }
+
+    /** Puts every app back on its own icon (Appearance → App Icons → Restore). */
+    fun clearAllIconOverrides() {
+        val keys = prefs.all.keys.filter { it.startsWith(KEY_ICON_OVERRIDE_PREFIX) }
+        if (keys.isEmpty()) return
+        prefs.edit().apply { keys.forEach { remove(it) } }.apply()
+        AppRepository.invalidateIconCaches()
+    }
+
     private fun iconOverrideKey(appKey: String) = "$KEY_ICON_OVERRIDE_PREFIX$appKey"
 
     // -------------------------------------------------------- Accent color

@@ -97,9 +97,9 @@ nothing else); volume keys still change the volume.
 
 A short list where each row opens its own screen:
 
-- **Appearance** - wallpaper, accent color, light/dark theme, **Replace App
-  Icons** (a one-time switch of every matching app to the launcher's own
-  icons, each still changeable later), icon size
+- **Appearance** - wallpaper, accent color, light/dark theme, **App Icons**
+  (a one-time switch of every matching app to the launcher's own icons, each
+  still changeable later, or back to every app's own icon), icon size
 - **Home Screen & Keys** - soft keys and D-pad; other buttons (Camera, Mic,
   SOS, outer END, outer Speaker, PTT); speed dial
 - **Notifications** - the Home banner, Read Aloud, icon dots

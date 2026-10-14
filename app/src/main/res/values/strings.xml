@@ -151,8 +151,15 @@
     <string name="settings_left_key_set">Left key will open %1$s</string>
     <string name="settings_left_key_cleared">Left key reset to Contacts</string>
     <string name="settings_icon_size_set">Icon size set to %1$s</string>
-    <string name="settings_replace_icons">Replace App Icons</string>
-    <string name="settings_replace_icons_sub">Use Flip Launcher\'s icons for matching apps</string>
+    <string name="settings_replace_icons">App Icons</string>
+    <string name="settings_replace_icons_sub">Switch to Flip Launcher\'s icons, or back to the apps\' own</string>
+    <string name="app_icons_use_flip">Use Flip Launcher icons</string>
+    <string name="app_icons_restore">Restore system icons</string>
+    <string name="restore_icons_confirm_title">Restore system icons?</string>
+    <string name="restore_icons_confirm_message">%1$d apps go back to their own icon, including icons you picked yourself.</string>
+    <string name="restore_icons_confirm">Restore</string>
+    <string name="restore_icons_none">All apps already use their own icon</string>
+    <string name="restore_icons_done">System icons restored</string>
     <string name="replace_icons_confirm_title">Replace app icons?</string>
     <string name="replace_icons_confirm_message">%1$d apps will get Flip Launcher\'s icon. Icons you picked yourself stay. You can change any icon later with Change Icon.</string>
     <string name="replace_icons_confirm">Replace</string>

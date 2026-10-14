@@ -26,7 +26,7 @@ class AppearanceSettingsActivity : BaseListActivity() {
         actions[ID_WALLPAPER] = { startActivity(Intent(this, WallpaperPickerActivity::class.java)) }
         actions[ID_ACCENT] = { chooseAccentColor() }
         actions[ID_THEME] = { chooseTheme() }
-        actions[ID_REPLACE_ICONS] = { replaceAppIcons() }
+        actions[ID_REPLACE_ICONS] = { chooseAppIcons() }
         actions[ID_SIZE] = { chooseIconSize() }
 
         adapter = ListRowAdapter(onClick = { dispatch(it) })
@@ -93,6 +93,33 @@ class AppearanceSettingsActivity : BaseListActivity() {
 
     private fun dispatch(position: Int) {
         adapter.rowAt(position)?.id?.let { actions[it]?.invoke() }
+    }
+
+    /** App Icons: a one-time switch to the launcher's icons, or back to every app's own. */
+    private fun chooseAppIcons() {
+        val items = arrayOf(getString(R.string.app_icons_use_flip), getString(R.string.app_icons_restore))
+        AlertDialog.Builder(this)
+            .setTitle(R.string.settings_replace_icons)
+            .setItems(items) { _, which -> if (which == 0) replaceAppIcons() else restoreSystemIcons() }
+            .show()
+    }
+
+    /** Clears every custom icon - the replaced ones and any picked by hand. */
+    private fun restoreSystemIcons() {
+        val count = prefs.iconOverrideCount()
+        if (count == 0) {
+            Toast.makeText(this, R.string.restore_icons_none, Toast.LENGTH_SHORT).show()
+            return
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.restore_icons_confirm_title)
+            .setMessage(getString(R.string.restore_icons_confirm_message, count))
+            .setPositiveButton(R.string.restore_icons_confirm) { _, _ ->
+                prefs.clearAllIconOverrides()
+                Toast.makeText(this, R.string.restore_icons_done, Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     /**

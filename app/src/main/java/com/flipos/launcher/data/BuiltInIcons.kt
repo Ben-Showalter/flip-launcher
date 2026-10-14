@@ -15,7 +15,7 @@ import com.flipos.launcher.util.CategoryApps
  * per-app icon picker. The generated "ic_" set (tools/icons, see
  * [BuiltInIconMap]) comes first: full-bleed gradient tiles that the launcher
  * clips to its squircle like the stock Kyocera icons, and that the one-time
- * "Replace app icons" action ([autoAssignments]) puts on matching apps. The
+ * "Use Flip Launcher icons" action ([autoAssignments]) puts on matching apps. The
  * older hand-made icons follow.
  */
 object BuiltInIcons {
@@ -59,7 +59,7 @@ object BuiltInIcons {
     }
 
     /**
-     * What the "Replace app icons" action would set: drawer entry key -> icon
+     * What the "Use Flip Launcher icons" action would set: drawer entry key -> icon
      * name, for every launchable entry a [BuiltInIconMap] rule matches that
      * doesn't already have an icon the user picked. Each entry gets the first
      * matching icon in picker order.
