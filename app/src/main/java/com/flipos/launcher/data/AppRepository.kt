@@ -37,7 +37,7 @@ object AppRepository {
      * shape + background + density), so a re-query doesn't re-run the whole
      * Palette + multi-bitmap render pipeline for every app. Stores bitmaps (not
      * Drawables) and re-wraps a fresh [BitmapDrawable] per request so callers get
-     * independent bounds. Cleared via [invalidateIconCaches] on icon/pack/package
+     * independent bounds. Cleared via [invalidateIconCaches] on icon/override/package
      * changes.
      */
     private const val ICON_CACHE_SIZE = 400
@@ -51,7 +51,6 @@ object AppRepository {
     fun invalidateIconCaches() {
         renderedIconCache.evictAll()
         NotificationDotColor.clear()
-        IconPackRepository.clearCaches()
     }
 
     /**
@@ -80,6 +79,20 @@ object AppRepository {
         if (!prefs.isAutoIconsReverted()) {
             if (prefs.isBuiltInIconsApplied()) revertAutoIcons(context, prefs, resolveInfos)
             prefs.setAutoIconsReverted()
+        }
+        if (!prefs.isOwnEntryIconsReset()) {
+            // Our own entries (Notices, Kyocera menus) went back to their own
+            // icons; undo what the first "Use Flip Launcher icons" put on them.
+            for (ri in resolveInfos) {
+                val ai = ri.activityInfo ?: continue
+                if (ai.packageName != self) continue
+                val key = ComponentName(ai.packageName, ai.name).flattenToString()
+                val override = prefs.getIconOverride(key) ?: continue
+                if (override.first == BuiltInIcons.PACK_ID && override.second in BuiltInIcons.OWN_ENTRY_AUTO_NAMES) {
+                    prefs.clearIconOverride(key)
+                }
+            }
+            prefs.setOwnEntryIconsReset()
         }
         if (!prefs.isUnlistedAppsHidden()) {
             applyDefaultHiddenApps(context, prefs, resolveInfos)
@@ -196,9 +209,11 @@ object AppRepository {
             prefs.setAppOrderSeeded()
             prefs.setAppOrderV4Seeded()
             prefs.setSettingsSeedFixed()
+            prefs.setSettingsSlotFixedV2()
         } else if (!prefs.isSettingsSeedFixed()) {
             fixSettingsSeed(context, prefs, apps)
         }
+        if (!prefs.isSettingsSlotFixedV2()) fixSettingsSlot(context, prefs, apps)
         val order = prefs.getAppOrder()
         if (order.isEmpty()) return apps
         val position = HashMap<String, Int>(order.size)
@@ -251,9 +266,7 @@ object AppRepository {
             activityKey(KyoceraShortcuts.QUICK_SETTINGS_ALIAS),
             pickApp(
                 context, visible,
-                packages = listOfNotNull(
-                    "jp.kyocera.settings.nfp", "com.android.settings", CategoryApps.systemSettingsPackage(context),
-                ),
+                packages = settingsPackages(context),
                 intent = Intent(Settings.ACTION_SETTINGS),
                 label = "Settings",
             ),
@@ -280,7 +293,7 @@ object AppRepository {
         label: String,
     ): String? {
         for (pkg in packages) {
-            visible.firstOrNull { it.packageName == pkg }?.let { return it.key }
+            mainEntryKey(context, visible, pkg, label)?.let { return it }
         }
         if (intent != null) {
             val handlers = try {
@@ -298,8 +311,48 @@ object AppRepository {
     }
 
     /** Matches [packageName] against [apps] by package, resolving a category resolver's result to a real entry's component key. */
-    private fun packageNameKey(apps: List<AppInfo>, packageName: String?): String? =
-        packageName?.let { pkg -> apps.firstOrNull { it.packageName == pkg }?.key }
+    private fun packageNameKey(context: Context, apps: List<AppInfo>, packageName: String?): String? =
+        packageName?.let { mainEntryKey(context, apps, it, label = null) }
+
+    /**
+     * [packageName]'s main drawer entry: its launch activity, else one
+     * labeled [label], else its first. Some packages have several entries -
+     * Kyocera's Settings app also lists Hotspot, which the first-entry pick
+     * put in the Settings slot.
+     */
+    private fun mainEntryKey(context: Context, apps: List<AppInfo>, packageName: String, label: String?): String? {
+        val entries = apps.filter { it.packageName == packageName }
+        if (entries.isEmpty()) return null
+        val launchKey = try {
+            context.packageManager.getLaunchIntentForPackage(packageName)?.component?.flattenToString()
+        } catch (e: Exception) {
+            null
+        }
+        return (entries.firstOrNull { it.key == launchKey }
+            ?: label?.let { l -> entries.firstOrNull { it.label.equals(l, ignoreCase = true) } }
+            ?: entries.first()).key
+    }
+
+    /**
+     * One-time repair (see [LauncherPrefs.isSettingsSlotFixedV2]) for phones
+     * seeded while slots took a package's first entry: puts each settings
+     * package's main entry in place of a non-main one (Hotspot), at the same
+     * position, keeping any manual ordering.
+     */
+    private fun fixSettingsSlot(context: Context, prefs: LauncherPrefs, apps: List<AppInfo>) {
+        val order = prefs.getAppOrder().toMutableList()
+        for (pkg in settingsPackages(context)) {
+            val main = mainEntryKey(context, apps, pkg, "Settings") ?: continue
+            if (main in order) continue
+            val index = order.indexOfFirst { key -> apps.any { it.key == key && it.packageName == pkg } }
+            if (index >= 0) order[index] = main
+        }
+        prefs.setAppOrder(order)
+        prefs.setSettingsSlotFixedV2()
+    }
+
+    private fun settingsPackages(context: Context): List<String> =
+        listOfNotNull("jp.kyocera.settings.nfp", "com.android.settings", CategoryApps.systemSettingsPackage(context)).distinct()
 
     /**
      * One-time correction for a device that already seeded (see
@@ -326,7 +379,7 @@ object AppRepository {
             prefs.setSettingsSeedFixed()
             return
         }
-        val systemSettingsKey = packageNameKey(apps, CategoryApps.systemSettingsPackage(context)) ?: return
+        val systemSettingsKey = packageNameKey(context, apps, CategoryApps.systemSettingsPackage(context)) ?: return
         if (systemSettingsKey in order) return
         prefs.setAppOrder(order.toMutableList().apply { set(position, systemSettingsKey) })
         prefs.setSettingsSeedFixed()
@@ -393,7 +446,7 @@ object AppRepository {
 
     /**
      * Resolves [key] to its icon exactly like [resolveComponent] (per-app
-     * override / active icon pack, falling back to the app's own icon), but
+     * own-icon override, falling back to the app's own icon), but
      * skips the final shape-masking step — for callers that need to apply a
      * *different* shape than the user's global [LauncherPrefs.IconShape]
      * (e.g. the Home D-pad shortcut pod, always squircle regardless of the
@@ -449,24 +502,19 @@ object AppRepository {
         legacyBg: Boolean,
     ): String {
         val override = prefs.getIconOverride(componentKey)
-        val pack = prefs.getActiveIconPack()
         val dpi = context.resources.displayMetrics.densityDpi
-        return "$componentKey|ovr=${override?.first}:${override?.second}|pack=$pack|shape=$shape|bg=$legacyBg|dpi=$dpi"
+        return "$componentKey|ovr=${override?.first}:${override?.second}|shape=$shape|bg=$legacyBg|dpi=$dpi"
     }
 
     private fun rawIcon(context: Context, prefs: LauncherPrefs, componentKey: String, fallback: Drawable): Drawable {
         val override = prefs.getIconOverride(componentKey) ?: packageIconOverride(context, prefs, componentKey)
-        override?.let { (pack, name) ->
-            val drawable = if (pack == BuiltInIcons.PACK_ID) {
-                BuiltInIcons.loadIcon(context, name)
-            } else {
-                IconPackRepository.loadIcon(context, pack, name)
-            }
-            drawable?.let { return it }
+        // Only the launcher's own icons are offered now; a pick made from an
+        // installed icon pack before that support was removed shows the
+        // app's own icon.
+        override?.takeIf { it.first == BuiltInIcons.PACK_ID }?.let { (_, name) ->
+            BuiltInIcons.loadIcon(context, name)?.let { return it }
         }
-        val activePack = prefs.getActiveIconPack() ?: return fallback
-        val name = IconPackRepository.iconNameFor(context, activePack, componentKey) ?: return fallback
-        return IconPackRepository.loadIcon(context, activePack, name) ?: fallback
+        return fallback
     }
 
     /**

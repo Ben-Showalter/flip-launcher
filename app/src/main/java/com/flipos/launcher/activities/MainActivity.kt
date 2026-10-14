@@ -30,11 +30,13 @@ import androidx.activity.result.contract.ActivityResultContracts.StartActivityFo
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
 import com.flipos.launcher.data.AppRepository
 import com.flipos.launcher.data.IconShapeRenderer
 import com.flipos.launcher.data.LauncherPrefs
 import com.flipos.launcher.data.NotificationKind
 import com.flipos.launcher.data.NotificationStore
+import com.flipos.launcher.data.UpdateChecker
 import com.flipos.launcher.util.BackgroundLoader
 import com.flipos.launcher.util.CategoryApps
 import com.flipos.launcher.util.KEYCODE_ASSISTANT_RAW
@@ -55,6 +57,7 @@ import com.flipos.launcher.util.placeCall
 import com.flipos.launcher.util.SystemSpeedDialResult
 import com.flipos.launcher.util.openSystemSpeedDial
 import com.flipos.launcher.util.openSettingsWithPath
+import com.flipos.launcher.util.showUpdatePrompt
 import com.flipos.launcher.util.systemSpeedDial
 import com.flipos.launcher.util.toastIfUnknownKey
 import java.text.SimpleDateFormat
@@ -197,6 +200,9 @@ class MainActivity : AppCompatActivity() {
     /** Measures the wallpaper for [applyWallpaperScrim]; separate from [loader] so neither cancels the other. */
     private val scrimLoader = BackgroundLoader()
 
+    /** Separate from [loader] so its other loads can't supersede an update check/download. */
+    private val updateLoader = BackgroundLoader()
+
     private val timeReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) = updateClock()
     }
@@ -254,10 +260,10 @@ class MainActivity : AppCompatActivity() {
             // bg_rail_focus is white so it can be tinted to the user's accent.
             backgroundTintList = ColorStateList.valueOf(accentColorAlpha(0x4D))
             setOnClickListener { openAppDrawer() }
-            setOnLongClickListener { openOptions(); true }
         }
 
-        // Back opens the app drawer; long-pressing it launches the configured app instead
+        // Back opens the app drawer; long-pressing it launches the configured app
+        // (launcher settings when none is set) instead
         // (see onKeyDown/onKeyUp, which suppress this callback when a long-press fires).
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() = openAppDrawer()
@@ -304,7 +310,7 @@ class MainActivity : AppCompatActivity() {
         // theme overlays only apply at onCreate, so recreate to pick it up. Done last
         // (after registering the receiver/listener above) so onPause's matching
         // unregister calls below still have something to unregister.
-        if (prefs.getAccentColor() != appliedAccentColor) recreate()
+        if (prefs.getAccentColor() != appliedAccentColor) recreate() else maybeCheckForUpdate()
     }
 
     override fun onPause() {
@@ -321,6 +327,8 @@ class MainActivity : AppCompatActivity() {
         digitHoldRunnables.clear()
         digitTapRunnables.clear()
         pressedTapKeys.clear()
+        centerDownSeen = false
+        centerHoldFired = false
         // digitHandledDownTime deliberately survives a pause: placing a
         // speed-dial call (from a hold firing) backgrounds this Activity via
         // the system InCallActivity, triggering this very onPause() while
@@ -364,6 +372,7 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         loader.cancel()
         scrimLoader.cancel()
+        updateLoader.cancel()
         super.onDestroy()
     }
 
@@ -453,7 +462,11 @@ class MainActivity : AppCompatActivity() {
         val hideText = prefs.isNotificationTextHidden()
         val appName = if (hideText) appLabel(item.packageName) else item.title
         notifBanner.visibility = View.VISIBLE
-        notifBannerIcon.setImageResource(iconRes)
+        // The posting app's own icon (as the launcher draws it), else the category icon.
+        if (!bindKeyIcon(notifBannerIcon, packageManager.getLaunchIntentForPackage(item.packageName)?.component?.flattenToString())) {
+            notifBannerIcon.setImageResource(iconRes)
+            notifBannerIcon.visibility = View.VISIBLE
+        }
         notifBannerApp.text = appName
         if (!hideText && item.text.isNotEmpty()) {
             notifBannerText.text = item.text
@@ -564,6 +577,10 @@ class MainActivity : AppCompatActivity() {
         if (outerKey != null) {
             if (prefs.getExtraKeyApp(outerKey) == null) return false
             onOuterKeyEvent(outerKey, event)
+            return true
+        }
+        if (event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER || event.keyCode == KeyEvent.KEYCODE_ENTER) {
+            onCenterKeyEvent(event)
             return true
         }
         if (event.keyCode in DIRECTIONAL_KEYS) {
@@ -688,6 +705,61 @@ class MainActivity : AppCompatActivity() {
             }
         }
         return super.onKeyUp(keyCode, event)
+    }
+
+    /**
+     * Center/OK: a tap opens the app drawer, a hold opens the newest banner
+     * notification. Timed by hand ([KeyEvent.isLongPress] is unreliable on
+     * these keypads), both halves consumed, and the tap only fires for a
+     * press whose DOWN this window saw.
+     */
+    private fun onCenterKeyEvent(event: KeyEvent) {
+        when (event.action) {
+            KeyEvent.ACTION_DOWN -> if (event.repeatCount == 0) {
+                assignHandler.removeCallbacks(centerHoldRunnable)
+                centerDownSeen = true
+                centerHoldFired = false
+                assignHandler.postDelayed(centerHoldRunnable, DIGIT_HOLD_MS)
+            }
+            KeyEvent.ACTION_UP -> {
+                assignHandler.removeCallbacks(centerHoldRunnable)
+                val tap = centerDownSeen && !centerHoldFired && !event.isCanceled
+                centerDownSeen = false
+                centerHoldFired = false
+                if (tap) openAppDrawer()
+            }
+        }
+    }
+
+    private var centerDownSeen = false
+    private var centerHoldFired = false
+    private val centerHoldRunnable = Runnable {
+        centerHoldFired = true
+        openNewestNotification()
+    }
+
+    /** Opens what the Home banner shows, as tapping it in the shade would; else its app. */
+    private fun openNewestNotification() {
+        val item = NotificationStore.newest { prefs.isShownOnHome(it.kind) }
+        if (item == null) {
+            Toast.makeText(this, R.string.toast_no_notifications, Toast.LENGTH_SHORT).show()
+            return
+        }
+        try {
+            item.contentIntent?.let { it.send(); return }
+        } catch (e: Exception) {
+            // Cancelled or stale - fall back to opening the app.
+        }
+        val launch = packageManager.getLaunchIntentForPackage(item.packageName)
+        if (launch != null) {
+            try {
+                startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                return
+            } catch (e: Exception) {
+                // Fall through to the toast.
+            }
+        }
+        Toast.makeText(this, R.string.toast_not_available, Toast.LENGTH_SHORT).show()
     }
 
     /** Starts long-press tracking on the initial down and clears any stale hold state from a prior, interrupted press. */
@@ -953,7 +1025,7 @@ class MainActivity : AppCompatActivity() {
     private fun launchBackLongPressApp() {
         val key = prefs.getBackLongPressApp()
         if (key == null) {
-            Toast.makeText(this, R.string.back_longpress_unset_toast, Toast.LENGTH_SHORT).show()
+            openOptions()
         } else {
             launchAppByKey(key)
         }
@@ -1008,6 +1080,50 @@ class MainActivity : AppCompatActivity() {
                 if (!opened) maybeShowStartupPrompts()
             }
             .show()
+    }
+
+    // ---------------------------------------------------------------- Updates
+
+    /**
+     * Checks GitHub for a newer release about once a week (Home resumes
+     * constantly, so no background scheduler is needed) and, if there is one,
+     * asks the user whether to install it. Settings > Advanced has a manual check too.
+     */
+    private fun maybeCheckForUpdate() {
+        val now = System.currentTimeMillis()
+        val last = prefs.getLastUpdateCheckAt()
+        // A last-check time in the future means the clock was turned back; check anyway.
+        if (now - last in 0 until UpdateChecker.CHECK_INTERVAL_MS) return
+        // Let the startup prompts finish first; the next resume checks instead.
+        if (startupPrompt?.isShowing == true) return
+        // Recorded up front so resumes while the check is in flight don't start another.
+        prefs.setLastUpdateCheckAt(now)
+        updateLoader.load(
+            produce = {
+                try {
+                    Result.success(UpdateChecker.fetchLatest(this))
+                } catch (e: Exception) {
+                    Result.failure(e)
+                }
+            },
+            consume = { result ->
+                result.onFailure {
+                    // Offline or rate-limited: try again in a day rather than a week.
+                    prefs.setLastUpdateCheckAt(
+                        now - UpdateChecker.CHECK_INTERVAL_MS + UpdateChecker.RETRY_AFTER_FAILURE_MS,
+                    )
+                }
+                val release = result.getOrNull() ?: return@load
+                if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) &&
+                    startupPrompt?.isShowing != true
+                ) {
+                    showUpdatePrompt(release, updateLoader)
+                } else {
+                    // Home was left (or a startup prompt came up) mid-check; ask on the next resume instead.
+                    prefs.setLastUpdateCheckAt(0L)
+                }
+            },
+        )
     }
 
     companion object {

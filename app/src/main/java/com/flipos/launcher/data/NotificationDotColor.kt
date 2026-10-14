@@ -30,6 +30,6 @@ object NotificationDotColor {
         color
     }
 
-    /** Drops memoized colors so icon/pack/shape changes recompute against new artwork. */
+    /** Drops memoized colors so icon/shape changes recompute against new artwork. */
     fun clear() = cache.clear()
 }

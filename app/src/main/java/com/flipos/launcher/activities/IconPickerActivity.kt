@@ -12,20 +12,18 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.flipos.launcher.data.BuiltInIcons
-import com.flipos.launcher.data.IconPackRepository
+import com.flipos.launcher.data.IconShapeRenderer
 import com.flipos.launcher.data.LauncherPrefs
 import com.flipos.launcher.ui.IconGridAdapter
 import com.flipos.launcher.ui.SoftKeyBar
-import com.flipos.launcher.util.BackgroundLoader
 import com.flipos.launcher.util.SoftKeyRouter
 import com.flipos.launcher.util.applyFakeBold
 import com.flipos.launcher.util.hideNavigationBar
 import com.flipos.launcher.util.toastIfUnknownKey
 
 /**
- * Lets the user replace one app's icon with any icon from an installed icon
- * pack, or from the launcher's own bundled icon set (always available, even
- * with no icon pack installed).
+ * Lets the user replace one app's icon with one of the launcher's own icons
+ * (see [BuiltInIcons]), or put back its original.
  */
 class IconPickerActivity : AppCompatActivity() {
 
@@ -34,8 +32,6 @@ class IconPickerActivity : AppCompatActivity() {
     private lateinit var titleView: TextView
     private lateinit var grid: RecyclerView
     private lateinit var adapter: IconGridAdapter
-    private var currentPack: String? = null
-    private val loader = BackgroundLoader()
 
     /** No primary action or Options here; still consumes both halves of each soft-key press. */
     private val softKeyRouter = SoftKeyRouter(onPrimary = {}, onOptions = {})
@@ -70,11 +66,16 @@ class IconPickerActivity : AppCompatActivity() {
 
         adapter = IconGridAdapter(
             onClick = { name -> applyIcon(name) },
+            // Shown clipped to the launcher's tile, as they'll look in the drawer.
             iconLoader = { name ->
-                when (currentPack) {
-                    null -> null
-                    BuiltInIcons.PACK_ID -> BuiltInIcons.loadIcon(this, name)
-                    else -> IconPackRepository.loadIcon(this, currentPack!!, name)
+                BuiltInIcons.loadIcon(this, name)?.let {
+                    IconShapeRenderer.render(
+                        context = this,
+                        source = it,
+                        shape = LauncherPrefs.IconShape.SQUIRCLE,
+                        wrapEnabled = true,
+                        legacyBackgroundEnabled = true,
+                    )
                 }
             },
         )
@@ -83,8 +84,8 @@ class IconPickerActivity : AppCompatActivity() {
 
         softKeys.setLabels(null, null, null)
 
-        titleView.text = getString(R.string.icon_picker_choose_pack)
-        choosePack()
+        titleView.text = getString(R.string.icon_picker_change)
+        chooseSource()
     }
 
     override fun onResume() {
@@ -113,41 +114,18 @@ class IconPickerActivity : AppCompatActivity() {
         return super.onKeyUp(keyCode, event)
     }
 
-    override fun onDestroy() {
-        loader.cancel()
-        super.onDestroy()
-    }
-
-    private fun choosePack() {
-        loader.load(
-            produce = { IconPackRepository.getInstalledIconPacks(this) },
-            consume = { packs ->
-                if (isDestroyed) return@load
-                // The bundled set is always offered first, so there's something
-                // to pick from even with no icon pack installed. An app with a
-                // custom icon also gets "Original icon" on top, to undo it.
-                val hasOverride = prefs.getIconOverride(appKey) != null
-                val labels = listOf(getString(R.string.icon_picker_built_in)) + packs.map { it.label }
-                val packageNames = listOf(BuiltInIcons.PACK_ID) + packs.map { it.packageName }
-                if (labels.size == 1 && !hasOverride) {
-                    openSource(packageNames[0], labels[0])
-                } else {
-                    val offset = if (hasOverride) 1 else 0
-                    val items = (if (hasOverride) listOf(getString(R.string.icon_picker_original)) else emptyList()) + labels
-                    AlertDialog.Builder(this)
-                        .setTitle(R.string.icon_picker_choose_pack)
-                        .setItems(items.toTypedArray()) { _, which ->
-                            if (which < offset) {
-                                resetToOriginal()
-                            } else {
-                                openSource(packageNames[which - offset], labels[which - offset])
-                            }
-                        }
-                        .setOnCancelListener { finish() }
-                        .show()
-                }
-            },
-        )
+    /** Straight to the icons; an app with a custom icon first gets "Original icon", to undo it. */
+    private fun chooseSource() {
+        if (prefs.getIconOverride(appKey) == null) {
+            showBuiltIn()
+            return
+        }
+        val items = arrayOf(getString(R.string.icon_picker_original), getString(R.string.icon_picker_built_in))
+        AlertDialog.Builder(this)
+            .setTitle(R.string.icon_picker_change)
+            .setItems(items) { _, which -> if (which == 0) resetToOriginal() else showBuiltIn() }
+            .setOnCancelListener { finish() }
+            .show()
     }
 
     /** Drops this app's custom icon, back to its own (what Reset Icon used to do). */
@@ -157,22 +135,10 @@ class IconPickerActivity : AppCompatActivity() {
         finish()
     }
 
-    private fun openSource(packageName: String, label: String) {
-        currentPack = packageName
-        titleView.text = label
-        if (packageName == BuiltInIcons.PACK_ID) {
-            adapter.submit(BuiltInIcons.names())
-            focusFirstIcon()
-            return
-        }
-        loader.load(
-            produce = { IconPackRepository.getDrawableNames(this, packageName) },
-            consume = { names ->
-                if (isDestroyed) return@load
-                adapter.submit(names)
-                focusFirstIcon()
-            },
-        )
+    private fun showBuiltIn() {
+        titleView.text = getString(R.string.icon_picker_built_in)
+        adapter.submit(BuiltInIcons.names())
+        focusFirstIcon()
     }
 
     /** Parks focus on the first icon so the grid is immediately D-pad navigable. */
@@ -183,8 +149,7 @@ class IconPickerActivity : AppCompatActivity() {
     }
 
     private fun applyIcon(name: String) {
-        val pack = currentPack ?: return
-        prefs.setIconOverride(appKey, pack, name)
+        prefs.setIconOverride(appKey, BuiltInIcons.PACK_ID, name)
         Toast.makeText(this, R.string.icon_picker_applied, Toast.LENGTH_SHORT).show()
         finish()
     }

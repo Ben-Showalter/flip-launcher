@@ -1,5 +1,6 @@
 package com.flipos.launcher.data
 
+import android.app.PendingIntent
 import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Looper
@@ -14,6 +15,8 @@ data class NoticeItem(
     val postTime: Long,
     val icon: Drawable?,
     val kind: NotificationKind,
+    /** What tapping it in the shade would open; null when the app gave none. */
+    val contentIntent: PendingIntent? = null,
 )
 
 /**

@@ -13,6 +13,12 @@ class LauncherPrefs(context: Context) {
     private val prefs = context.applicationContext
         .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
+    // ---------------------------------------------------------------- Updates
+
+    /** When Home last started an automatic update check (epoch ms, 0 = never). */
+    fun getLastUpdateCheckAt(): Long = prefs.getLong(KEY_LAST_UPDATE_CHECK, 0L)
+    fun setLastUpdateCheckAt(time: Long) = prefs.edit().putLong(KEY_LAST_UPDATE_CHECK, time).apply()
+
     // ---------------------------------------------------------------- Hidden
 
     fun getHiddenKeys(): MutableSet<String> =
@@ -178,6 +184,10 @@ class LauncherPrefs(context: Context) {
      * real system Settings app in an already-seeded order ([AppRepository])
      * has already run.
      */
+    /** Whether [com.flipos.launcher.data.AppRepository]'s one-time Settings-slot repair (Hotspot -> Settings) has run. */
+    fun isSettingsSlotFixedV2(): Boolean = prefs.getBoolean(KEY_SETTINGS_SLOT_FIXED_V2, false)
+    fun setSettingsSlotFixedV2() = prefs.edit().putBoolean(KEY_SETTINGS_SLOT_FIXED_V2, true).apply()
+
     fun isSettingsSeedFixed(): Boolean = prefs.getBoolean(KEY_SETTINGS_SEED_FIXED, false)
 
     fun setSettingsSeedFixed() {
@@ -201,6 +211,10 @@ class LauncherPrefs(context: Context) {
      * Whether the one-time cleanup that removes the built-in icons the old
      * automatic pass ([isBuiltInIconsApplied]) put on common apps has run.
      */
+    /** Whether the one-time reset of the launcher's own entries to their own icons has run. */
+    fun isOwnEntryIconsReset(): Boolean = prefs.getBoolean(KEY_OWN_ENTRY_ICONS_RESET, false)
+    fun setOwnEntryIconsReset() = prefs.edit().putBoolean(KEY_OWN_ENTRY_ICONS_RESET, true).apply()
+
     fun isAutoIconsReverted(): Boolean = prefs.getBoolean(KEY_AUTO_ICONS_REVERTED, false)
 
     fun setAutoIconsReverted() {
@@ -271,17 +285,9 @@ class LauncherPrefs(context: Context) {
     fun getReadAloudRate(): Float = prefs.getFloat(KEY_READ_ALOUD_RATE, 1.0f)
     fun setReadAloudRate(rate: Float) = prefs.edit().putFloat(KEY_READ_ALOUD_RATE, rate).apply()
 
-    // ------------------------------------------------------------- Icon packs
+    // ------------------------------------------------------------ App icons
 
-    /** Icon pack package applied launcher-wide, or null for default icons. */
-    fun getActiveIconPack(): String? = prefs.getString(KEY_ACTIVE_ICON_PACK, null)
-
-    fun setActiveIconPack(packageName: String?) {
-        prefs.edit().putString(KEY_ACTIVE_ICON_PACK, packageName).apply()
-        AppRepository.invalidateIconCaches()
-    }
-
-    /** Per-app icon override as (icon pack package, drawable name), or null if unset. */
+    /** Per-app icon override as (source, drawable name) - source is [BuiltInIcons.PACK_ID] - or null if unset. */
     fun getIconOverride(appKey: String): Pair<String, String>? {
         val raw = prefs.getString(iconOverrideKey(appKey), null) ?: return null
         val parts = raw.split(ICON_OVERRIDE_SEPARATOR, limit = 2)
@@ -311,6 +317,17 @@ class LauncherPrefs(context: Context) {
         val stale = prefs.all.keys.filter { it.startsWith(prefix) }
         if (stale.isEmpty()) return
         prefs.edit().apply { stale.forEach { remove(it) } }.apply()
+        AppRepository.invalidateIconCaches()
+    }
+
+    /** How many apps have a custom icon. */
+    fun iconOverrideCount(): Int = prefs.all.keys.count { it.startsWith(KEY_ICON_OVERRIDE_PREFIX) }
+
+    /** Puts every app back on its own icon (Appearance → App Icons → Restore). */
+    fun clearAllIconOverrides() {
+        val keys = prefs.all.keys.filter { it.startsWith(KEY_ICON_OVERRIDE_PREFIX) }
+        if (keys.isEmpty()) return
+        prefs.edit().apply { keys.forEach { remove(it) } }.apply()
         AppRepository.invalidateIconCaches()
     }
 
@@ -452,6 +469,7 @@ class LauncherPrefs(context: Context) {
         private const val SPEED_DIAL_SEPARATOR = "::"
         private const val KEY_APP_ORDER_V4_SEEDED = "app_order_v4_seeded"
         private const val KEY_AUTO_ICONS_REVERTED = "auto_icons_reverted"
+        private const val KEY_OWN_ENTRY_ICONS_RESET = "own_entry_icons_reset"
         private const val KEY_SETTINGS_CHOOSER = "settings_chooser"
         private const val KEY_ICON_SIZE_PERCENT = "icon_size_percent"
         private const val KEY_RIGHT_KEY_APP = "right_key_app"
@@ -464,7 +482,6 @@ class LauncherPrefs(context: Context) {
         private const val KEY_READ_ALOUD_MODE = "read_aloud_mode"
         private const val KEY_READ_ALOUD_VOICE = "read_aloud_voice"
         private const val KEY_READ_ALOUD_RATE = "read_aloud_rate"
-        private const val KEY_ACTIVE_ICON_PACK = "active_icon_pack"
         private const val KEY_DRAWER_LIST_VIEW = "drawer_list_view"
         private const val KEY_ICON_OVERRIDE_PREFIX = "icon_override_"
         private const val KEY_ACCENT_COLOR = "accent_color"
@@ -474,8 +491,10 @@ class LauncherPrefs(context: Context) {
         private const val KEY_APP_ORDER = "app_order"
         private const val KEY_APP_ORDER_SEEDED = "app_order_seeded"
         private const val KEY_SETTINGS_SEED_FIXED = "app_order_settings_seed_fixed"
+        private const val KEY_SETTINGS_SLOT_FIXED_V2 = "app_order_settings_slot_fixed_v2"
         private const val KEY_BUILT_IN_ICONS_APPLIED = "built_in_icons_applied"
         private const val KEY_UNLISTED_APPS_HIDDEN = "unlisted_apps_hidden"
+        private const val KEY_LAST_UPDATE_CHECK = "last_update_check_at"
         private const val APP_ORDER_SEPARATOR = "\n"
     }
 }

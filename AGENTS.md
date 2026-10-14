@@ -70,8 +70,13 @@ person's laptop.
   the same allowlist) - it feeds the Home banner and the app list's icon
   dots (`AppDrawerActivity.hasNotification` reads both sources), not
   Notices, since accessibility has no "list active notifications" or
-  removal event. Home asks to turn it on at startup if it's off. Its store
-  appends new items (the listener's is newest-first), so the Home banner
+  removal event. Every notification is posted, even from the app in front;
+  an app's entries are dismissed when the user leaves it. Only the app's own
+  Activity windows count as it being open (outer-screen popups such as
+  TurboText's fire window events just before the notification, which used to
+  mark the app "in front" and drop the message), and with the screen off the
+  app left open counts as closed. Home asks to turn it on at startup if it's
+  off. Its store appends new items (the listener's is newest-first), so the Home banner
   and read-aloud pick the newest by `postTime` (`NotificationStore.newest`),
   never list order. The same service filters key events
   (`flagRequestFilterKeyEvents`, set in XML and code) so any button press
@@ -90,8 +95,14 @@ person's laptop.
   `jp.kyocera.kyocerahome/.MediaCenterMenuActivity`, `.ToolsMenuActivity` and
   `.QuickSettingsActivity`, exposed as drawer shortcuts via `<activity-alias>`
   entries of `KyoceraShortcutActivity` (see `util/KyoceraShortcuts.kt`; add a
-  new one there and in the manifest). The Mic/Assistant key reports keycode
-  287 (scan 171) on the E4610, even with the launcher focused; other builds
+  new one there and in the manifest). On Android 9+ Kyocera Home's Quick
+  Settings menu (and the same rows in the phone's Settings) can't open
+  Airplane mode, Bluetooth or Hotspot unless Kyocera Home is the default
+  launcher, so there the alias opens Kyocera Settings' own copy first,
+  `jp.kyocera.settings.nfp/.core.Settings$QuickSettingsActivity` (action
+  `jp.kyocera.settings.programmablekey.action.SHORTCUTS`, what the phone's
+  programmable-key shortcut sends), which works under any launcher. The
+  Mic/Assistant key reports keycode 287 (scan 171) on the E4610, even with the launcher focused; other builds
   send `KEYCODE_F4`, so both are handled.
 - **E4610 speed dial and outer keys** (Android 7): `content://speed_dial`
   holds nothing the dialer's own Speed Dial screen
@@ -117,6 +128,9 @@ person's laptop.
   slot from known packages, then all handlers, then label
   (`AppRepository.pickApp`), searching hidden apps too and unhiding what it
   picks (the old hide-unlisted default hid Gallery/Settings on the E4610).
+  A package can have several drawer entries (Kyocera's Settings app also
+  lists Hotspot), so a slot takes the package's launch activity
+  (`AppRepository.mainEntryKey`), never just its first entry.
   The E4610 dialer's call-log drawer entry has an empty label; labels fall
   back to "Call Log", then the app label (`AppRepository.labelFor`).
 
@@ -133,6 +147,10 @@ key handling, focus, or layout. Decisions taken here:
   `util/Keys.kt`'s `SoftKeyRouter`; list screens override `onPrimaryKey()` /
   `onOptionsKey()`, never `onKeyDown` for soft keys. Home (`MainActivity`) is
   the one exception: its soft keys and D-pad are user-assignable app slots.
+  On Home, OK taps open the app drawer and an OK hold (timed by hand) opens
+  the newest banner notification (its `contentIntent`, else its app); a
+  Clr/Back hold opens the assigned app, launcher settings when none is set.
+  The banner shows the posting app's own icon.
 - **Act on key UP, consume both halves.** Anything that finishes the screen or
   launches another app/screen fires on UP, and only for a press whose DOWN
   this window saw - otherwise the stray UP lands in the next window (e.g. Home
@@ -181,7 +199,7 @@ Key pieces:
   across those list screens; `AppGridAdapter` is the App Drawer's icon grid;
   `NoticeRowAdapter` is the richer 3-line notice row.
 - `LauncherPrefs` is the single SharedPreferences wrapper — all settings
-  (icon size/shape/pack, accent color, drawer view mode, badges, shortcuts,
+  (icon size, accent color, drawer view mode, badges, shortcuts,
   hidden apps, per-app icon overrides) live there.
 - `util/WallpaperContrast.kt` measures the wallpaper's brightness (cached
   per wallpaper, off the main thread) and scales Home's and the App
@@ -201,14 +219,27 @@ Key pieces:
 ## Bundled icons & wallpapers
 
 Built-in icons and wallpapers live directly in
-`app/src/main/res/drawable-nodpi/` — that folder is the single source of truth
-(there are no separate staging folders). To add one:
+`app/src/main/res/drawable-nodpi/`; that folder is the single source of truth
+(there are no separate staging folders). Third-party icon packs are not
+supported (removed); the launcher's own icons are the only choice in Change
+Icon.
 
-1. Drop the PNG (icon) or JPG (wallpaper) into
-   `app/src/main/res/drawable-nodpi/`.
-2. Add the filename (no extension) to the matching registry:
-   `BuiltInIcons.NAMES` in `data/BuiltInIcons.kt` or `BuiltInWallpapers.NAMES`
-   in `data/BuiltInWallpapers.kt`.
-
-Resources aren't auto-discovered, so step 2 is required for the asset to show
-up in the picker.
+- **Generated icons (`ic_*`)**: large Material Design Icons glyphs
+  (Apache-2.0), each in one flat color, on a 50% transparent black tile
+  (no gradient or shadow).
+  Don't hand-edit them: add or change a row in `tools/icons/icons.csv` (name,
+  glyph, palette color, match rules) and run `tools/icons/make_icons.py` (see
+  `tools/icons/README.md`), which rewrites the PNGs and
+  `data/BuiltInIconMap.kt`. `BuiltInIcons.loadIcon` returns them as
+  `FullBleedIcon`, which `IconShapeRenderer` draws at full size with no gray
+  legacy tile behind it. The match rules feed Appearance →
+  App Icons → Use Flip Launcher icons, a one-time action that writes ordinary
+  per-app overrides (skipping apps with one already, and never the
+  launcher's own entries - Notices, Quick Settings, Media Center, Tools keep
+  their own icons); App Icons → Restore
+  system icons clears every override. There is no automatic or on/off icon
+  theming.
+- **Older icons and wallpapers**: drop the PNG/JPG in, then add the filename
+  (no extension) to `BuiltInIcons.LEGACY_NAMES` in `data/BuiltInIcons.kt` or
+  `BuiltInWallpapers.NAMES` in `data/BuiltInWallpapers.kt`. Resources aren't
+  auto-discovered, so the registry step is required.

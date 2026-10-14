@@ -58,8 +58,10 @@ object IconShapeRenderer {
         val size = (CANVAS_DP * context.resources.displayMetrics.density).toInt().coerceAtLeast(1)
         val res = context.resources
         // Work on an isolated copy: we mutate the source's bounds while drawing,
-        // and the source may be a shared/cached icon-pack or PM drawable instance.
-        val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && source is AdaptiveIconDrawable) {
+        // and the source may be a shared/cached built-in or PM drawable instance.
+        val bitmap = if (source is FullBleedIcon) {
+            renderFullBleed(source.freshCopy(res), size, shape)
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && source is AdaptiveIconDrawable) {
             renderAdaptive(source.freshCopy(res) as? AdaptiveIconDrawable ?: source, size, shape)
         } else {
             renderLegacy(source.freshCopy(res), size, shape, legacyBackgroundEnabled)
@@ -82,6 +84,14 @@ object IconShapeRenderer {
         val offset = (size - scaledSize) / 2
         drawable.background?.let { it.setBounds(offset, offset, offset + scaledSize, offset + scaledSize); it.draw(canvas) }
         drawable.foreground?.let { it.setBounds(offset, offset, offset + scaledSize, offset + scaledSize); it.draw(canvas) }
+        return applyMask(content, shape, size)
+    }
+
+    /** A [FullBleedIcon] is drawn over the whole canvas, then masked - no gray tile, no inset. */
+    private fun renderFullBleed(drawable: Drawable, size: Int, shape: LauncherPrefs.IconShape): Bitmap {
+        val content = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        drawable.setBounds(0, 0, size, size)
+        drawable.draw(Canvas(content))
         return applyMask(content, shape, size)
     }
 

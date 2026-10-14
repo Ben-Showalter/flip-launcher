@@ -11,7 +11,7 @@ import android.widget.ImageView
 import androidx.recyclerview.widget.RecyclerView
 import com.flipos.launcher.R
 
-/** Grid of individual icons inside one icon pack, for picking a replacement app icon. */
+/** Grid of the launcher's own icons, for picking a replacement app icon. */
 class IconGridAdapter(
     private val onClick: (String) -> Unit,
     private val iconLoader: (String) -> Drawable?,
@@ -41,11 +41,13 @@ class IconGridAdapter(
     inner class VH(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val icon: ImageView = itemView.findViewById(R.id.icon)
 
-        // Same focus/press squircle the app drawer uses, so the picker is
-        // navigable by D-pad with a visible highlight on the focused icon.
+        // A focus ring around the icon, as in the app drawer - a fill behind
+        // it would be hidden by the full-tile icons.
         init {
-            itemView.findViewById<View>(R.id.icon_frame).background =
-                SquircleDrawable(highlightColor(itemView.context))
+            itemView.findViewById<View>(R.id.icon_frame).background = SquircleDrawable(
+                highlightColor(itemView.context),
+                ringWidthPx = FOCUS_RING_DP * itemView.resources.displayMetrics.density,
+            )
         }
 
         fun bind(name: String) {
@@ -53,5 +55,9 @@ class IconGridAdapter(
             icon.contentDescription = name
             itemView.setOnClickListener { onClick(name) }
         }
+    }
+
+    private companion object {
+        const val FOCUS_RING_DP = 4f
     }
 }

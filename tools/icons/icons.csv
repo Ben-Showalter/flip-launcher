@@ -1,0 +1,109 @@
+# name,mdi_glyph,color,match
+# color: a palette key from make_icons.py. match: space-separated rules -
+#   cat:<dialer|sms|contacts|camera|gallery|calendar|email|music|settings>  (CategoryApps resolvers)
+#   pkg:<package>   the package's main entry
+#   cmp:<package>/<class>   one exact drawer entry
+#   label:<Drawer_Label>   any entry with that label (_ for a space), for phones whose packages aren't listed
+# Rows are grouped; the picker keeps this order. The launcher's own entries
+# (Notices, Quick Settings, Media Center, Tools) are never matched: they keep
+# their own icons.
+phone,phone,green,cat:dialer label:Phone
+dialpad,dialpad,green,
+call_log,phone-log,teal,cmp:com.android.dialer/com.android.dialer.calllog.CallLogActivityKc cmp:com.android.dialer/com.android.dialer.app.calllog.CallLogActivityKc label:Call_Log label:Call_History label:Recent_Calls
+voicemail,voicemail,blue,
+contacts,account-box,orange,cat:contacts pkg:com.android.contacts label:Contacts
+messages,message-text,teal,cat:sms pkg:com.android.mms pkg:com.android.messaging label:Messages label:Messaging
+chat,chat,sky,pkg:com.turbotext.app
+group_chat,forum,indigo,pkg:org.matchat.client
+email,email,red,cat:email label:Email
+notices,bell,orange,
+alarm,alarm,yellow,pkg:com.kyocera.alarm pkg:com.android.deskclock label:Alarm label:Alarm_Clock label:Clock
+clock,clock-outline,navy,
+timer,timer-sand,orange,pkg:com.kyocera.timer label:Timer
+stopwatch,timer-outline,pink,pkg:com.kyocera.stopwatch label:Stopwatch
+world_clock,earth,sky,pkg:com.kyocera.worldclock label:World_Clock
+calculator,calculator-variant,indigo,pkg:com.kyocera.calculator2 pkg:com.android.calculator2 label:Calculator
+calendar,calendar-month,red,cat:calendar pkg:com.android.calendar label:Calendar
+notes,note-text,amber,pkg:jp.kyocera.memo label:Notes label:Notepad label:Memo
+tasks,checkbox-marked-circle-outline,blue,
+recorder,microphone,pink,pkg:jp.kyocera.kc_soundrecorder pkg:com.android.soundrecorder label:Sound_Recorder label:Voice_Recorder label:Recorder
+flashlight,flashlight,charcoal,pkg:com.kyocera.flashlight label:Flashlight
+converter,ruler,green,
+translate,translate,blue,pkg:com.turbotranslate.app label:Translate
+compass,compass,red,
+qr_scanner,qrcode-scan,charcoal,
+tools,toolbox,orange,
+wrench,wrench,gray,
+camera,camera,gray,cat:camera pkg:jp.kyocera.camera label:Camera
+gallery,image-multiple,purple,cat:gallery pkg:jp.kyocera.gallery.launcher pkg:jp.kyocera.gallery pkg:com.android.gallery3d label:Gallery label:Photos label:Pictures
+photos,image,sky,
+video,play-circle,purple,label:Videos label:Video_Player
+movies,movie-open,red,
+media_center,play-box-multiple,purple,
+music,music-note,orange,cat:music pkg:com.kyocera.musicplayer label:Music label:Music_Player
+headphones,headphones,indigo,
+radio,radio,red,pkg:com.android.fmradio pkg:com.caf.fmradio label:FM_Radio label:Radio
+podcasts,podcast,purple,
+audiobooks,book-music,brown,
+tv,television,navy,
+browser,web,blue,pkg:com.android.browser label:Browser label:Internet
+navigation,navigation,blue,
+maps,map-marker,green,
+weather,weather-partly-cloudy,white,pkg:com.flipweather.app label:Weather
+wifi,wifi,blue,
+bluetooth,bluetooth,navy,
+hotspot,access-point,orange,
+airplane_mode,airplane,sky,
+cloud,cloud,sky,
+settings,cog,slate,cat:settings pkg:jp.kyocera.settings.nfp pkg:com.android.settings label:Settings
+quick_settings,tune-vertical,teal,
+apps,apps,indigo,
+files,folder,amber,pkg:jp.kyocera.filemanager.launcher pkg:com.android.documentsui label:Files label:File_Manager label:My_Files
+downloads,download,green,label:Downloads
+storage,sd,gray,
+sim,sim,gray,
+battery,battery-high,green,
+display,brightness-6,amber,
+sound,volume-high,purple,
+security,shield-lock,navy,
+lock,lock,navy,
+passwords,key,amber,
+accessibility,human,blue,
+search,magnify,slate,
+book,book-open-variant,brown,
+bible,book-cross,brown,
+church,church,brown,
+news,newspaper,gray,
+school,school,indigo,
+work,briefcase,brown,
+games,gamepad-variant,purple,
+cards,cards-playing-outline,green,
+dice,dice-5,red,
+chess,chess-knight,charcoal,
+puzzle,puzzle,orange,
+sports,soccer,green,
+health,heart-pulse,red,
+fitness,run,orange,
+medication,pill,pink,
+emergency,hospital-box,red,
+scale,scale-bathroom,teal,
+bank,bank,navy,
+wallet,wallet,brown,
+stocks,chart-line,green,
+shopping,cart,orange,
+store,storefront,teal,
+gift,gift,pink,
+home,home,blue,
+car,car,red,
+gas,gas-station,red,
+bus,bus,yellow,
+flight,airplane-takeoff,sky,
+food,silverware-fork-knife,orange,
+recipes,chef-hat,orange,
+coffee,coffee,brown,
+family,account-group,pink,
+pets,paw,brown,
+garden,flower,green,
+water,water,sky,
+lightbulb,lightbulb,yellow,
+star,star,yellow,

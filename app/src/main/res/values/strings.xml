@@ -22,6 +22,8 @@
     <string name="opt_set_wallpaper">Set Wallpaper</string>
     <string name="opt_default_launcher">Set as Default Launcher</string>
     <string name="opt_system_settings">System Settings</string>
+    <string name="opt_check_updates">Check for Updates</string>
+    <string name="opt_check_updates_sub">Installed version %1$s</string>
     <string name="opt_back_longpress">Back Button (Long-Press)</string>
     <string name="opt_menu_key">Menu Key (Long-Press)</string>
 
@@ -47,11 +49,12 @@
     <string name="content_apps">Open apps menu</string>
     <string name="hidden_badge">Hidden</string>
     <string name="back_longpress_not_set">Not set</string>
+    <string name="back_longpress_default">Launcher Settings</string>
+    <string name="toast_no_notifications">No notifications</string>
     <string name="back_longpress_choose">Choose App</string>
     <string name="back_longpress_clear">Clear</string>
     <string name="back_longpress_app_set">Long-press Back will open %1$s</string>
     <string name="back_longpress_app_cleared">Long-press Back is now unassigned</string>
-    <string name="back_longpress_unset_toast">No app set for long-press Back. Configure it in Settings.</string>
     <string name="menu_key_unset_toast">No app set for long-press Menu. Configure it in Settings.</string>
     <string name="key_assigned_toast">%1$s will open on long-press</string>
     <string name="directional_key_unset_toast">No app set for this key. Configure it in Settings.</string>
@@ -148,7 +151,21 @@
     <string name="settings_left_key_set">Left key will open %1$s</string>
     <string name="settings_left_key_cleared">Left key reset to Contacts</string>
     <string name="settings_icon_size_set">Icon size set to %1$s</string>
-    <string name="settings_icon_pack">Icon Pack</string>
+    <string name="settings_replace_icons">App Icons</string>
+    <string name="settings_replace_icons_sub">Switch to Flip Launcher\'s icons, or back to the apps\' own</string>
+    <string name="app_icons_use_flip">Use Flip Launcher icons</string>
+    <string name="app_icons_restore">Restore system icons</string>
+    <string name="restore_icons_confirm_title">Restore system icons?</string>
+    <string name="restore_icons_confirm_message">%1$d apps go back to their own icon, including icons you picked yourself.</string>
+    <string name="restore_icons_confirm">Restore</string>
+    <string name="restore_icons_none">All apps already use their own icon</string>
+    <string name="restore_icons_done">System icons restored</string>
+    <string name="replace_icons_confirm_title">Replace app icons?</string>
+    <string name="replace_icons_confirm_message">%1$d apps will get Flip Launcher\'s icon. Icons you picked yourself stay. You can change any icon later with Change Icon.</string>
+    <string name="replace_icons_confirm">Replace</string>
+    <string name="replace_icons_none">No app icons to replace</string>
+    <string name="replace_icons_done">Replaced %1$d icons</string>
+    <string name="icon_picker_change">Change Icon</string>
     <string name="settings_accent_color">Accent Color</string>
     <string name="settings_accent_color_set">Accent color set to %1$s</string>
     <string name="accent_color_default">Cyan (default)</string>
@@ -194,12 +211,7 @@
     <string name="notices_dismiss_all_confirm">Dismiss All</string>
     <string name="notices_dismiss_all_cancel">Cancel</string>
 
-    <!-- Icon packs -->
-    <string name="title_icon_packs">Icon Packs</string>
-    <string name="icon_pack_default">Default (No Pack)</string>
-    <string name="icon_pack_reset">Icons reset to default</string>
-    <string name="icon_pack_applied">Applied %1$s</string>
-    <string name="icon_picker_choose_pack">Choose Icon Pack</string>
+    <!-- Change Icon -->
     <string name="icon_picker_built_in">Built-in Icons</string>
     <string name="icon_picker_applied">Icon updated</string>
     <string name="icon_picker_reset">Icon reset to default</string>
@@ -290,4 +302,16 @@
     <string name="ctx_list_view">Switch to List View</string>
     <string name="ctx_grid_view">Switch to Grid View</string>
     <string name="icon_picker_original">Original icon</string>
+
+    <!-- In-app updates (data/UpdateChecker.kt, util/UpdatePrompt.kt) -->
+    <string name="update_available_title">Update available: v%1$s</string>
+    <string name="update_available_message">A new version of Flip Launcher is ready to install (%1$s MB).\n\nA Wi-Fi connection is preferred for downloading updates.</string>
+    <string name="update_on_mobile_data">You are currently on mobile data.</string>
+    <string name="update_install">Install</string>
+    <string name="update_later">Later</string>
+    <string name="update_downloading">Downloading update…</string>
+    <string name="update_failed">Update download failed</string>
+    <string name="update_checking">Checking for updates…</string>
+    <string name="update_up_to_date">Flip Launcher is up to date</string>
+    <string name="update_check_failed">Couldn\'t check for updates</string>
 </resources>

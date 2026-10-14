@@ -171,7 +171,7 @@ class HomeKeysSettingsActivity : BaseListActivity() {
         val rightLabel = prefs.getRightKeyApp()?.let { AppRepository.resolveComponent(this, it)?.label }
             ?: getString(R.string.settings_right_key_sms)
         val backLabel = prefs.getBackLongPressApp()?.let { AppRepository.resolveComponent(this, it)?.label }
-            ?: getString(R.string.back_longpress_not_set)
+            ?: getString(R.string.back_longpress_default)
         val menuLabel = prefs.getMenuKeyApp()?.let { AppRepository.resolveComponent(this, it)?.label }
             ?: getString(R.string.back_longpress_not_set)
         fun directionalLabel(keyCode: Int) = getDirectionalKeyApp(keyCode)?.let { AppRepository.resolveComponent(this, it)?.label }

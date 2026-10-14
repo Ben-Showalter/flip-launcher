@@ -18,7 +18,9 @@ local.properties
 
 # Signing keys (keep the shared debug keystore, ignore everything else)
 *.keystore
+*.jks
 !debug.keystore
+keystore.properties
 
 # Kotlin
 .kotlin/
