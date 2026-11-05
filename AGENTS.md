@@ -81,7 +81,12 @@ person's laptop.
   the flip onto an app fires no window event. That receiver must be
   registered `RECEIVER_EXPORTED`: below Android 13, `RECEIVER_NOT_EXPORTED`
   adds an app-private permission that blocks `USER_PRESENT` (SystemUI sends
-  it from an app uid). Messages that arrive with the
+  it from an app uid). The seen state lives in `NotificationStore`
+  (`markSeen`/`dismissSeen`/`dismissAllSeen`) so the launcher backs the
+  service up: `launchAppDirect` and the OK hold mark the app they open as
+  seen, and Home's `onResume` dismisses every seen entry (accessibility feed
+  only). The service and Home log each step under the `FlipNotif` tag.
+  Messages that arrive with the
   flip closed stay until their app has been opened and left. Calendar
   event/reminder notifications (category `event`/`reminder`, or anything
   from the default calendar app) are their own `NotificationKind.EVENT`,

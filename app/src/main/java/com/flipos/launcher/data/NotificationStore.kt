@@ -4,6 +4,7 @@ import android.app.PendingIntent
 import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Looper
+import java.util.Collections
 import java.util.concurrent.CopyOnWriteArraySet
 
 /** One active notification, as shown in the custom Notices screen. */
@@ -55,7 +56,43 @@ object NotificationStore {
 
     fun update(items: List<NoticeItem>) {
         this.items = items
+        val keys = items.mapTo(HashSet()) { it.key }
+        seenKeys.retainAll(keys)
         notifyListeners()
+    }
+
+    // ------------------------------------------------- Seen (accessibility feed)
+    //
+    // With the accessibility fallback there's no removal event, so an entry is
+    // dismissed once the user has seen its app and left it. Both the service
+    // (window/screen events) and the launcher (it opened the app; Home came
+    // back) record that here. Synchronized: [update] can run on the
+    // listener's binder thread.
+
+    /** Keys of [items] whose app the user has had on screen since they were posted. */
+    private val seenKeys: MutableSet<String> = Collections.synchronizedSet(HashSet())
+
+    /** Marks every current entry from [packageName] as seen. */
+    fun markSeen(packageName: String) {
+        items.filter { it.packageName == packageName }.forEach { seenKeys.add(it.key) }
+    }
+
+    /** Marks one entry as seen - posted while its app was on screen. */
+    fun markSeenKey(key: String) {
+        seenKeys.add(key)
+    }
+
+    /** Removes [packageName]'s seen entries (the user left that app). Returns how many. */
+    fun dismissSeen(packageName: String): Int = dismissWhere { it.packageName == packageName && it.key in seenKeys }
+
+    /** Removes every seen entry (the user is back on Home, so they've left those apps). Returns how many. */
+    fun dismissAllSeen(): Int = dismissWhere { it.key in seenKeys }
+
+    private fun dismissWhere(predicate: (NoticeItem) -> Boolean): Int {
+        val kept = items.filterNot(predicate)
+        val removed = items.size - kept.size
+        if (removed > 0) update(kept)
+        return removed
     }
 
     private fun notifyListeners() {

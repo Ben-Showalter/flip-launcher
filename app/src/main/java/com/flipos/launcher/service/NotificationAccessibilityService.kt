@@ -11,6 +11,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.PowerManager
+import android.util.Log
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
 import androidx.core.content.ContextCompat
@@ -43,7 +44,7 @@ import com.flipos.launcher.util.ReadAloudSpeaker
  * (dialogs, toasts, the keyboard, SystemUI, and outer-screen popups like
  * TurboText's, which fire just before the app's notification) would
  * otherwise look like the app opening and closing. An entry counts as seen
- * ([seenKeys]) when it's posted while its app is on screen, or when its app
+ * ([NotificationStore.markSeen]) when it's posted while its app is on screen, or when its app
  * comes on screen: a window change, or the screen coming back on / unlocking
  * with the app still in front (opening the flip onto an app fires no window
  * event, which used to leave its entry stuck). A message that arrives with
@@ -57,14 +58,13 @@ class NotificationAccessibilityService : AccessibilityService() {
     /** "pkg/class" -> whether it's one of that package's Activities; window events repeat, so cache. */
     private val isActivityCache = HashMap<String, Boolean>()
 
-    /** Keys of [NotificationStore] entries the user has seen their app with; dismissed on leaving it. */
-    private val seenKeys = HashSet<String>()
-
     /** The screen came back on or was unlocked with an app still in front: its entries are now seen. */
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (NotificationCountService.instance != null) return
-            if (isScreenVisible()) foregroundPackage?.let { markSeen(it) }
+            val visible = isScreenVisible()
+            Log.d(TAG, "${intent?.action}: visible=$visible foreground=$foregroundPackage")
+            if (visible) foregroundPackage?.let { NotificationStore.markSeen(it) }
         }
     }
     private var screenReceiverRegistered = false
@@ -122,11 +122,16 @@ class NotificationAccessibilityService : AccessibilityService() {
     private fun handleForegroundChange(event: AccessibilityEvent) {
         val packageName = event.packageName?.toString() ?: return
         val className = event.className?.toString() ?: return
-        if (packageName == foregroundPackage || !isActivity(packageName, className)) return
+        val isApp = isActivity(packageName, className)
+        Log.d(TAG, "window $packageName/$className app=$isApp foreground=$foregroundPackage")
+        if (packageName == foregroundPackage || !isApp) return
         // The previous app was left - dismiss what the user saw of it.
-        foregroundPackage?.let { dismissSeen(it) }
+        foregroundPackage?.let {
+            val removed = NotificationStore.dismissSeen(it)
+            Log.d(TAG, "left $it: dismissed $removed")
+        }
         foregroundPackage = packageName
-        if (isScreenVisible()) markSeen(packageName)
+        if (isScreenVisible()) NotificationStore.markSeen(packageName)
     }
 
     /** Screen on and unlocked: what's in front is actually being looked at. */
@@ -136,15 +141,6 @@ class NotificationAccessibilityService : AccessibilityService() {
         return power?.isInteractive != false && keyguard?.isKeyguardLocked != true
     }
 
-    private fun markSeen(packageName: String) {
-        NotificationStore.items.filter { it.packageName == packageName }.forEach { seenKeys.add(it.key) }
-    }
-
-    private fun dismissSeen(packageName: String) {
-        val kept = NotificationStore.items.filterNot { it.packageName == packageName && it.key in seenKeys }
-        if (kept.size != NotificationStore.items.size) NotificationStore.update(kept)
-        seenKeys.retainAll(kept.map { it.key }.toSet())
-    }
 
     private fun isActivity(packageName: String, className: String): Boolean =
         isActivityCache.getOrPut("$packageName/$className") {
@@ -179,10 +175,11 @@ class NotificationAccessibilityService : AccessibilityService() {
         val merged = (NotificationStore.items.filterNot { it.packageName == packageName } + newItem)
             .sortedByDescending { it.postTime }
             .take(MAX_PENDING)
-        // Posted while its app is on screen: the user is looking at it already.
-        if (packageName == foregroundPackage && isScreenVisible()) seenKeys.add(newItem.key)
-        seenKeys.retainAll(merged.map { it.key }.toSet())
         NotificationStore.update(merged)
+        // Posted while its app is on screen: the user is looking at it already.
+        val seen = packageName == foregroundPackage && isScreenVisible()
+        if (seen) NotificationStore.markSeenKey(newItem.key)
+        Log.d(TAG, "posted $packageName seen=$seen foreground=$foregroundPackage")
     }
 
     override fun onInterrupt() {}
@@ -204,5 +201,8 @@ class NotificationAccessibilityService : AccessibilityService() {
     companion object {
         /** Defensive cap on how many distinct apps' pending notifications this stacks. */
         private const val MAX_PENDING = 10
+
+        /** Logcat tag for the banner's seen/dismiss trail (filter `tag:FlipNotif`). */
+        const val TAG = "FlipNotif"
     }
 }

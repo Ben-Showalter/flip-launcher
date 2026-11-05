@@ -18,6 +18,7 @@ import android.os.Looper
 import android.os.PowerManager
 import android.provider.MediaStore
 import android.provider.Settings
+import android.util.Log
 import android.speech.RecognizerIntent
 import android.view.KeyEvent
 import android.view.View
@@ -37,6 +38,8 @@ import com.flipos.launcher.data.LauncherPrefs
 import com.flipos.launcher.data.NotificationKind
 import com.flipos.launcher.data.NotificationStore
 import com.flipos.launcher.data.UpdateChecker
+import com.flipos.launcher.service.NotificationAccessibilityService
+import com.flipos.launcher.service.NotificationCountService
 import com.flipos.launcher.util.BackgroundLoader
 import com.flipos.launcher.util.CategoryApps
 import com.flipos.launcher.util.KEYCODE_ASSISTANT_RAW
@@ -274,6 +277,12 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         window.hideNavigationBar()
+        // Back on Home: the user has left whatever app they opened, so its seen
+        // banner entries go (accessibility feed only - the listener has real removals).
+        if (NotificationCountService.instance == null) {
+            val removed = NotificationStore.dismissAllSeen()
+            if (removed > 0) Log.d(NotificationAccessibilityService.TAG, "Home resumed: dismissed $removed")
+        }
         applyWallpaperScrim()
         ContextCompat.registerReceiver(
             this,
@@ -748,6 +757,8 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, NoticesActivity::class.java))
             return
         }
+        // Opening it counts as seeing it; it goes when Home comes back.
+        NotificationStore.markSeen(item.packageName)
         try {
             item.contentIntent?.let { it.send(); return }
         } catch (e: Exception) {
