@@ -243,9 +243,8 @@ class MainActivity : AppCompatActivity() {
         ampm = findViewById(R.id.ampm)
         weekday = findViewById(R.id.weekday)
         dateLine = findViewById(R.id.date_line)
-        notifBanner = findViewById<View>(R.id.notif_banner).apply {
-            backgroundTintList = ColorStateList.valueOf(accentColorAlpha(0xE6))
-        }
+        // Dark, semi-transparent background from bg_notif_banner - not the accent.
+        notifBanner = findViewById(R.id.notif_banner)
         notifBannerIcon = findViewById(R.id.notif_banner_icon)
         notifBannerApp = findViewById(R.id.notif_banner_app)
         notifBannerText = findViewById(R.id.notif_banner_text)
@@ -457,6 +456,7 @@ class MainActivity : AppCompatActivity() {
         val (iconRes, cdRes) = when (item.kind) {
             NotificationKind.CALL -> R.drawable.ic_call to R.string.cd_notif_calls
             NotificationKind.MESSAGE -> R.drawable.ic_message to R.string.cd_notif_messages
+            NotificationKind.EVENT -> R.drawable.ic_event to R.string.cd_notif_events
             NotificationKind.OTHER -> R.drawable.ic_notification to R.string.cd_notif_other
         }
         val hideText = prefs.isNotificationTextHidden()
@@ -738,11 +738,14 @@ class MainActivity : AppCompatActivity() {
         openNewestNotification()
     }
 
-    /** Opens what the Home banner shows, as tapping it in the shade would; else its app. */
+    /**
+     * Opens what the Home banner shows, as tapping it in the shade would;
+     * else its app. With nothing on the banner, opens the Notices screen.
+     */
     private fun openNewestNotification() {
         val item = NotificationStore.newest { prefs.isShownOnHome(it.kind) }
         if (item == null) {
-            Toast.makeText(this, R.string.toast_no_notifications, Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this, NoticesActivity::class.java))
             return
         }
         try {

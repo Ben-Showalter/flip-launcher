@@ -69,7 +69,11 @@ object ReadAloud {
     private fun phrase(context: Context, prefs: LauncherPrefs, item: NoticeItem): String {
         // Mirror the banner: with message text hidden it shows only the app name.
         if (prefs.isNotificationTextHidden()) return appLabel(context, item.packageName)
-        val title = if (item.kind == NotificationKind.MESSAGE) "Message from ${item.title}" else item.title
+        val title = when (item.kind) {
+            NotificationKind.MESSAGE -> "Message from ${item.title}"
+            NotificationKind.EVENT -> "Reminder: ${item.title}"
+            else -> item.title
+        }
         return if (item.text.isBlank()) title else "$title. ${item.text}"
     }
 

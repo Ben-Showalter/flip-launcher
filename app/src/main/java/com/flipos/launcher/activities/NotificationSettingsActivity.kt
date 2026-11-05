@@ -46,6 +46,9 @@ class NotificationSettingsActivity : BaseListActivity() {
         actions[ID_MESSAGES] = {
             prefs.setMessageBadgeEnabled(!prefs.isMessageBadgeEnabled()); refreshRows()
         }
+        actions[ID_EVENTS] = {
+            prefs.setEventBadgeEnabled(!prefs.isEventBadgeEnabled()); refreshRows()
+        }
         actions[ID_OTHER] = {
             prefs.setOtherBadgeEnabled(!prefs.isOtherBadgeEnabled()); refreshRows()
         }
@@ -87,6 +90,7 @@ class NotificationSettingsActivity : BaseListActivity() {
                 GROUP_BANNER -> listOf(
                     Row(id = ID_CALLS, title = getString(R.string.settings_notif_calls), toggle = prefs.isCallBadgeEnabled()),
                     Row(id = ID_MESSAGES, title = getString(R.string.settings_notif_messages), toggle = prefs.isMessageBadgeEnabled()),
+                    Row(id = ID_EVENTS, title = getString(R.string.settings_notif_events), toggle = prefs.isEventBadgeEnabled()),
                     Row(id = ID_OTHER, title = getString(R.string.settings_notif_other), toggle = prefs.isOtherBadgeEnabled()),
                     Row(
                         id = ID_HIDE_TEXT,
@@ -205,6 +209,7 @@ class NotificationSettingsActivity : BaseListActivity() {
         private const val ID_CALLS = "calls"
         private const val ID_MESSAGES = "messages"
         private const val ID_OTHER = "other"
+        private const val ID_EVENTS = "events"
         private const val ID_HIDE_TEXT = "hide_text"
         private const val ID_DOTS = "dots"
         private const val ID_READ_ALOUD = "read_aloud"

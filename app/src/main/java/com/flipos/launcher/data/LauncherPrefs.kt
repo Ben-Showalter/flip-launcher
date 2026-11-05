@@ -254,6 +254,9 @@ class LauncherPrefs(context: Context) {
     fun isMessageBadgeEnabled(): Boolean = prefs.getBoolean(KEY_BADGE_MESSAGES, true)
     fun setMessageBadgeEnabled(enabled: Boolean) = prefs.edit().putBoolean(KEY_BADGE_MESSAGES, enabled).apply()
 
+    fun isEventBadgeEnabled(): Boolean = prefs.getBoolean(KEY_BADGE_EVENTS, true)
+    fun setEventBadgeEnabled(enabled: Boolean) = prefs.edit().putBoolean(KEY_BADGE_EVENTS, enabled).apply()
+
     fun isOtherBadgeEnabled(): Boolean = prefs.getBoolean(KEY_BADGE_OTHER, false)
     fun setOtherBadgeEnabled(enabled: Boolean) = prefs.edit().putBoolean(KEY_BADGE_OTHER, enabled).apply()
 
@@ -269,6 +272,7 @@ class LauncherPrefs(context: Context) {
     fun isShownOnHome(kind: NotificationKind): Boolean = when (kind) {
         NotificationKind.CALL -> isCallBadgeEnabled()
         NotificationKind.MESSAGE -> isMessageBadgeEnabled()
+        NotificationKind.EVENT -> isEventBadgeEnabled()
         NotificationKind.OTHER -> isOtherBadgeEnabled()
     }
 
@@ -477,6 +481,7 @@ class LauncherPrefs(context: Context) {
         private const val KEY_BADGE_CALLS = "badge_calls"
         private const val KEY_BADGE_MESSAGES = "badge_messages"
         private const val KEY_BADGE_OTHER = "badge_other"
+        private const val KEY_BADGE_EVENTS = "badge_events"
         private const val KEY_BADGE_ICON_DOT = "badge_icon_dot"
         private const val KEY_NOTIF_TEXT_HIDDEN = "notif_text_hidden"
         private const val KEY_READ_ALOUD_MODE = "read_aloud_mode"

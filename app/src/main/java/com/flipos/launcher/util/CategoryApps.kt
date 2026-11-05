@@ -37,6 +37,13 @@ object CategoryApps {
     fun contactsKey(context: Context): String? = categoryKey(context, Intent.CATEGORY_APP_CONTACTS)
     fun galleryKey(context: Context): String? = categoryKey(context, Intent.CATEGORY_APP_GALLERY)
     fun calendarKey(context: Context): String? = categoryKey(context, Intent.CATEGORY_APP_CALENDAR)
+
+    /** The default calendar app's package, or null - its notifications count as events. */
+    fun calendarPackage(context: Context): String? = try {
+        calendarKey(context)?.let { ComponentName.unflattenFromString(it)?.packageName }
+    } catch (e: Exception) {
+        null
+    }
     fun emailKey(context: Context): String? = categoryKey(context, Intent.CATEGORY_APP_EMAIL)
     fun musicKey(context: Context): String? = categoryKey(context, Intent.CATEGORY_APP_MUSIC)
 

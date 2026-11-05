@@ -50,7 +50,6 @@
     <string name="hidden_badge">Hidden</string>
     <string name="back_longpress_not_set">Not set</string>
     <string name="back_longpress_default">Launcher Settings</string>
-    <string name="toast_no_notifications">No notifications</string>
     <string name="back_longpress_choose">Choose App</string>
     <string name="back_longpress_clear">Clear</string>
     <string name="back_longpress_app_set">Long-press Back will open %1$s</string>
@@ -227,6 +226,7 @@
     <string name="settings_notif_access_denied">Not granted — tap to enable</string>
     <string name="settings_notif_calls">Show Missed Calls</string>
     <string name="settings_notif_messages">Show Messages</string>
+    <string name="settings_notif_events">Show Events and Reminders</string>
     <string name="settings_notif_other">Show Other Notifications</string>
     <string name="settings_notif_hide_text">Hide Message Text</string>
     <string name="settings_notif_hide_text_sub">Show only the app name on Home, not the message content</string>
@@ -256,6 +256,7 @@
     <string name="settings_toggle_off">Off</string>
     <string name="cd_notif_calls">Missed calls</string>
     <string name="cd_notif_messages">Messages</string>
+    <string name="cd_notif_events">Events and reminders</string>
     <string name="cd_notif_other">Other notifications</string>
 
     <!-- Drawer shortcuts into Kyocera's own Home menus (util/KyoceraShortcuts.kt). -->

@@ -71,11 +71,18 @@ person's laptop.
   dots (`AppDrawerActivity.hasNotification` reads both sources), not
   Notices, since accessibility has no "list active notifications" or
   removal event. Every notification is posted, even from the app in front;
-  an app's entries are dismissed when the user leaves it. Only the app's own
-  Activity windows count as it being open (outer-screen popups such as
-  TurboText's fire window events just before the notification, which used to
-  mark the app "in front" and drop the message), and with the screen off the
-  app left open counts as closed. Home asks to turn it on at startup if it's
+  an entry is dismissed once the user has seen its app and then left it.
+  Only the app's own Activity windows count as it being open (outer-screen
+  popups such as TurboText's fire window events just before the
+  notification, which used to mark the app "in front" and drop the
+  message). An entry counts as seen when posted while its app is on screen
+  (screen on, keyguard down) or when its app comes on screen - a window
+  change, or `SCREEN_ON`/`USER_PRESENT` with it still in front, since opening
+  the flip onto an app fires no window event. Messages that arrive with the
+  flip closed stay until their app has been opened and left. Calendar
+  event/reminder notifications (category `event`/`reminder`, or anything
+  from the default calendar app) are their own `NotificationKind.EVENT`,
+  shown on the banner by default. Home asks to turn it on at startup if it's
   off. Its store appends new items (the listener's is newest-first), so the Home banner
   and read-aloud pick the newest by `postTime` (`NotificationStore.newest`),
   never list order. The same service filters key events
@@ -148,9 +155,11 @@ key handling, focus, or layout. Decisions taken here:
   `onOptionsKey()`, never `onKeyDown` for soft keys. Home (`MainActivity`) is
   the one exception: its soft keys and D-pad are user-assignable app slots.
   On Home, OK taps open the app drawer and an OK hold (timed by hand) opens
-  the newest banner notification (its `contentIntent`, else its app); a
+  the newest banner notification (its `contentIntent`, else its app), or
+  Notices when the banner is empty; a
   Clr/Back hold opens the assigned app, launcher settings when none is set.
-  The banner shows the posting app's own icon.
+  The banner shows the posting app's own icon on a semi-transparent dark
+  background (not the accent), with white text.
 - **Act on key UP, consume both halves.** Anything that finishes the screen or
   launches another app/screen fires on UP, and only for a press whose DOWN
   this window saw - otherwise the stray UP lands in the next window (e.g. Home

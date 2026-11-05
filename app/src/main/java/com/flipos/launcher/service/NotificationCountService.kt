@@ -12,6 +12,7 @@ import com.flipos.launcher.data.NotificationCategorizer
 import com.flipos.launcher.data.NotificationCounts
 import com.flipos.launcher.data.NotificationKind
 import com.flipos.launcher.data.NotificationStore
+import com.flipos.launcher.util.CategoryApps
 import com.flipos.launcher.util.ReadAloud
 
 /**
@@ -58,6 +59,7 @@ class NotificationCountService : NotificationListenerService() {
         } catch (e: SecurityException) {
             return
         }
+        val calendarPackage = CategoryApps.calendarPackage(this)
 
         var calls = 0
         var messages = 0
@@ -68,11 +70,12 @@ class NotificationCountService : NotificationListenerService() {
             // Group summaries and our own posted-by-system rows aren't real, user-facing
             // notifications, so they're skipped to avoid inflating the "other" count.
             if (sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0) continue
-            val kind = NotificationCategorizer.kindOf(sbn.notification.category)
+            val kind = NotificationCategorizer.kindOf(sbn.notification.category, sbn.packageName, calendarPackage)
             when (kind) {
                 NotificationKind.CALL -> calls++
                 NotificationKind.MESSAGE -> messages++
-                NotificationKind.OTHER -> other++
+                // Events share the "other" badge count; the banner shows them separately.
+                NotificationKind.EVENT, NotificationKind.OTHER -> other++
             }
             packages.add(sbn.packageName)
             notices.add(toNoticeItem(sbn, kind))

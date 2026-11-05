@@ -18,6 +18,21 @@ class NotificationCategorizerTest {
     }
 
     @Test
+    fun `event and reminder categories map to EVENT`() {
+        assertEquals(NotificationKind.EVENT, NotificationCategorizer.kindOf("event"))
+        assertEquals(NotificationKind.EVENT, NotificationCategorizer.kindOf("reminder"))
+    }
+
+    @Test
+    fun `calendar app notifications without an event category map to EVENT`() {
+        assertEquals(NotificationKind.EVENT, NotificationCategorizer.kindOf(null, "com.cal", "com.cal"))
+        assertEquals(NotificationKind.EVENT, NotificationCategorizer.kindOf("email", "com.cal", "com.cal"))
+        assertEquals(NotificationKind.MESSAGE, NotificationCategorizer.kindOf("msg", "com.cal", "com.cal"))
+        assertEquals(NotificationKind.OTHER, NotificationCategorizer.kindOf(null, "com.other", "com.cal"))
+        assertEquals(NotificationKind.OTHER, NotificationCategorizer.kindOf(null, "com.other", null))
+    }
+
+    @Test
     fun `unknown and null categories map to OTHER`() {
         assertEquals(NotificationKind.OTHER, NotificationCategorizer.kindOf("email"))
         assertEquals(NotificationKind.OTHER, NotificationCategorizer.kindOf(null))
