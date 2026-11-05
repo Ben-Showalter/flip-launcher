@@ -78,7 +78,10 @@ person's laptop.
   message). An entry counts as seen when posted while its app is on screen
   (screen on, keyguard down) or when its app comes on screen - a window
   change, or `SCREEN_ON`/`USER_PRESENT` with it still in front, since opening
-  the flip onto an app fires no window event. Messages that arrive with the
+  the flip onto an app fires no window event. That receiver must be
+  registered `RECEIVER_EXPORTED`: below Android 13, `RECEIVER_NOT_EXPORTED`
+  adds an app-private permission that blocks `USER_PRESENT` (SystemUI sends
+  it from an app uid). Messages that arrive with the
   flip closed stay until their app has been opened and left. Calendar
   event/reminder notifications (category `event`/`reminder`, or anything
   from the default calendar app) are their own `NotificationKind.EVENT`,
@@ -158,8 +161,9 @@ key handling, focus, or layout. Decisions taken here:
   the newest banner notification (its `contentIntent`, else its app), or
   Notices when the banner is empty; a
   Clr/Back hold opens the assigned app, launcher settings when none is set.
-  The banner shows the posting app's own icon on a semi-transparent dark
-  background (not the accent), with white text.
+  The banner shows the posting app's own icon on a 70% dark gray background
+  (not the accent), with white text; the D-pad shortcut pod uses the same
+  gray.
 - **Act on key UP, consume both halves.** Anything that finishes the screen or
   launches another app/screen fires on UP, and only for a press whose DOWN
   this window saw - otherwise the stray UP lands in the next window (e.g. Home

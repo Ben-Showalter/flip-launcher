@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Squircle "pod" background for the Home D-pad shortcut icon cluster. -->
+<!-- Squircle "pod" background for the Home D-pad shortcut icon cluster: the
+     same 70% dark gray as the notification banner (bg_notif_banner.xml). -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
-    <solid android:color="#33FFFFFF" />
+    <solid android:color="#B31E2023" />
     <corners android:radius="22dp" />
 </shape>

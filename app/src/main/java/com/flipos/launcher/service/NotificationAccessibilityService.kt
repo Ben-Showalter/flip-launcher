@@ -84,6 +84,10 @@ class NotificationAccessibilityService : AccessibilityService() {
         }
         ReadAloud.attach(this)
         if (!screenReceiverRegistered) {
+            // Exported on purpose: SCREEN_ON/USER_PRESENT are platform broadcasts,
+            // and below Android 13 RECEIVER_NOT_EXPORTED guards the receiver with
+            // an app-private permission that blocks USER_PRESENT (sent by
+            // SystemUI, an app uid) - the unlock then never arrives.
             ContextCompat.registerReceiver(
                 this,
                 screenReceiver,
@@ -91,7 +95,7 @@ class NotificationAccessibilityService : AccessibilityService() {
                     addAction(Intent.ACTION_SCREEN_ON)
                     addAction(Intent.ACTION_USER_PRESENT)
                 },
-                ContextCompat.RECEIVER_NOT_EXPORTED,
+                ContextCompat.RECEIVER_EXPORTED,
             )
             screenReceiverRegistered = true
         }

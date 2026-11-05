@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Background for the Home notification banner: the icon tiles' dark gray at
-     about 60% opacity, so the wallpaper shows through; white text on top reads
+     70% opacity, so the wallpaper shows through; white text on top reads
      whatever the accent color. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
-    <solid android:color="#991E2023" />
+    <solid android:color="#B31E2023" />
     <corners android:radius="14dp" />
 </shape>
