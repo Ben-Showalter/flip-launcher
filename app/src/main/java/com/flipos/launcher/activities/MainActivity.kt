@@ -105,11 +105,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var dpadIconLeft: ImageView
     private lateinit var dpadIconRight: ImageView
 
-    private val ampmFmt = SimpleDateFormat("a", Locale.getDefault())
-    private val time12 = SimpleDateFormat("h:mm", Locale.getDefault())
-    private val time24 = SimpleDateFormat("HH:mm", Locale.getDefault())
-    private val weekdayFmt = SimpleDateFormat("EEEE", Locale.getDefault())
-    private val dateFmt = SimpleDateFormat("MMM d", Locale.getDefault())
 
     /** Physical key awaiting an app from [assignAppLauncher] (0 = none). */
     private var pendingAssignAppKey = 0
@@ -284,6 +279,9 @@ class MainActivity : AppCompatActivity() {
             if (removed > 0) Log.d(NotificationAccessibilityService.TAG, "Home resumed: dismissed $removed")
         }
         applyWallpaperScrim()
+        // Exported on purpose: these are platform broadcasts, and below Android
+        // 13 RECEIVER_NOT_EXPORTED blocks any sender that isn't the core system -
+        // the Settings app's 12/24-hour change (ACTION_TIME_CHANGED) among them.
         ContextCompat.registerReceiver(
             this,
             timeReceiver,
@@ -291,8 +289,9 @@ class MainActivity : AppCompatActivity() {
                 addAction(Intent.ACTION_TIME_TICK)
                 addAction(Intent.ACTION_TIME_CHANGED)
                 addAction(Intent.ACTION_TIMEZONE_CHANGED)
+                addAction(Intent.ACTION_LOCALE_CHANGED)
             },
-            ContextCompat.RECEIVER_NOT_EXPORTED,
+            ContextCompat.RECEIVER_EXPORTED,
         )
         ContextCompat.registerReceiver(
             this,
@@ -386,18 +385,28 @@ class MainActivity : AppCompatActivity() {
 
     // ----------------------------------------------------------- Data / clock
 
+    /**
+     * Formatters are built on every refresh (about once a minute): a
+     * SimpleDateFormat keeps the time zone and language it was created with,
+     * and Home lives until reboot, so cached ones missed time-zone and
+     * language changes. Follows the system 12/24-hour setting.
+     */
     private fun updateClock() {
         val now = Date()
+        val locale = Locale.getDefault()
+        fun format(pattern: String) = SimpleDateFormat(pattern, locale).format(now)
+        fun best(skeleton: String) = android.text.format.DateFormat.getBestDateTimePattern(locale, skeleton)
         if (android.text.format.DateFormat.is24HourFormat(this)) {
             ampm.visibility = TextView.GONE
-            clock.text = time24.format(now)
+            clock.text = format(best("Hmm"))
         } else {
             ampm.visibility = TextView.VISIBLE
-            ampm.text = ampmFmt.format(now)
-            clock.text = time12.format(now)
+            ampm.text = format("a")
+            // The locale's 12-hour pattern minus its AM/PM, which has its own view.
+            clock.text = format(best("hmm").replace(Regex("\\s*a\\s*"), "").trim())
         }
-        weekday.text = weekdayFmt.format(now)
-        dateLine.text = dateFmt.format(now)
+        weekday.text = format("EEEE")
+        dateLine.text = format(best("MMMd"))
     }
 
     // --------------------------------------------------------------- Actions

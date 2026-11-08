@@ -219,6 +219,12 @@ Key pieces:
 - `LauncherPrefs` is the single SharedPreferences wrapper — all settings
   (icon size, accent color, drawer view mode, badges, shortcuts,
   hidden apps, per-app icon overrides) live there.
+- **Home clock** (`MainActivity.updateClock`): builds its `SimpleDateFormat`s
+  on every refresh - one keeps the time zone and language it was created
+  with, and Home lives until reboot - and follows `DateFormat.is24HourFormat`.
+  Its time receiver is `RECEIVER_EXPORTED`, like every platform-broadcast
+  receiver here (below Android 13 `RECEIVER_NOT_EXPORTED` blocks senders that
+  aren't the core system, such as Settings' 12/24-hour change).
 - `util/WallpaperContrast.kt` measures the wallpaper's brightness (cached
   per wallpaper, off the main thread) and scales Home's and the App
   Drawer's window scrim to it, so text and icons keep their contrast over
