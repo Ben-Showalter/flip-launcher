@@ -51,7 +51,13 @@ object SettingsRedirects {
             Target.SHORTCUT_KEYS -> Intent(context, HomeKeysSettingsActivity::class.java)
             Target.WALLPAPER -> Intent(context, WallpaperPickerActivity::class.java)
             Target.NOTIFICATIONS -> Intent(context, SettingsRedirectChooserActivity::class.java)
-        }.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }.addFlags(
+            // A task of its own on top of the phone's Settings: the launcher's
+            // task holds Home and the app list, so closing ours there showed
+            // those instead of the phone's screen.
+            Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
+                Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS,
+        )
         val flags = PendingIntent.FLAG_UPDATE_CURRENT or
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0
         try {

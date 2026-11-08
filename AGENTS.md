@@ -126,7 +126,10 @@ person's laptop.
   window titled "...Notification...") asks first
   (`SettingsRedirectChooserActivity`). The phone's screen stays underneath,
   and nothing redirects when the previous window was the launcher's own, so
-  Back reaches it. The `FlipNotif` window log prints each screen's title. The
+  Back reaches it. Redirected screens open in a task of their own
+  (`NEW_TASK|MULTIPLE_TASK|EXCLUDE_FROM_RECENTS`; the chooser has
+  `taskAffinity=""`): in the launcher's task, closing them showed the app
+  list instead of the phone's screen. The `FlipNotif` window log prints each screen's title. The
   Mic/Assistant key reports keycode 287 (scan 171) on the E4610, even with the launcher focused; other builds
   send `KEYCODE_F4`, so both are handled.
 - **E4610 speed dial and outer keys** (Android 7): `content://speed_dial`

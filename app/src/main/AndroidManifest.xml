@@ -216,6 +216,7 @@
         <activity
             android:name=".activities.SettingsRedirectChooserActivity"
             android:exported="false"
+            android:taskAffinity=""
             android:excludeFromRecents="true"
             android:noHistory="true"
             android:theme="@style/Theme.FlipLauncher.Transparent"

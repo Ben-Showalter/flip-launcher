@@ -25,6 +25,7 @@ class SettingsRedirectChooserActivity : AppCompatActivity() {
                     getString(R.string.redirect_notifications_phone),
                 ),
             ) { _, which ->
+                // In this task (no new-task flag), so Back from it also lands on the phone's picker.
                 if (which == 0) startActivity(Intent(this, NotificationSettingsActivity::class.java))
                 finish()
             }
