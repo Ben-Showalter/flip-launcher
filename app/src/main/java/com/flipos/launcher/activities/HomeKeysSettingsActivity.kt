@@ -12,7 +12,9 @@ import com.flipos.launcher.data.AppRepository
 import com.flipos.launcher.data.LauncherPrefs
 import com.flipos.launcher.ui.ListRowAdapter
 import com.flipos.launcher.ui.Row
+import com.flipos.launcher.util.isSystemSpeedDialReadable
 import com.flipos.launcher.util.openSystemSettings
+import com.flipos.launcher.util.openSystemSpeedDial
 
 /**
  * Home screen key bindings. Opens to a short menu - Navigation & Soft Keys,
@@ -121,7 +123,14 @@ class HomeKeysSettingsActivity : BaseListActivity() {
         EXTRA_ROW_IDS.forEachIndexed { index, id ->
             actions[id] = { configureExtraKey(LauncherPrefs.EXTRA_KEYCODES[index]) }
         }
-        actions[ID_SPEED_DIAL] = { startActivity(Intent(this, SpeedDialSettingsActivity::class.java)) }
+        // The phone's own Speed Dial where Home reads it (Android 9+), else the launcher's slots.
+        actions[ID_SPEED_DIAL] = {
+            if (isSystemSpeedDialReadable(this)) {
+                openSystemSpeedDial()
+            } else {
+                startActivity(Intent(this, SpeedDialSettingsActivity::class.java))
+            }
+        }
 
         adapter = ListRowAdapter(onClick = { dispatch(it) })
         listView.adapter = adapter
@@ -161,7 +170,12 @@ class HomeKeysSettingsActivity : BaseListActivity() {
                         subtitle = getString(R.string.keys_group_other_sub),
                         chevron = true,
                     ),
-                    Row(id = ID_SPEED_DIAL, title = getString(R.string.opt_speed_dial), chevron = true),
+                    Row(
+                        id = ID_SPEED_DIAL,
+                        title = getString(R.string.opt_speed_dial),
+                        subtitle = if (isSystemSpeedDialReadable(this)) getString(R.string.opt_speed_dial_system_sub) else null,
+                        chevron = true,
+                    ),
                 ),
             )
             return

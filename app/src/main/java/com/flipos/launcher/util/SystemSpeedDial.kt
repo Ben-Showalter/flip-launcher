@@ -4,6 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.widget.Toast
 import com.flipos.launcher.R
 
@@ -53,7 +54,9 @@ fun systemSpeedDial(context: Context, digit: Int): SystemSpeedDialResult = try {
             } else {
                 SystemSpeedDialResult.Found(SystemSpeedDialEntry(number, name ?: number))
             }
-        } else if (hasAnySpeedDial(context)) {
+        } else if (hasAnySpeedDial(context) || Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            // Android 9+ (E4810/E4811): an empty table just means nothing is
+            // set yet, so the phone's own Speed Dial screen is where to set it.
             SystemSpeedDialResult.Unset
         } else {
             // The provider answers but holds nothing at all - on the E4610
@@ -79,6 +82,21 @@ sealed class SystemSpeedDialResult {
 }
 
 private val SPEED_DIAL_URI: Uri = Uri.parse("content://speed_dial/speed_dial")
+
+/**
+ * Whether the phone's own speed dial is the one in use: its provider answers
+ * on Android 9+ (E4810/E4811). The E4610 (Android 7) has a provider too, but
+ * it never reflects what the dialer saves, so the launcher's own slots
+ * (SpeedDialSettingsActivity) stand in there. Needs READ_CONTACTS.
+ */
+fun isSystemSpeedDialReadable(context: Context): Boolean {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return false
+    return try {
+        context.contentResolver.query(SPEED_DIAL_URI, null, null, null, null)?.use { true } ?: false
+    } catch (e: Exception) {
+        false
+    }
+}
 
 private fun hasAnySpeedDial(context: Context): Boolean = try {
     context.contentResolver.query(SPEED_DIAL_URI, null, null, null, null)?.use { it.count > 0 } ?: false

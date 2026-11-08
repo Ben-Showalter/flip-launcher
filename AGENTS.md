@@ -116,7 +116,17 @@ person's laptop.
   launcher, so there the alias opens Kyocera Settings' own copy first,
   `jp.kyocera.settings.nfp/.core.Settings$QuickSettingsActivity` (action
   `jp.kyocera.settings.programmablekey.action.SHORTCUTS`, what the phone's
-  programmable-key shortcut sends), which works under any launcher. The
+  programmable-key shortcut sends), which works under any launcher.
+  **Settings redirects** (`util/SettingsRedirects.kt`, driven by the
+  accessibility service's window events, on every model): the phone's
+  shortcut-key screen (`jp.kyocera.customizekey/.settings.ProgrammableKeysSettingsActivity`)
+  opens Home Screen & Keys on top; Kyocera Settings' `core.SubSettings` titled
+  "Wallpaper" opens the Wallpaper picker; its notification-sound picker
+  (`sound.PresetRingtonePickerActivity`, shown as an `android.app.Dialog`
+  window titled "...Notification...") asks first
+  (`SettingsRedirectChooserActivity`). The phone's screen stays underneath,
+  and nothing redirects when the previous window was the launcher's own, so
+  Back reaches it. The `FlipNotif` window log prints each screen's title. The
   Mic/Assistant key reports keycode 287 (scan 171) on the E4610, even with the launcher focused; other builds
   send `KEYCODE_F4`, so both are handled.
 - **E4610 speed dial and outer keys** (Android 7): `content://speed_dial`
@@ -124,7 +134,10 @@ person's laptop.
   (`com.android.dialer/.speeddial.SpeedDialActivity` there, `.app.speeddial.`
   on newer models) saves, so `util/SystemSpeedDial.kt` reports it
   `Unsupported` and Home falls back to the launcher's own slots
-  (`SpeedDialSettingsActivity`). The outer buttons' system assignment
+  (`SpeedDialSettingsActivity`). On Android 9+ the phone's data is read
+  (an empty table means nothing set yet), and Settings → Home Screen & Keys
+  → Speed Dial opens the phone's own Speed Dial screen
+  (`isSystemSpeedDialReadable`). The outer buttons' system assignment
   (`com.android.settings/.afp.PttSettings`, action
   `kyocera.intent.action.PTT_SETTINGS`) is a Kyocera Home feature that never
   fires under another launcher, so Home assigns them itself (scan codes →

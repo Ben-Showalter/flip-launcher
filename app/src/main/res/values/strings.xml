@@ -86,6 +86,10 @@
     <!-- Speed dial (long-press digit keys 0, 2-9) - read from the phone's own
          system speed dial data; see util/SystemSpeedDial.kt. -->
     <string name="opt_speed_dial">Speed Dial</string>
+    <string name="redirect_notifications_title">Notification settings</string>
+    <string name="redirect_notifications_home">Home Screen notifications</string>
+    <string name="redirect_notifications_phone">Phone notification sound</string>
+    <string name="opt_speed_dial_system_sub">Opens the phone\'s Speed Dial</string>
     <string name="title_speed_dial">Speed Dial</string>
     <string name="shortcut_slot_label">Key %1$d</string>
     <string name="speed_dial_not_set">Not set</string>

@@ -11,6 +11,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.PowerManager
+import android.os.SystemClock
 import android.util.Log
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
@@ -21,6 +22,7 @@ import com.flipos.launcher.data.NotificationStore
 import com.flipos.launcher.util.CategoryApps
 import com.flipos.launcher.util.ReadAloud
 import com.flipos.launcher.util.ReadAloudSpeaker
+import com.flipos.launcher.util.SettingsRedirects
 
 /**
  * Fallback notification source for devices where NotificationListenerService
@@ -109,7 +111,15 @@ class NotificationAccessibilityService : AccessibilityService() {
         super.onDestroy()
     }
 
+    /** The package of the last window event, any window - for [handleSettingsRedirect]'s guard. */
+    private var lastWindowPackage: String? = null
+
+    /** When the last redirect opened, so a screen's repeated window events open ours only once. */
+    private var lastRedirectAt = 0L
+
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
+        // Runs whichever source feeds the banner, so it works on the E4610 too.
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) handleSettingsRedirect(event)
         // NotificationCountService already owns NotificationStore with richer,
         // accurately-active data whenever it's actually bound - don't fight over it.
         if (NotificationCountService.instance != null) return
@@ -119,11 +129,31 @@ class NotificationAccessibilityService : AccessibilityService() {
         }
     }
 
+    /**
+     * Opens the launcher's own screen over a phone Settings screen that has
+     * one ([SettingsRedirects]) - unless the user just came from the launcher
+     * (Back from ours, or a screen the launcher opened), so the phone's screen
+     * stays reachable.
+     */
+    private fun handleSettingsRedirect(event: AccessibilityEvent) {
+        val packageName = event.packageName?.toString() ?: return
+        val className = event.className?.toString().orEmpty()
+        val title = event.text.joinToString(" ")
+        val previous = lastWindowPackage
+        lastWindowPackage = packageName
+        val target = SettingsRedirects.match(packageName, className, title) ?: return
+        val now = SystemClock.elapsedRealtime()
+        Log.d(TAG, "settings screen $className \"$title\" -> $target, previous=$previous")
+        if (previous == this.packageName || now - lastRedirectAt < REDIRECT_DEBOUNCE_MS) return
+        lastRedirectAt = now
+        SettingsRedirects.open(this, target)
+    }
+
     private fun handleForegroundChange(event: AccessibilityEvent) {
         val packageName = event.packageName?.toString() ?: return
         val className = event.className?.toString() ?: return
         val isApp = isActivity(packageName, className)
-        Log.d(TAG, "window $packageName/$className app=$isApp foreground=$foregroundPackage")
+        Log.d(TAG, "window $packageName/$className \"${event.text.joinToString(" ")}\" app=$isApp foreground=$foregroundPackage")
         if (packageName == foregroundPackage || !isApp) return
         // The previous app was left - dismiss what the user saw of it.
         foregroundPackage?.let {
@@ -201,6 +231,9 @@ class NotificationAccessibilityService : AccessibilityService() {
     companion object {
         /** Defensive cap on how many distinct apps' pending notifications this stacks. */
         private const val MAX_PENDING = 10
+
+        /** A screen's window events can repeat; one redirect per this long. */
+        private const val REDIRECT_DEBOUNCE_MS = 1500L
 
         /** Logcat tag for the banner's seen/dismiss trail (filter `tag:FlipNotif`). */
         const val TAG = "FlipNotif"
