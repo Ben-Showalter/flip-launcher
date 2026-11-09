@@ -201,6 +201,12 @@
     <string name="toast_settings_manual_path">Couldn\'t open Settings. Go to: %1$s</string>
     <string name="path_app_permissions">Select Flip Launcher, then Permissions</string>
     <string name="path_notification_access">Select Flip Launcher under Notification access and turn it on</string>
+    <string name="path_dnd_access">Select Flip Launcher under Do Not Disturb access and turn it on</string>
+    <string name="dnd_needs_access">Allow Do Not Disturb access to use hold #</string>
+    <string name="dnd_on">Do Not Disturb on</string>
+    <string name="dnd_off">Do Not Disturb off</string>
+    <string name="settings_dnd_access">Do Not Disturb access</string>
+    <string name="settings_dnd_access_sub">Hold # on Home to turn Do Not Disturb on or off</string>
     <string name="path_accessibility">Select Flip Launcher under Accessibility and turn it on</string>
     <string name="toast_launch_failed">Couldn\'t open %1$s</string>
     <string name="toast_launch_unavailable">App is no longer available</string>

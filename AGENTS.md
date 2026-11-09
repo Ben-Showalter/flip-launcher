@@ -181,7 +181,10 @@ key handling, focus, or layout. Decisions taken here:
   On Home, OK taps open the app drawer and an OK hold (timed by hand) opens
   the newest banner notification (its `contentIntent`, else its app), or
   Notices when the banner is empty; a
-  Clr/Back hold opens the assigned app, launcher settings when none is set.
+  Clr/Back hold opens the assigned app, launcher settings when none is set;
+  a `#` hold (timed by hand; a tap still dials "#") toggles Do Not Disturb
+  like the stock Kyocera Home (`util/DoNotDisturb.kt`), which needs Do Not
+  Disturb access (Advanced shows its status).
   The banner shows the posting app's own icon on a 70% dark gray background
   (not the accent), with white text; the D-pad shortcut pod uses the same
   gray.

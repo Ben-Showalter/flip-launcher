@@ -42,6 +42,7 @@ import com.flipos.launcher.service.NotificationAccessibilityService
 import com.flipos.launcher.service.NotificationCountService
 import com.flipos.launcher.util.BackgroundLoader
 import com.flipos.launcher.util.CategoryApps
+import com.flipos.launcher.util.DoNotDisturb
 import com.flipos.launcher.util.KEYCODE_ASSISTANT_RAW
 import com.flipos.launcher.util.KyoceraShortcuts
 import com.flipos.launcher.util.PermissionGate
@@ -161,6 +162,13 @@ class MainActivity : AppCompatActivity() {
      * another window.
      */
     private val pressedTapKeys = HashSet<Int>()
+
+    /** Whether the current `#` press's hold already toggled Do Not Disturb (so its UP doesn't dial "#"). */
+    private var poundHoldFired = false
+    private val poundHoldRunnable = Runnable {
+        poundHoldFired = true
+        DoNotDisturb.toggle(this)
+    }
 
     private val callPermission = PermissionGate(this, Manifest.permission.CALL_PHONE)
     private val contactsPermission = PermissionGate(this, Manifest.permission.READ_CONTACTS)
@@ -332,6 +340,7 @@ class MainActivity : AppCompatActivity() {
         assignHandler.removeCallbacksAndMessages(null)
         assignRunnables.clear()
         digitHoldRunnables.clear()
+        poundHoldFired = false
         digitTapRunnables.clear()
         pressedTapKeys.clear()
         centerDownSeen = false
@@ -625,7 +634,15 @@ class MainActivity : AppCompatActivity() {
             // Resolved on UP: launching the dialer / Recent Calls on DOWN would
             // hand it our UP (a second "*", or a CALL that dials).
             KeyEvent.KEYCODE_STAR, KeyEvent.KEYCODE_NUMPAD_MULTIPLY, KeyEvent.KEYCODE_POUND, KeyEvent.KEYCODE_CALL -> {
-                if (event.repeatCount == 0) pressedTapKeys.add(keyCode)
+                if (event.repeatCount == 0) {
+                    pressedTapKeys.add(keyCode)
+                    // Hold # toggles Do Not Disturb, like the stock Kyocera Home.
+                    if (keyCode == KeyEvent.KEYCODE_POUND) {
+                        poundHoldFired = false
+                        assignHandler.removeCallbacks(poundHoldRunnable)
+                        assignHandler.postDelayed(poundHoldRunnable, DIGIT_HOLD_MS)
+                    }
+                }
                 return true
             }
             KeyEvent.KEYCODE_SOFT_LEFT, KeyEvent.KEYCODE_SOFT_RIGHT,
@@ -674,6 +691,15 @@ class MainActivity : AppCompatActivity() {
                 return true
             }
             KeyEvent.KEYCODE_STAR, KeyEvent.KEYCODE_NUMPAD_MULTIPLY, KeyEvent.KEYCODE_POUND, KeyEvent.KEYCODE_CALL -> {
+                if (keyCode == KeyEvent.KEYCODE_POUND) {
+                    assignHandler.removeCallbacks(poundHoldRunnable)
+                    if (poundHoldFired) {
+                        // The hold already toggled Do Not Disturb; this UP is only consumed.
+                        poundHoldFired = false
+                        pressedTapKeys.remove(keyCode)
+                        return true
+                    }
+                }
                 if (pressedTapKeys.remove(keyCode) && !event.isCanceled) {
                     when {
                         keyCode == KeyEvent.KEYCODE_CALL -> openCallLog()
