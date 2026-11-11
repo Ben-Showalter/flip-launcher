@@ -138,6 +138,20 @@ abstract class BaseListActivity : AppCompatActivity() {
         return listView.getChildAdapterPosition(child)
     }
 
+    /** Scrolls to and focuses row [position] (falls back to [focusFirst] if it isn't there). */
+    protected fun focusPosition(position: Int) {
+        if (position < 0) {
+            focusFirst()
+            return
+        }
+        listView.post {
+            listView.scrollToPosition(position)
+            listView.post {
+                if (listView.layoutManager?.findViewByPosition(position)?.requestFocus() != true) focusFirst()
+            }
+        }
+    }
+
     protected fun focusFirst() {
         listView.post {
             if (listView.focusedChild == null) {

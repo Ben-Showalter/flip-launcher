@@ -2,10 +2,12 @@ package com.flipos.launcher.util
 
 import android.app.NotificationManager
 import android.content.Context
+import android.content.Intent
 import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
 import com.flipos.launcher.R
+import com.flipos.launcher.activities.AdvancedSettingsActivity
 
 /**
  * Do Not Disturb on/off, for Home's `#` hold (the stock Kyocera Home's
@@ -29,7 +31,7 @@ object DoNotDisturb {
         }
         if (!isAccessGranted(context)) {
             Toast.makeText(context, R.string.dnd_needs_access, Toast.LENGTH_SHORT).show()
-            openAccessSettings(context)
+            openLauncherSetting(context)
             return
         }
         try {
@@ -43,6 +45,19 @@ object DoNotDisturb {
         } catch (e: Exception) {
             Toast.makeText(context, R.string.toast_not_available, Toast.LENGTH_SHORT).show()
         }
+    }
+
+    /**
+     * The launcher's own Advanced settings, at its "Do Not Disturb access"
+     * row - the route that works on these phones (the row opens the system
+     * list, where Allow brings up the phone's own confirmation).
+     */
+    fun openLauncherSetting(context: Context) {
+        context.startActivity(
+            Intent(context, AdvancedSettingsActivity::class.java)
+                .putExtra(AdvancedSettingsActivity.EXTRA_FOCUS_ROW, AdvancedSettingsActivity.ID_DND_ACCESS)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
     }
 
     fun openAccessSettings(context: Context) {

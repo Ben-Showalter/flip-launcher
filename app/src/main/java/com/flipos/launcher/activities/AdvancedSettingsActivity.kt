@@ -64,7 +64,18 @@ class AdvancedSettingsActivity : BaseListActivity() {
         softKeys.setLabels(null, getString(R.string.softkey_select), null)
         softKeys.setOnCenterClick { focusedPosition().takeIf { it >= 0 }?.let { dispatch(it) } }
         refreshRows()
-        focusFirst()
+        // Opened to a specific row, e.g. Do Not Disturb access from Home's prompt.
+        val focusRow = intent.getStringExtra(EXTRA_FOCUS_ROW)
+        if (focusRow != null && savedInstanceState == null) focusPosition(rowIndex(focusRow)) else focusFirst()
+    }
+
+    private fun rowIndex(id: String): Int {
+        var i = 0
+        while (true) {
+            val row = adapter.rowAt(i) ?: return -1
+            if (row.id == id) return i
+            i++
+        }
     }
 
     override fun onResume() {
@@ -184,7 +195,10 @@ class AdvancedSettingsActivity : BaseListActivity() {
         private const val ID_ACCESSIBILITY = "accessibility"
         private const val ID_NOTIFICATION_ACCESS = "notification_access"
         private const val ID_CALL_LOG = "call_log"
-        private const val ID_DND_ACCESS = "dnd_access"
+        const val ID_DND_ACCESS = "dnd_access"
+
+        /** Row id to focus on open (e.g. [ID_DND_ACCESS]). */
+        const val EXTRA_FOCUS_ROW = "focus_row"
         private const val ID_SETTINGS_CHOOSER = "settings_chooser"
         private const val ID_PHONE_SETTINGS = "phone_settings"
         private const val ID_CHECK_UPDATES = "check_updates"
