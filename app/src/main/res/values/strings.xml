@@ -203,6 +203,7 @@
     <string name="path_notification_access">Select Flip Launcher under Notification access and turn it on</string>
     <string name="vibrate_on">Phone set to Vibrate only</string>
     <string name="vibrate_off">Phone set to Ring</string>
+    <string name="ringer_silent">Phone set to Silent</string>
     <string name="path_accessibility">Select Flip Launcher under Accessibility and turn it on</string>
     <string name="toast_launch_failed">Couldn\'t open %1$s</string>
     <string name="toast_launch_unavailable">App is no longer available</string>

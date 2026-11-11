@@ -286,6 +286,10 @@ class LauncherPrefs(context: Context) {
     fun getReadAloudVoice(): String? = prefs.getString(KEY_READ_ALOUD_VOICE, null)
     fun setReadAloudVoice(name: String?) = prefs.edit().putString(KEY_READ_ALOUD_VOICE, name).apply()
 
+    /** The ringer mode before Home's `#` hold switched to vibrate, restored by the next hold (-1 = none). */
+    fun getRingerModeBeforeVibrate(): Int = prefs.getInt(KEY_RINGER_BEFORE_VIBRATE, -1)
+    fun setRingerModeBeforeVibrate(mode: Int) = prefs.edit().putInt(KEY_RINGER_BEFORE_VIBRATE, mode).apply()
+
     fun getReadAloudRate(): Float = prefs.getFloat(KEY_READ_ALOUD_RATE, 1.0f)
     fun setReadAloudRate(rate: Float) = prefs.edit().putFloat(KEY_READ_ALOUD_RATE, rate).apply()
 
@@ -487,6 +491,7 @@ class LauncherPrefs(context: Context) {
         private const val KEY_READ_ALOUD_MODE = "read_aloud_mode"
         private const val KEY_READ_ALOUD_VOICE = "read_aloud_voice"
         private const val KEY_READ_ALOUD_RATE = "read_aloud_rate"
+        private const val KEY_RINGER_BEFORE_VIBRATE = "ringer_mode_before_vibrate"
         private const val KEY_DRAWER_LIST_VIEW = "drawer_list_view"
         private const val KEY_ICON_OVERRIDE_PREFIX = "icon_override_"
         private const val KEY_ACCENT_COLOR = "accent_color"
