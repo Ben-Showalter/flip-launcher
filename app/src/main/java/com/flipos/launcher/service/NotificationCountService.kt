@@ -12,6 +12,7 @@ import com.flipos.launcher.data.NotificationCategorizer
 import com.flipos.launcher.data.NotificationCounts
 import com.flipos.launcher.data.NotificationKind
 import com.flipos.launcher.data.NotificationStore
+import com.flipos.launcher.data.NotificationText
 import com.flipos.launcher.util.CategoryApps
 import com.flipos.launcher.util.ReadAloud
 
@@ -85,13 +86,13 @@ class NotificationCountService : NotificationListenerService() {
     }
 
     private fun toNoticeItem(sbn: StatusBarNotification, kind: NotificationKind): NoticeItem {
-        val extras = sbn.notification.extras
-        val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
+        // The newest message of a conversation, not its first line.
+        val (title, text) = NotificationText.latest(sbn.notification)
         return NoticeItem(
             key = sbn.key,
             packageName = sbn.packageName,
             title = title.ifEmpty { appLabel(sbn.packageName) },
-            text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty(),
+            text = text,
             postTime = sbn.postTime,
             icon = loadSmallIcon(sbn),
             kind = kind,

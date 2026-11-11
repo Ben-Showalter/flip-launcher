@@ -93,7 +93,12 @@ person's laptop.
   shown on the banner by default. Home asks to turn it on at startup if it's
   off. Its store appends new items (the listener's is newest-first), so the Home banner
   and read-aloud pick the newest by `postTime` (`NotificationStore.newest`),
-  never list order. The same service filters key events
+  never list order. Group summaries are read too (once a second message
+  arrives, apps like TurboText alert with the summary and update the
+  message silently), the text is the newest message from MessagingStyle /
+  InboxStyle data (`data/NotificationText.kt`), and a summary and its
+  message arriving within 5s with the same text count as one. The same
+  service filters key events
   (`flagRequestFilterKeyEvents`, set in XML and code) so any button press
   stops a readout in progress and still does its normal job (never
   consumed), volume keys excepted (`ReadAloudSpeaker.interceptKey`, also

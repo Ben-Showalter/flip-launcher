@@ -19,6 +19,7 @@ import androidx.core.content.ContextCompat
 import com.flipos.launcher.data.NotificationCategorizer
 import com.flipos.launcher.data.NoticeItem
 import com.flipos.launcher.data.NotificationStore
+import com.flipos.launcher.data.NotificationText
 import com.flipos.launcher.util.CategoryApps
 import com.flipos.launcher.util.ReadAloud
 import com.flipos.launcher.util.ReadAloudSpeaker
@@ -184,18 +185,25 @@ class NotificationAccessibilityService : AccessibilityService() {
 
     private fun handleNotificationPosted(event: AccessibilityEvent) {
         val notification = event.parcelableData as? Notification ?: return
-        if (notification.flags and Notification.FLAG_GROUP_SUMMARY != 0) return
         val packageName = event.packageName?.toString() ?: return
-        val extras = notification.extras
-        val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
-        val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty()
+        // Group summaries count too: once a second message arrives, apps such
+        // as TurboText alert with the summary and update the message itself
+        // silently, so skipping summaries lost every message after the first.
+        val (title, text) = NotificationText.latest(notification)
         if (title.isEmpty() && text.isEmpty()) return
+        // The summary and the message itself can both arrive for one message.
+        val now = System.currentTimeMillis()
+        val duplicate = NotificationStore.items.any {
+            it.packageName == packageName && it.text == text && now - it.postTime < DUPLICATE_WINDOW_MS
+        }
+        Log.d(TAG, "event $packageName summary=${notification.flags and Notification.FLAG_GROUP_SUMMARY != 0} duplicate=$duplicate")
+        if (duplicate) return
         val newItem = NoticeItem(
             key = "$packageName:${event.eventTime}",
             packageName = packageName,
             title = title.ifEmpty { appLabel(packageName) },
             text = text,
-            postTime = System.currentTimeMillis(),
+            postTime = now,
             icon = null,
             kind = NotificationCategorizer.kindOf(notification.category, packageName, CategoryApps.calendarPackage(this)),
             contentIntent = notification.contentIntent,
@@ -232,6 +240,9 @@ class NotificationAccessibilityService : AccessibilityService() {
     companion object {
         /** Defensive cap on how many distinct apps' pending notifications this stacks. */
         private const val MAX_PENDING = 10
+
+        /** A message's summary and its own notification arriving this close together are one message. */
+        private const val DUPLICATE_WINDOW_MS = 5_000L
 
         /** A screen's window events can repeat; one redirect per this long. */
         private const val REDIRECT_DEBOUNCE_MS = 1500L
