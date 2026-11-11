@@ -241,10 +241,9 @@ Key pieces:
   (`util/Launch.kt`, off via "Don't ask again", back on in Advanced). Home
   shows a default-launcher prompt, then an Accessibility prompt, at startup
   (`MainActivity.maybeShowStartupPrompts`; checks in `util/AccessChecks.kt`),
-  then a Do Not Disturb access prompt (for the `#` hold). That prompt, and
-  a `#` hold without access, open Advanced at its "Do Not Disturb access"
-  row (`EXTRA_FOCUS_ROW`), the route that works on these phones, rather
-  than jumping straight to the phone's access page.
+  then a Do Not Disturb access prompt (for the `#` hold). That prompt, a
+  `#` hold without access, and Advanced's "Do Not Disturb access" row all
+  open the phone's access list (`DoNotDisturb.openAccessSettings`).
 - `ListRowAdapter` + `Row` is the generic one-line-or-icon-row adapter reused
   across those list screens; `AppGridAdapter` is the App Drawer's icon grid;
   `NoticeRowAdapter` is the richer 3-line notice row.

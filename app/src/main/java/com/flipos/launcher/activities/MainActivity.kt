@@ -1117,7 +1117,7 @@ class MainActivity : AppCompatActivity() {
             showStartupPrompt(
                 R.string.prompt_dnd_title,
                 R.string.prompt_dnd_message,
-            ) { DoNotDisturb.openLauncherSetting(this) }
+            ) { DoNotDisturb.openAccessSettings(this) }
         }
     }
 
