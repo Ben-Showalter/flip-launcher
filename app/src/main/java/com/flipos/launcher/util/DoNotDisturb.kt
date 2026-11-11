@@ -45,7 +45,6 @@ object DoNotDisturb {
         }
     }
 
-    /** The phone's Do Not Disturb access list, where Allow brings up the phone's own confirmation. */
     fun openAccessSettings(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
         context.openSettingsWithPath(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS, R.string.path_dnd_access)

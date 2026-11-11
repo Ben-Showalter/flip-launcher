@@ -193,7 +193,7 @@ key handling, focus, or layout. Decisions taken here:
   Clr/Back hold opens the assigned app, launcher settings when none is set;
   a `#` hold (timed by hand; a tap still dials "#") toggles Do Not Disturb
   like the stock Kyocera Home (`util/DoNotDisturb.kt`), which needs Do Not
-  Disturb access (Advanced shows its status).
+  Disturb access (asked on the first hold).
   The banner shows the posting app's own icon on a 70% dark gray background
   (not the accent), with white text; the D-pad shortcut pod uses the same
   gray.
@@ -243,7 +243,7 @@ Key pieces:
   (`MainActivity.maybeShowStartupPrompts`; checks in `util/AccessChecks.kt`),
   Do Not Disturb access isn't asked at startup: the first `#` hold without
   it shows a toast and opens the phone's access list
-  (`DoNotDisturb.openAccessSettings`), as does Advanced's row.
+  (`DoNotDisturb.openAccessSettings`).
 - `ListRowAdapter` + `Row` is the generic one-line-or-icon-row adapter reused
   across those list screens; `AppGridAdapter` is the App Drawer's icon grid;
   `NoticeRowAdapter` is the richer 3-line notice row.

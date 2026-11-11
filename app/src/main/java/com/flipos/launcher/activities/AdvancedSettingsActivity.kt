@@ -11,7 +11,6 @@ import com.flipos.launcher.data.UpdateChecker
 import com.flipos.launcher.ui.ListRowAdapter
 import com.flipos.launcher.ui.Row
 import com.flipos.launcher.util.BackgroundLoader
-import com.flipos.launcher.util.DoNotDisturb
 import com.flipos.launcher.util.PermissionGate
 import com.flipos.launcher.util.isAccessibilityServiceEnabled
 import com.flipos.launcher.util.isDefaultLauncher
@@ -52,7 +51,6 @@ class AdvancedSettingsActivity : BaseListActivity() {
             openSettingsWithPath(Settings.ACTION_ACCESSIBILITY_SETTINGS, R.string.path_accessibility)
         }
         actions[ID_CALL_LOG] = { requestCallLogAccess() }
-        actions[ID_DND_ACCESS] = { DoNotDisturb.openAccessSettings(this) }
         actions[ID_PHONE_SETTINGS] = { openSystemSettings() }
         actions[ID_SETTINGS_CHOOSER] = {
             prefs.setSettingsChooserEnabled(!prefs.isSettingsChooserEnabled()); refreshRows()
@@ -106,13 +104,6 @@ class AdvancedSettingsActivity : BaseListActivity() {
                     title = getString(R.string.settings_calllog_access),
                     subtitle = getString(R.string.settings_calllog_access_sub),
                     trailing = status(readCallLogPermission.isGranted()),
-                    chevron = true,
-                ),
-                Row(
-                    id = ID_DND_ACCESS,
-                    title = getString(R.string.settings_dnd_access),
-                    subtitle = getString(R.string.settings_dnd_access_sub),
-                    trailing = status(DoNotDisturb.isAccessGranted(this)),
                     chevron = true,
                 ),
                 Row(
@@ -184,7 +175,6 @@ class AdvancedSettingsActivity : BaseListActivity() {
         private const val ID_ACCESSIBILITY = "accessibility"
         private const val ID_NOTIFICATION_ACCESS = "notification_access"
         private const val ID_CALL_LOG = "call_log"
-        private const val ID_DND_ACCESS = "dnd_access"
         private const val ID_SETTINGS_CHOOSER = "settings_chooser"
         private const val ID_PHONE_SETTINGS = "phone_settings"
         private const val ID_CHECK_UPDATES = "check_updates"
