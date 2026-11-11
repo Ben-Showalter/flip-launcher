@@ -191,9 +191,9 @@ key handling, focus, or layout. Decisions taken here:
   the newest banner notification (its `contentIntent`, else its app), or
   Notices when the banner is empty; a
   Clr/Back hold opens the assigned app, launcher settings when none is set;
-  a `#` hold (timed by hand; a tap still dials "#") toggles Do Not Disturb
-  like the stock Kyocera Home (`util/DoNotDisturb.kt`), which needs Do Not
-  Disturb access (asked on the first hold).
+  a `#` hold (timed by hand; a tap still dials "#") toggles ring/vibrate
+  like the stock Kyocera Home ("Phone set to Vibrate only" in its logcat;
+  `util/VibrateMode.kt`), which needs no permission.
   The banner shows the posting app's own icon on a 70% dark gray background
   (not the accent), with white text; the D-pad shortcut pod uses the same
   gray.
@@ -240,10 +240,7 @@ Key pieces:
   phone's Settings entry asks Phone vs Home Screen Settings
   (`util/Launch.kt`, off via "Don't ask again", back on in Advanced). Home
   shows a default-launcher prompt, then an Accessibility prompt, at startup
-  (`MainActivity.maybeShowStartupPrompts`; checks in `util/AccessChecks.kt`),
-  Do Not Disturb access isn't asked at startup: the first `#` hold without
-  it shows a toast and opens the phone's access list
-  (`DoNotDisturb.openAccessSettings`).
+  (`MainActivity.maybeShowStartupPrompts`; checks in `util/AccessChecks.kt`).
 - `ListRowAdapter` + `Row` is the generic one-line-or-icon-row adapter reused
   across those list screens; `AppGridAdapter` is the App Drawer's icon grid;
   `NoticeRowAdapter` is the richer 3-line notice row.

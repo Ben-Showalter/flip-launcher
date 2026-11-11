@@ -42,12 +42,12 @@ import com.flipos.launcher.service.NotificationAccessibilityService
 import com.flipos.launcher.service.NotificationCountService
 import com.flipos.launcher.util.BackgroundLoader
 import com.flipos.launcher.util.CategoryApps
-import com.flipos.launcher.util.DoNotDisturb
 import com.flipos.launcher.util.KEYCODE_ASSISTANT_RAW
 import com.flipos.launcher.util.KyoceraShortcuts
 import com.flipos.launcher.util.PermissionGate
 import com.flipos.launcher.util.ReadAloud
 import com.flipos.launcher.util.ReadAloudSpeaker
+import com.flipos.launcher.util.VibrateMode
 import com.flipos.launcher.util.WallpaperContrast
 import com.flipos.launcher.util.accentColorAlpha
 import com.flipos.launcher.util.applyFakeBold
@@ -163,11 +163,11 @@ class MainActivity : AppCompatActivity() {
      */
     private val pressedTapKeys = HashSet<Int>()
 
-    /** Whether the current `#` press's hold already toggled Do Not Disturb (so its UP doesn't dial "#"). */
+    /** Whether the current `#` press's hold already toggled vibrate mode (so its UP doesn't dial "#"). */
     private var poundHoldFired = false
     private val poundHoldRunnable = Runnable {
         poundHoldFired = true
-        DoNotDisturb.toggle(this)
+        VibrateMode.toggle(this)
     }
 
     private val callPermission = PermissionGate(this, Manifest.permission.CALL_PHONE)
@@ -636,7 +636,7 @@ class MainActivity : AppCompatActivity() {
             KeyEvent.KEYCODE_STAR, KeyEvent.KEYCODE_NUMPAD_MULTIPLY, KeyEvent.KEYCODE_POUND, KeyEvent.KEYCODE_CALL -> {
                 if (event.repeatCount == 0) {
                     pressedTapKeys.add(keyCode)
-                    // Hold # toggles Do Not Disturb, like the stock Kyocera Home.
+                    // Hold # toggles vibrate mode, like the stock Kyocera Home.
                     if (keyCode == KeyEvent.KEYCODE_POUND) {
                         poundHoldFired = false
                         assignHandler.removeCallbacks(poundHoldRunnable)
@@ -694,7 +694,7 @@ class MainActivity : AppCompatActivity() {
                 if (keyCode == KeyEvent.KEYCODE_POUND) {
                     assignHandler.removeCallbacks(poundHoldRunnable)
                     if (poundHoldFired) {
-                        // The hold already toggled Do Not Disturb; this UP is only consumed.
+                        // The hold already toggled vibrate mode; this UP is only consumed.
                         poundHoldFired = false
                         pressedTapKeys.remove(keyCode)
                         return true

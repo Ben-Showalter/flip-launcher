@@ -26,9 +26,6 @@
          separate copy. Requested at runtime the first time it's needed. -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />
 
-    <!-- Home's # hold toggles Do Not Disturb (util/DoNotDisturb.kt); also
-         needs the user to allow Do Not Disturb access. -->
-    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
 
     <!-- Self-update from GitHub Releases (data/UpdateChecker.kt): fetch the
          latest release + APK, check for Wi-Fi to note it's preferred, and hand
