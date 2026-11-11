@@ -54,6 +54,10 @@ class LauncherPrefs(context: Context) {
     // --------------------------------------------- D-pad / Camera shortcuts
 
     /** App key launched by pressing D-pad Up on Home, or null if unconfigured. */
+    /** Whether DefaultKeys has given the unassigned D-pad/outer keys their default apps (once). */
+    fun isDefaultKeysSeeded(): Boolean = prefs.getBoolean(KEY_DEFAULT_KEYS_SEEDED, false)
+    fun setDefaultKeysSeeded() = prefs.edit().putBoolean(KEY_DEFAULT_KEYS_SEEDED, true).apply()
+
     fun getDpadUpApp(): String? = prefs.getString(KEY_DPAD_UP_APP, null)
     fun setDpadUpApp(key: String?) = prefs.edit().putString(KEY_DPAD_UP_APP, key).apply()
 
@@ -491,6 +495,7 @@ class LauncherPrefs(context: Context) {
         private const val KEY_READ_ALOUD_MODE = "read_aloud_mode"
         private const val KEY_READ_ALOUD_VOICE = "read_aloud_voice"
         private const val KEY_READ_ALOUD_RATE = "read_aloud_rate"
+        private const val KEY_DEFAULT_KEYS_SEEDED = "default_keys_seeded"
         private const val KEY_RINGER_BEFORE_VIBRATE = "ringer_mode_before_vibrate"
         private const val KEY_DRAWER_LIST_VIEW = "drawer_list_view"
         private const val KEY_ICON_OVERRIDE_PREFIX = "icon_override_"

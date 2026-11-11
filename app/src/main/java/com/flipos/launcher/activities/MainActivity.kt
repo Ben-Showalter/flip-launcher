@@ -42,6 +42,7 @@ import com.flipos.launcher.service.NotificationAccessibilityService
 import com.flipos.launcher.service.NotificationCountService
 import com.flipos.launcher.util.BackgroundLoader
 import com.flipos.launcher.util.CategoryApps
+import com.flipos.launcher.util.DefaultKeys
 import com.flipos.launcher.util.KEYCODE_ASSISTANT_RAW
 import com.flipos.launcher.util.KyoceraShortcuts
 import com.flipos.launcher.util.PermissionGate
@@ -237,6 +238,7 @@ class MainActivity : AppCompatActivity() {
         prefs = LauncherPrefs(this)
         ReadAloud.attach(this)
         KyoceraShortcuts.syncEnabled(this)
+        DefaultKeys.seedOnce(this)
         val accent = prefs.getAccentColor()
         appliedAccentColor = accent
         if (accent.themeOverlayRes != 0) theme.applyStyle(accent.themeOverlayRes, true)

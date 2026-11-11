@@ -190,7 +190,10 @@ key handling, focus, or layout. Decisions taken here:
   On Home, OK taps open the app drawer and an OK hold (timed by hand) opens
   the newest banner notification (its `contentIntent`, else its app), or
   Notices when the banner is empty; a
-  Clr/Back hold opens the assigned app, launcher settings when none is set;
+  Clr/Back hold opens the assigned app, launcher settings when none is set.
+  Unassigned keys get default apps once (`util/DefaultKeys.kt`): Up
+  Calculator, Left Calendar, Right Quick Settings, Down Notepad, SOS
+  Weather, PTT Flashlight, outer END Timer, outer Speaker Alarm clock;
   a `#` hold (timed by hand; a tap still dials "#") toggles vibrate like
   the stock Kyocera Home ("Phone set to Vibrate only" in its logcat;
   `util/VibrateMode.kt`): it remembers the earlier ringer mode and the next
