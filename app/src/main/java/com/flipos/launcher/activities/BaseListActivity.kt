@@ -112,7 +112,7 @@ abstract class BaseListActivity : AppCompatActivity() {
     protected open fun onOptionsKey() {}
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        // A press while a message is being read only stops the readout.
+        // A press while a message is being read stops the readout and still does its job.
         if (ReadAloudSpeaker.interceptKey(event)) return true
         return super.dispatchKeyEvent(event)
     }

@@ -12,6 +12,7 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -598,7 +599,7 @@ class MainActivity : AppCompatActivity() {
     // launcher, hence assigning them here.
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        // A press while a message is being read only stops the readout.
+        // A press while a message is being read stops the readout and still does its job.
         if (ReadAloudSpeaker.interceptKey(event)) return true
         val outerKey = outerKeyFor(event.scanCode)
         if (outerKey != null) {
@@ -1108,6 +1109,15 @@ class MainActivity : AppCompatActivity() {
                 R.string.prompt_accessibility_title,
                 R.string.prompt_accessibility_message,
             ) { openSettingsWithPath(Settings.ACTION_ACCESSIBILITY_SETTINGS, R.string.path_accessibility) }
+            return
+        }
+        // Hold # toggles Do Not Disturb, which needs its own access (Android 6+).
+        if (!dndPromptShown && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !DoNotDisturb.isAccessGranted(this)) {
+            dndPromptShown = true
+            showStartupPrompt(
+                R.string.prompt_dnd_title,
+                R.string.prompt_dnd_message,
+            ) { DoNotDisturb.openAccessSettings(this) }
         }
     }
 
@@ -1179,6 +1189,7 @@ class MainActivity : AppCompatActivity() {
         // Shown at most once per process so we don't nag on every resume.
         private var defaultPromptShown = false
         private var accessibilityPromptShown = false
+        private var dndPromptShown = false
 
         /** How long an assignable key must be held to open its assign menu. */
         private const val ASSIGN_HOLD_MS = 5000L

@@ -649,7 +649,7 @@ class AppDrawerActivity : AppCompatActivity() {
      * its own directional keys.
      */
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        // A press while a message is being read only stops the readout.
+        // A press while a message is being read stops the readout and still does its job.
         if (ReadAloudSpeaker.interceptKey(event)) return true
         if (movingKey != null &&
             event.action == KeyEvent.ACTION_DOWN &&

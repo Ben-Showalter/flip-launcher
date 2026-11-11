@@ -95,12 +95,16 @@ person's laptop.
   and read-aloud pick the newest by `postTime` (`NotificationStore.newest`),
   never list order. The same service filters key events
   (`flagRequestFilterKeyEvents`, set in XML and code) so any button press
-  stops a readout in progress and is swallowed (DOWN and UP), volume keys
-  excepted (`ReadAloudSpeaker.interceptKey`, also called from the
-  launcher's own `dispatchKeyEvent`s for when Accessibility is off). The
-  read-aloud MediaSession needs `FLAG_HANDLES_MEDIA_BUTTONS` on Android 7 and
-  an `onMediaButtonEvent` override, since headsets send PLAY_PAUSE /
-  HEADSETHOOK rather than PAUSE.
+  stops a readout in progress and still does its normal job (never
+  consumed), volume keys excepted (`ReadAloudSpeaker.interceptKey`, also
+  called from the launcher's own `dispatchKeyEvent`s for when Accessibility
+  is off). Read-aloud renders each message with `synthesizeToFile` and plays
+  it from this process (`MediaPlayer`, `USAGE_MEDIA`): on Android 8+ media
+  buttons go to the session of the app actually playing audio, and spoken by
+  the TTS engine directly the audio was the engine's, so a Bluetooth
+  headset's button never reached our `MediaSession`. The session needs
+  `FLAG_HANDLES_MEDIA_BUTTONS` on Android 7 and an `onMediaButtonEvent`
+  override, since headsets send PLAY_PAUSE / HEADSETHOOK rather than PAUSE.
 
 - **Kyocera component names** (captured from logcat on the E4610; not yet
   verified on the E4810/E4811 - every launch falls back or toasts, never
@@ -231,7 +235,8 @@ Key pieces:
   phone's Settings entry asks Phone vs Home Screen Settings
   (`util/Launch.kt`, off via "Don't ask again", back on in Advanced). Home
   shows a default-launcher prompt, then an Accessibility prompt, at startup
-  (`MainActivity.maybeShowStartupPrompts`; checks in `util/AccessChecks.kt`).
+  (`MainActivity.maybeShowStartupPrompts`; checks in `util/AccessChecks.kt`),
+  then a Do Not Disturb access prompt (for the `#` hold).
 - `ListRowAdapter` + `Row` is the generic one-line-or-icon-row adapter reused
   across those list screens; `AppGridAdapter` is the App Drawer's icon grid;
   `NoticeRowAdapter` is the richer 3-line notice row.

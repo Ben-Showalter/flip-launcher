@@ -7,9 +7,11 @@ import android.media.AudioAttributes
 import android.media.AudioDeviceInfo
 import android.media.AudioFocusRequest
 import android.media.AudioManager
+import android.media.MediaPlayer
 import android.media.session.MediaSession
 import android.media.session.PlaybackState
 import android.os.Build
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.speech.tts.TextToSpeech
@@ -20,6 +22,8 @@ import com.flipos.launcher.data.LauncherPrefs
 import com.flipos.launcher.data.NoticeItem
 import com.flipos.launcher.data.NotificationKind
 import com.flipos.launcher.data.NotificationStore
+import java.io.File
+import java.util.ArrayDeque
 import java.util.Locale
 
 /**
@@ -109,7 +113,12 @@ object ReadAloud {
  * from TurboText's NativeTtsHelper. While speaking it holds transient audio
  * focus and an (invisible) [MediaSession]: losing focus is how an incoming
  * or ongoing call shows up, and the session is where a Bluetooth headset's
- * pause button lands - either one stops the readout.
+ * button lands - either one stops the readout.
+ *
+ * The engine renders each message to a file and this process plays it
+ * ([MediaPlayer]). On Android 8+ media buttons go to the session of the app
+ * that's actually playing audio; spoken by the engine directly, the audio
+ * was the engine's, so the headset button never reached our session.
  */
 object ReadAloudSpeaker {
 
@@ -125,8 +134,16 @@ object ReadAloudSpeaker {
     var isSpeaking = false
         private set
 
-    /** Keys whose DOWN stopped the readout, so their matching UP is swallowed too. */
-    private val swallowedKeys = HashSet<Int>()
+    /** Rendered messages waiting to play, in order, and the one playing. */
+    private val playQueue = ArrayDeque<File>()
+    private var player: MediaPlayer? = null
+
+    /** Utterance id -> (file, text) for messages being rendered; the text is the fallback if rendering fails. */
+    private val rendering = HashMap<String, Pair<File, String>>()
+
+    /** Bumped by [stop], so a render that finishes afterwards is dropped instead of played. */
+    private var generation = 0
+    private var cacheDir: File? = null
 
     private var audioManager: AudioManager? = null
     private var mediaSession: MediaSession? = null
@@ -148,10 +165,10 @@ object ReadAloudSpeaker {
                 applyPreferences(appContext)
                 tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                     override fun onStart(utteranceId: String?) {}
-                    override fun onDone(utteranceId: String?) = onUtteranceFinished()
+                    override fun onDone(utteranceId: String?) = onRendered(utteranceId, ok = true)
                     @Deprecated("Deprecated in Java")
-                    override fun onError(utteranceId: String?) = onUtteranceFinished()
-                    override fun onStop(utteranceId: String?, interrupted: Boolean) = onUtteranceFinished()
+                    override fun onError(utteranceId: String?) = onRendered(utteranceId, ok = false)
+                    override fun onStop(utteranceId: String?, interrupted: Boolean) = onRendered(utteranceId, ok = false, stopped = true)
                 })
                 ready = true
                 pending.forEach { speakNow(appContext, it) }
@@ -186,16 +203,89 @@ object ReadAloudSpeaker {
         inFlight++
         isSpeaking = true
         acquireFocusAndSession(context)
-        tts?.speak(text, TextToSpeech.QUEUE_ADD, null, "fl_${System.nanoTime()}")
+        val dir = (cacheDir ?: File(context.cacheDir, "readaloud").also { cacheDir = it }).apply { mkdirs() }
+        val id = "fl_${generation}_${System.nanoTime()}"
+        val file = File(dir, "$id.wav")
+        rendering[id] = file to text
+        val result = try {
+            tts?.synthesizeToFile(text, Bundle(), file, id) ?: TextToSpeech.ERROR
+        } catch (e: Exception) {
+            TextToSpeech.ERROR
+        }
+        if (result != TextToSpeech.SUCCESS) {
+            rendering.remove(id)
+            speakDirect(text)
+        }
     }
 
-    private fun onUtteranceFinished() {
+    /** Fallback: the engine speaks it itself (the headset button won't reach us for this one). */
+    private fun speakDirect(text: String) {
+        tts?.speak(text, TextToSpeech.QUEUE_ADD, null, "direct_${generation}_${System.nanoTime()}")
+    }
+
+    /** An utterance finished rendering (or, for [speakDirect], speaking). Engine thread. */
+    private fun onRendered(utteranceId: String?, ok: Boolean, stopped: Boolean = false) {
         mainHandler.post {
-            if (--inFlight <= 0) {
-                inFlight = 0
-                if (pending.isEmpty()) isSpeaking = false
-                releaseFocusAndSession()
+            val id = utteranceId ?: return@post
+            if (!id.startsWith("fl_${generation}_") && !id.startsWith("direct_${generation}_")) return@post // stale
+            val job = rendering.remove(id)
+            when {
+                job == null -> utteranceFinished() // a direct utterance ended
+                ok -> {
+                    playQueue.add(job.first)
+                    playNext()
+                }
+                stopped -> {
+                    job.first.delete()
+                    utteranceFinished()
+                }
+                else -> {
+                    job.first.delete()
+                    speakDirect(job.second)
+                }
             }
+        }
+    }
+
+    /** Plays the next rendered message from this process, so our media session gets the headset button. */
+    private fun playNext() {
+        if (player != null) return
+        val file = playQueue.poll() ?: return
+        try {
+            player = MediaPlayer().apply {
+                setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                        .build(),
+                )
+                setDataSource(file.path)
+                setOnCompletionListener { finishPlayback(file) }
+                setOnErrorListener { _, _, _ ->
+                    finishPlayback(file)
+                    true
+                }
+                prepare()
+                start()
+            }
+        } catch (e: Exception) {
+            finishPlayback(file)
+        }
+    }
+
+    private fun finishPlayback(file: File) {
+        player?.release()
+        player = null
+        file.delete()
+        utteranceFinished()
+        playNext()
+    }
+
+    private fun utteranceFinished() {
+        if (--inFlight <= 0) {
+            inFlight = 0
+            if (pending.isEmpty() && playQueue.isEmpty()) isSpeaking = false
+            releaseFocusAndSession()
         }
     }
 
@@ -285,7 +375,21 @@ object ReadAloudSpeaker {
     fun stop() {
         isSpeaking = false
         mainHandler.post {
+            generation++
             tts?.stop()
+            player?.let {
+                try {
+                    it.stop()
+                } catch (e: Exception) {
+                    // Not started yet; release below is enough.
+                }
+                it.release()
+            }
+            player = null
+            playQueue.forEach { it.delete() }
+            playQueue.clear()
+            rendering.values.forEach { it.first.delete() }
+            rendering.clear()
             pending.clear()
             inFlight = 0
             releaseFocusAndSession()
@@ -293,23 +397,18 @@ object ReadAloudSpeaker {
     }
 
     /**
-     * Any button press stops the readout - and only that: the stopping press
-     * (DOWN and its matching UP) is swallowed so it doesn't also open the
-     * dialer or an app. Volume keys pass through so the readout can still be
-     * turned up or down. Returns whether [event] was consumed. Called from
-     * the accessibility service's key filter (every app, flip closed too) and
-     * from the launcher's own screens; when nothing is speaking it's a single
-     * volatile read, as an accessibility onKeyEvent must stay cheap.
+     * Any button press stops the readout and still does its normal job (opens
+     * the app, dials the digit, moves focus): the key is never consumed.
+     * Volume keys don't stop it, so the readout can be turned up or down.
+     * Always returns false. Called from the accessibility service's key
+     * filter (every app, flip closed too) and from the launcher's own
+     * screens; when nothing is speaking it's a single volatile read, as an
+     * accessibility onKeyEvent must stay cheap.
      */
     fun interceptKey(event: KeyEvent): Boolean {
-        val keyCode = event.keyCode
-        if (event.action == KeyEvent.ACTION_UP && swallowedKeys.remove(keyCode)) return true
-        if (!isSpeaking || keyCode in PASS_THROUGH_KEYS) return false
-        if (event.action == KeyEvent.ACTION_DOWN) {
-            swallowedKeys.add(keyCode)
-            stop()
-        }
-        return true
+        if (!isSpeaking || event.keyCode in PASS_THROUGH_KEYS) return false
+        if (event.action == KeyEvent.ACTION_DOWN) stop()
+        return false
     }
 
     private val PASS_THROUGH_KEYS = setOf(

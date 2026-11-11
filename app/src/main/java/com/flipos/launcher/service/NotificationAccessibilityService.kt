@@ -215,9 +215,10 @@ class NotificationAccessibilityService : AccessibilityService() {
     override fun onInterrupt() {}
 
     /**
-     * Any button press anywhere (keypad, soft keys, side/outer buttons,
-     * Bluetooth headset keys) stops a readout in progress and is swallowed;
-     * otherwise keys pass straight through. Must stay cheap - it gates every
+     * Any button press anywhere (keypad, soft keys, side/outer buttons)
+     * stops a readout in progress; the key still passes through to do its
+     * normal job. (Bluetooth headset buttons reach the read-aloud
+     * MediaSession instead.) Must stay cheap - it gates every
      * key on the phone - which [ReadAloudSpeaker.interceptKey] is when idle.
      */
     override fun onKeyEvent(event: KeyEvent): Boolean = ReadAloudSpeaker.interceptKey(event)
