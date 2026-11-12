@@ -192,7 +192,7 @@
     <!-- Wallpaper picker -->
     <string name="title_wallpaper_picker">Choose Wallpaper</string>
     <string name="wallpaper_from_gallery">From gallery…</string>
-    <string name="crop_hint">OK SET  ARROWS MOVE  * # ZOOM  0 HIDE</string>
+    <string name="crop_hint">OK SET  * # ZOOM  1 3 TURN  0 HIDE</string>
     <string name="crop_loading">Opening picture…</string>
     <string name="crop_setting">Setting wallpaper…</string>
     <string name="crop_open_failed">Couldn\'t open that picture</string>
@@ -200,6 +200,9 @@
     <string name="crop_opt_show_home">Show Home screen</string>
     <string name="crop_opt_reset">Reset crop</string>
     <string name="crop_opt_set">Set wallpaper</string>
+    <string name="crop_opt_rotate_right">Rotate right</string>
+    <string name="crop_opt_rotate_left">Rotate left</string>
+    <string name="crop_rotate_failed">Couldn\'t rotate</string>
     <string name="wallpaper_set_toast">Wallpaper set</string>
     <string name="wallpaper_set_failed">Couldn\'t set wallpaper</string>
 

@@ -38,7 +38,7 @@ import kotlin.math.roundToInt
  * Started by [WallpaperPickerActivity] with the photo's Uri as data;
  * finishes with RESULT_OK once the wallpaper is set.
  *
- * Keys: D-pad moves, `#`/`*` zoom in/out, 5 resets, 0 hides/shows Home,
+ * Keys: D-pad moves, `#`/`*` zoom in/out, 1/3 turn left/right, 5 resets, 0 hides/shows Home,
  * OK or Left soft key sets, Right soft key/MENU opens Options, Back cancels.
  */
 class WallpaperCropActivity : AppCompatActivity() {
@@ -50,7 +50,11 @@ class WallpaperCropActivity : AppCompatActivity() {
     private lateinit var status: TextView
 
     private val loader = BackgroundLoader()
+    private val rotateLoader = BackgroundLoader()
     private var busy = false
+
+    /** A turn is being worked out; other presses wait. */
+    private var rotating = false
 
     /** Keys whose DOWN this window saw; their UP acts (see AGENTS.md §1). */
     private val pressed = mutableSetOf<Int>()
@@ -161,8 +165,45 @@ class WallpaperCropActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Turns the photo a quarter turn ([degrees] = 90 right, -90 left) and
+     * starts the crop over on the turned photo.
+     */
+    private fun rotate(degrees: Int) {
+        if (busy || rotating) return
+        val source = photo.bitmap ?: return
+        rotating = true
+        val appContext = applicationContext
+        rotateLoader.load(
+            produce = {
+                try {
+                    val turned = Bitmap.createBitmap(
+                        source, 0, 0, source.width, source.height,
+                        Matrix().apply { postRotate(degrees.toFloat()) }, true,
+                    )
+                    turned to WallpaperContrast.averageLuminance(BitmapDrawable(appContext.resources, turned))
+                } catch (e: Throwable) {
+                    // Out of memory, mostly; any failure must still clear [rotating].
+                    null
+                }
+            },
+            consume = { result ->
+                rotating = false
+                if (isDestroyed) return@load
+                if (result == null) {
+                    Toast.makeText(this, R.string.crop_rotate_failed, Toast.LENGTH_SHORT).show()
+                    return@load
+                }
+                val (turned, level) = result
+                photo.bitmap = turned
+                scrim.background = WallpaperContrast.homeScrim(this, level)
+                if (turned != source) source.recycle()
+            },
+        )
+    }
+
     private fun setWallpaper() {
-        if (busy) return
+        if (busy || rotating) return
         val source = photo.bitmap ?: return
         val rect = photo.visibleRect() ?: return
         if (rect.width() <= 0 || rect.height() <= 0) return
@@ -217,14 +258,18 @@ class WallpaperCropActivity : AppCompatActivity() {
             .setItems(
                 arrayOf(
                     getString(R.string.crop_opt_set),
+                    getString(R.string.crop_opt_rotate_right),
+                    getString(R.string.crop_opt_rotate_left),
                     getString(if (homeShown) R.string.crop_opt_hide_home else R.string.crop_opt_show_home),
                     getString(R.string.crop_opt_reset),
                 ),
             ) { _, which ->
                 when (which) {
                     0 -> setWallpaper()
-                    1 -> toggleHome()
-                    2 -> photo.reset()
+                    1 -> rotate(90)
+                    2 -> rotate(-90)
+                    3 -> toggleHome()
+                    4 -> photo.reset()
                 }
             }
             .show()
@@ -243,6 +288,7 @@ class WallpaperCropActivity : AppCompatActivity() {
             KeyEvent.KEYCODE_DPAD_RIGHT -> photo.pan(step, 0f)
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_BACK,
             KeyEvent.KEYCODE_POUND, KeyEvent.KEYCODE_STAR, KeyEvent.KEYCODE_NUMPAD_MULTIPLY,
+            KeyEvent.KEYCODE_1, KeyEvent.KEYCODE_3,
             KeyEvent.KEYCODE_5, KeyEvent.KEYCODE_0 -> if (event.repeatCount == 0) pressed.add(keyCode)
             else -> {
                 toastIfUnknownKey(keyCode, event)
@@ -266,6 +312,8 @@ class WallpaperCropActivity : AppCompatActivity() {
             keyCode == KeyEvent.KEYCODE_BACK -> if (!busy) finish()
             keyCode == KeyEvent.KEYCODE_POUND -> photo.zoomBy(ZOOM_STEP)
             isStarKey(keyCode) -> photo.zoomBy(1f / ZOOM_STEP)
+            keyCode == KeyEvent.KEYCODE_1 -> rotate(-90)
+            keyCode == KeyEvent.KEYCODE_3 -> rotate(90)
             keyCode == KeyEvent.KEYCODE_5 -> photo.reset()
             keyCode == KeyEvent.KEYCODE_0 -> toggleHome()
         }
@@ -291,6 +339,7 @@ class WallpaperCropActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         loader.cancel()
+        rotateLoader.cancel()
         super.onDestroy()
     }
 

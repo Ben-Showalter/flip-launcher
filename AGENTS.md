@@ -303,7 +303,8 @@ Icon.
   with Home drawn over it (`ui/HomePreview.kt`).
 - **Gallery wallpapers** (picker → Options → From gallery…): the picked photo
   opens `WallpaperCropActivity`, a D-pad crop with Home drawn on top - D-pad
-  moves, `#`/`*` zoom in/out, 5 resets, 0 hides Home, OK sets, Back cancels.
+  moves, `#`/`*` zoom in/out, 1/3 turn left/right, 5 resets, 0 hides Home,
+  OK sets, Back cancels.
   The visible area is what gets set. There's no link to the phone's own
   wallpaper setter (it has no Home preview).
 - **Home's clock, soft keys and D-pad pod** are filled by `ui/HomeScreenBinder.kt`,
