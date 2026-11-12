@@ -191,7 +191,6 @@
 
     <!-- Wallpaper picker -->
     <string name="title_wallpaper_picker">Choose Wallpaper</string>
-    <string name="wallpaper_picker_more">More wallpapers…</string>
     <string name="wallpaper_from_gallery">From gallery…</string>
     <string name="crop_hint">OK SET  ARROWS MOVE  * # ZOOM  0 HIDE</string>
     <string name="crop_loading">Opening picture…</string>

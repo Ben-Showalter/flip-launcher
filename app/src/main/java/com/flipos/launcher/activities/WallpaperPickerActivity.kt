@@ -126,21 +126,10 @@ class WallpaperPickerActivity : BaseListActivity() {
         Toast.makeText(this, R.string.toast_not_available, Toast.LENGTH_SHORT).show()
     }
 
-    private fun openSystemChooser() {
-        try {
-            startActivity(Intent.createChooser(Intent(Intent.ACTION_SET_WALLPAPER), getString(R.string.opt_set_wallpaper)))
-        } catch (e: Exception) {
-            Toast.makeText(this, R.string.toast_not_available, Toast.LENGTH_SHORT).show()
-        }
-    }
-
     override fun onOptionsKey() {
         AlertDialog.Builder(this)
-            .setItems(arrayOf(getString(R.string.wallpaper_from_gallery), getString(R.string.wallpaper_picker_more))) { _, which ->
-                when (which) {
-                    0 -> openGallery()
-                    1 -> openSystemChooser()
-                }
+            .setItems(arrayOf(getString(R.string.wallpaper_from_gallery))) { _, which ->
+                if (which == 0) openGallery()
             }
             .show()
     }

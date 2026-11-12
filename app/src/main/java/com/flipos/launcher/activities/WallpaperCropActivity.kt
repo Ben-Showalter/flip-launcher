@@ -120,7 +120,9 @@ class WallpaperCropActivity : AppCompatActivity() {
     private fun decode(uri: Uri, maxWidth: Int, maxHeight: Int): Bitmap? {
         val resolver = contentResolver
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) } ?: return null
+        // A bounds-only decode always returns null; the size lands in [bounds].
+        val stream = resolver.openInputStream(uri) ?: return null
+        stream.use { BitmapFactory.decodeStream(it, null, bounds) }
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
         val rotation = exifRotation(uri)
         // Compare in the photo's upright shape.
