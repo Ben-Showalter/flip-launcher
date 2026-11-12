@@ -141,6 +141,12 @@ person's laptop.
   list instead of the phone's screen. The `FlipNotif` window log prints each screen's title. The
   Mic/Assistant key reports keycode 287 (scan 171) on the E4610, even with the launcher focused; other builds
   send `KEYCODE_F4`, so both are handled.
+- **Typing a number on Home**: digits go into `dialBuffer` (cleared in
+  `onResume`), and each one reopens `ACTION_DIAL` with the whole number, since
+  keys typed while the dialer is opening still reach Home. `onPause` sends any
+  digit still waiting out its 200ms tap debounce instead of dropping it. A
+  same-digit re-press within `SPLIT_HOLD_GAP_MS` (60ms) of its release is the
+  keypad splitting one hold; later is a real second press. `FlipKeys` logs it.
 - **E4610 speed dial and outer keys** (Android 7): `content://speed_dial`
   holds nothing the dialer's own Speed Dial screen
   (`com.android.dialer/.speeddial.SpeedDialActivity` there, `.app.speeddial.`

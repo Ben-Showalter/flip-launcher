@@ -128,8 +128,18 @@ class MainActivity : AppCompatActivity() {
     /** [KeyEvent.getDownTime] of the outer-button press that last launched, keyed by synthetic keycode. */
     private val extraKeyFiredDownTime = HashMap<Int, Long>()
 
-    /** Scheduled digit short-tap dial runnables (debounced against a same-key re-press), keyed by keyCode. */
-    private val digitTapRunnables = HashMap<Int, Runnable>()
+    /** A released digit (or `*`/`#`) waiting out [DIGIT_TAP_DEBOUNCE_MS] before it goes to the dialer. */
+    private class PendingTap(val digit: String, val upTime: Long, val runnable: Runnable)
+
+    /** Pending digit taps in the order they were released, keyed by keyCode. */
+    private val digitTaps = LinkedHashMap<Int, PendingTap>()
+
+    /**
+     * Everything typed on Home since it was last shown. Each new digit
+     * reopens the dialer with the whole number, so digits typed while the
+     * dialer is still opening (which land here, not there) aren't lost.
+     */
+    private val dialBuffer = StringBuilder()
 
     /**
      * [KeyEvent.getDownTime] of the digit press session already resolved
@@ -265,6 +275,8 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         window.hideNavigationBar()
+        // Back on Home: a new number starts from scratch.
+        dialBuffer.setLength(0)
         // Back on Home: the user has left whatever app they opened, so its seen
         // banner entries go (accessibility feed only - the listener has real removals).
         if (NotificationCountService.instance == null) {
@@ -319,6 +331,9 @@ class MainActivity : AppCompatActivity() {
         unregisterReceiver(packageReceiver)
         NotificationStore.removeListener(notifListener)
         notifBannerHandler.removeCallbacksAndMessages(null)
+        // The dialer opening pauses Home while later digits may still be
+        // waiting out their tap debounce: send them on now rather than drop them.
+        flushDigitTaps()
         // A key hold that's interrupted mid-press (screen off, app switch) may
         // never deliver a matching key-up; drop any scheduled assign timers so
         // they don't fire into the background.
@@ -326,7 +341,7 @@ class MainActivity : AppCompatActivity() {
         assignRunnables.clear()
         digitHoldRunnables.clear()
         poundHoldFired = false
-        digitTapRunnables.clear()
+        digitTaps.clear()
         pressedTapKeys.clear()
         centerDownSeen = false
         centerHoldFired = false
@@ -384,10 +399,21 @@ class MainActivity : AppCompatActivity() {
 
     // --------------------------------------------------------------- Actions
 
-    /** Open the phone dialer, prefilled with the pressed digit (or * / #). */
-    private fun startDial(digit: String) {
+    /**
+     * Adds [digit] (a digit, `*` or `#`) to the number typed on Home and
+     * opens the dialer with all of it. The dialer takes a few hundred ms to
+     * come up, and keys pressed meanwhile still come here; reopening it with
+     * the whole number each time means a fast typist loses nothing.
+     */
+    private fun typeDialDigit(digit: String) {
+        dialBuffer.append(digit)
+        startDial(dialBuffer.toString())
+    }
+
+    /** Open the phone dialer, prefilled with [number]. */
+    private fun startDial(number: String) {
         try {
-            startActivity(Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", digit, null)))
+            startActivity(Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", number, null)))
         } catch (e: Exception) {
             Toast.makeText(this, R.string.toast_no_dialer, Toast.LENGTH_SHORT).show()
         }
@@ -576,7 +602,17 @@ class MainActivity : AppCompatActivity() {
         when (keyCode) {
             in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> {
                 if (event.repeatCount == 0) {
-                    cancelDigitTap(keyCode)
+                    // Same key again while its last tap is still pending: a
+                    // real second press (fast typing, "55") keeps that digit;
+                    // only the near-instant re-press this keypad sends in the
+                    // middle of one long hold cancels it (see [scheduleDigitTap]).
+                    val pending = digitTaps[keyCode]
+                    if (pending != null && event.eventTime - pending.upTime >= SPLIT_HOLD_GAP_MS) {
+                        flushDigitTap(keyCode)
+                    } else {
+                        if (pending != null) Log.d(KEY_TAG, "digit $keyCode re-pressed ${event.eventTime - pending.upTime}ms after release: treated as one hold")
+                        cancelDigitTap(keyCode)
+                    }
                     longPressFired.remove(keyCode)
                     digitHandledDownTime.remove(keyCode)
                     scheduleDigitHold(keyCode)
@@ -639,7 +675,7 @@ class MainActivity : AppCompatActivity() {
                 // already resolved is that spurious event, not a real new release.
                 if (digitHandledDownTime[keyCode] == event.downTime) return true
                 digitHandledDownTime[keyCode] = event.downTime
-                scheduleDigitTap(keyCode)
+                scheduleDigitTap(keyCode, event.eventTime)
                 return true
             }
             KeyEvent.KEYCODE_STAR, KeyEvent.KEYCODE_NUMPAD_MULTIPLY, KeyEvent.KEYCODE_POUND, KeyEvent.KEYCODE_CALL -> {
@@ -655,8 +691,8 @@ class MainActivity : AppCompatActivity() {
                 if (pressedTapKeys.remove(keyCode) && !event.isCanceled) {
                     when {
                         keyCode == KeyEvent.KEYCODE_CALL -> openCallLog()
-                        isStarKey(keyCode) -> startDial("*")
-                        else -> startDial("#")
+                        isStarKey(keyCode) -> typeDialDigit("*")
+                        else -> typeDialDigit("#")
                     }
                 }
                 return true
@@ -855,17 +891,37 @@ class MainActivity : AppCompatActivity() {
      * separate press/release cycles, so an immediate release-fires-dial
      * would double-dial (tap action + the real long-press action both firing).
      */
-    private fun scheduleDigitTap(keyCode: Int) {
+    private fun scheduleDigitTap(keyCode: Int, upTime: Long) {
         cancelDigitTap(keyCode)
+        val digit = (keyCode - KeyEvent.KEYCODE_0).toString()
         val runnable = Runnable {
-            startDial((keyCode - KeyEvent.KEYCODE_0).toString())
+            digitTaps.remove(keyCode)
+            typeDialDigit(digit)
         }
-        digitTapRunnables[keyCode] = runnable
+        digitTaps[keyCode] = PendingTap(digit, upTime, runnable)
         assignHandler.postDelayed(runnable, DIGIT_TAP_DEBOUNCE_MS)
     }
 
     private fun cancelDigitTap(keyCode: Int) {
-        digitTapRunnables.remove(keyCode)?.let { assignHandler.removeCallbacks(it) }
+        digitTaps.remove(keyCode)?.let { assignHandler.removeCallbacks(it.runnable) }
+    }
+
+    /** Sends [keyCode]'s pending tap to the dialer now instead of after its debounce. */
+    private fun flushDigitTap(keyCode: Int) {
+        val pending = digitTaps.remove(keyCode) ?: return
+        assignHandler.removeCallbacks(pending.runnable)
+        typeDialDigit(pending.digit)
+    }
+
+    /** Sends every pending tap, in the order typed, to the dialer in one go. */
+    private fun flushDigitTaps() {
+        if (digitTaps.isEmpty()) return
+        for (pending in digitTaps.values) {
+            assignHandler.removeCallbacks(pending.runnable)
+            dialBuffer.append(pending.digit)
+        }
+        digitTaps.clear()
+        startDial(dialBuffer.toString())
     }
 
     /** Opens the app picker to assign [keyCode] (MENU/BACK/soft-key/D-pad/Camera - digits are handled by the phone's own Speed Dial settings, see [dialSpeedDial]). */
@@ -1130,6 +1186,17 @@ class MainActivity : AppCompatActivity() {
          * genuine single tap.
          */
         private const val DIGIT_TAP_DEBOUNCE_MS = 200L
+
+        /**
+         * A same-digit re-press sooner than this after its release is this
+         * keypad splitting one long hold in two; any later is the user
+         * pressing it again (fast typing). Fingers can't release and re-press
+         * this quickly.
+         */
+        private const val SPLIT_HOLD_GAP_MS = 60L
+
+        /** Logcat tag for digit-typing decisions (filter `tag:FlipKeys`). */
+        private const val KEY_TAG = "FlipKeys"
 
         /** Captured in [dispatchKeyEvent], before default focus-search can consume them. */
         private val DIRECTIONAL_KEYS = setOf(
