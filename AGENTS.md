@@ -301,6 +301,11 @@ Icon.
   auto-discovered, so the registry step is required.
   Wallpapers are 240x320 (3:4) JPGs; the picker shows each one at that shape
   with Home drawn over it (`ui/HomePreview.kt`).
+- **Gallery wallpapers** (picker → Options → From gallery…): the picked photo
+  opens `WallpaperCropActivity`, a D-pad crop with Home drawn on top - D-pad
+  moves, `#`/`*` zoom in/out, 5 resets, 0 hides Home, OK sets, Back cancels.
+  The visible area is what gets set. "More wallpapers…" still opens the
+  phone's own setter.
 - **Home's clock, soft keys and D-pad pod** are filled by `ui/HomeScreenBinder.kt`,
   shared by Home and the wallpaper picker's preview. Change Home's look there,
   not in `MainActivity`, so the preview keeps matching.

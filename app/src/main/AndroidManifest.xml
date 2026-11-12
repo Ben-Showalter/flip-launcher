@@ -236,6 +236,12 @@
             android:screenOrientation="portrait"
             android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize|screenLayout|smallestScreenSize" />
 
+        <activity
+            android:name=".activities.WallpaperCropActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize|screenLayout|smallestScreenSize" />
+
         <!-- Exported with a LAUNCHER category so it also appears in the app
              drawer like a regular app, mirroring SettingsActivity below. -->
         <activity

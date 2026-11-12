@@ -7,7 +7,9 @@ import android.content.Intent
 import android.content.res.Resources
 import android.graphics.BitmapFactory
 import android.os.Bundle
+import android.provider.MediaStore
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.recyclerview.widget.GridLayoutManager
 import com.flipos.launcher.data.BuiltInWallpapers
@@ -19,6 +21,23 @@ import com.flipos.launcher.ui.WallpaperGridAdapter
 class WallpaperPickerActivity : BaseListActivity() {
 
     private lateinit var adapter: WallpaperGridAdapter
+
+    /** A photo picked from the gallery goes to the crop screen. */
+    private val galleryPicker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val uri = result.data?.data
+        if (result.resultCode == RESULT_OK && uri != null) {
+            cropScreen.launch(
+                Intent(this, WallpaperCropActivity::class.java)
+                    .setData(uri)
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
+            )
+        }
+    }
+
+    /** The crop screen set the wallpaper: done here too. */
+    private val cropScreen = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) finish()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -86,6 +105,27 @@ class WallpaperPickerActivity : BaseListActivity() {
         return BitmapFactory.decodeResource(res, resId, opts)
     }
 
+    /**
+     * The Gallery's photo picker, or the general image picker where there's
+     * none. The picked photo comes with read access, so no storage
+     * permission is needed.
+     */
+    private fun openGallery() {
+        val attempts = listOf(
+            Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI),
+            Intent(Intent.ACTION_GET_CONTENT).setType("image/*").addCategory(Intent.CATEGORY_OPENABLE),
+        )
+        for (intent in attempts) {
+            try {
+                galleryPicker.launch(intent)
+                return
+            } catch (e: Exception) {
+                // Nothing handles this one; try the next.
+            }
+        }
+        Toast.makeText(this, R.string.toast_not_available, Toast.LENGTH_SHORT).show()
+    }
+
     private fun openSystemChooser() {
         try {
             startActivity(Intent.createChooser(Intent(Intent.ACTION_SET_WALLPAPER), getString(R.string.opt_set_wallpaper)))
@@ -96,8 +136,11 @@ class WallpaperPickerActivity : BaseListActivity() {
 
     override fun onOptionsKey() {
         AlertDialog.Builder(this)
-            .setItems(arrayOf(getString(R.string.wallpaper_picker_more))) { _, which ->
-                if (which == 0) openSystemChooser()
+            .setItems(arrayOf(getString(R.string.wallpaper_from_gallery), getString(R.string.wallpaper_picker_more))) { _, which ->
+                when (which) {
+                    0 -> openGallery()
+                    1 -> openSystemChooser()
+                }
             }
             .show()
     }

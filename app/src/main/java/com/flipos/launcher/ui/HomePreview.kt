@@ -21,11 +21,16 @@ import com.flipos.launcher.util.applyFakeBold
  */
 object HomePreview {
 
-    /** Call from an Activity whose theme carries the user's accent (as Home's does). */
-    fun renderOverlay(context: Context): Bitmap {
-        val res = context.resources
-        val width = res.displayMetrics.widthPixels
-        val height = width * 4 / 3
+    /**
+     * Home at [width] x [height] px (by default the screen's width at the
+     * wallpapers' 3:4 shape). Call from an Activity whose theme carries the
+     * user's accent (as Home's does).
+     */
+    fun renderOverlay(
+        context: Context,
+        width: Int = context.resources.displayMetrics.widthPixels,
+        height: Int = width * 4 / 3,
+    ): Bitmap {
         val root = LayoutInflater.from(context).inflate(R.layout.activity_main, FrameLayout(context), false)
         // Home sits under a transparent status bar; offscreen there are no insets, so pad for it.
         root.fitsSystemWindows = false
