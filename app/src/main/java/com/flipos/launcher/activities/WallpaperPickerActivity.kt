@@ -11,6 +11,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.recyclerview.widget.GridLayoutManager
 import com.flipos.launcher.data.BuiltInWallpapers
+import com.flipos.launcher.ui.HomePreview
 import com.flipos.launcher.ui.WallpaperGridAdapter
 
 /** Lets the user set the device wallpaper from the launcher's bundled set, pulled
@@ -26,6 +27,8 @@ class WallpaperPickerActivity : BaseListActivity() {
         adapter = WallpaperGridAdapter(onClick = { name -> applyWallpaper(name) })
         listView.layoutManager = GridLayoutManager(this, COLUMNS)
         listView.adapter = adapter
+        // Each tile shows Home over it: the real clock, soft keys and D-pad pod.
+        adapter.overlay = HomePreview.renderOverlay(this)
         adapter.submit(BuiltInWallpapers.names())
 
         softKeys.setLabels(null, null, getString(R.string.softkey_options))

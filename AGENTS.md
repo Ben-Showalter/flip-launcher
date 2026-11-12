@@ -299,3 +299,8 @@ Icon.
   (no extension) to `BuiltInIcons.LEGACY_NAMES` in `data/BuiltInIcons.kt` or
   `BuiltInWallpapers.NAMES` in `data/BuiltInWallpapers.kt`. Resources aren't
   auto-discovered, so the registry step is required.
+  Wallpapers are 240x320 (3:4) JPGs; the picker shows each one at that shape
+  with Home drawn over it (`ui/HomePreview.kt`).
+- **Home's clock, soft keys and D-pad pod** are filled by `ui/HomeScreenBinder.kt`,
+  shared by Home and the wallpaper picker's preview. Change Home's look there,
+  not in `MainActivity`, so the preview keeps matching.

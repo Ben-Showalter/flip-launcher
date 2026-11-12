@@ -33,7 +33,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import com.flipos.launcher.data.AppRepository
-import com.flipos.launcher.data.IconShapeRenderer
 import com.flipos.launcher.data.LauncherPrefs
 import com.flipos.launcher.data.NotificationKind
 import com.flipos.launcher.data.NotificationStore
@@ -52,6 +51,7 @@ import com.flipos.launcher.util.VibrateMode
 import com.flipos.launcher.util.WallpaperContrast
 import com.flipos.launcher.util.accentColorAlpha
 import com.flipos.launcher.util.applyFakeBold
+import com.flipos.launcher.ui.HomeScreenBinder
 import com.flipos.launcher.util.hideNavigationBar
 import com.flipos.launcher.util.isAccessibilityServiceEnabled
 import com.flipos.launcher.util.isDefaultLauncher
@@ -65,9 +65,6 @@ import com.flipos.launcher.util.openSettingsWithPath
 import com.flipos.launcher.util.showUpdatePrompt
 import com.flipos.launcher.util.systemSpeedDial
 import com.flipos.launcher.util.toastIfUnknownKey
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 /**
  * The KaiOS-style home screen:
@@ -95,17 +92,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var prefs: LauncherPrefs
     private lateinit var appMenuButton: ImageView
     private lateinit var clock: TextView
-    private lateinit var ampm: TextView
-    private lateinit var weekday: TextView
-    private lateinit var dateLine: TextView
     private lateinit var notifBanner: View
     private lateinit var notifBannerIcon: ImageView
     private lateinit var notifBannerApp: TextView
     private lateinit var notifBannerText: TextView
-    private lateinit var dpadIconUp: ImageView
-    private lateinit var dpadIconDown: ImageView
-    private lateinit var dpadIconLeft: ImageView
-    private lateinit var dpadIconRight: ImageView
 
 
     /** Physical key awaiting an app from [assignAppLauncher] (0 = none). */
@@ -248,18 +238,11 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(android.R.id.content).applyFakeBold()
 
         clock = findViewById(R.id.clock)
-        ampm = findViewById(R.id.ampm)
-        weekday = findViewById(R.id.weekday)
-        dateLine = findViewById(R.id.date_line)
         // Dark, semi-transparent background from bg_notif_banner - not the accent.
         notifBanner = findViewById(R.id.notif_banner)
         notifBannerIcon = findViewById(R.id.notif_banner_icon)
         notifBannerApp = findViewById(R.id.notif_banner_app)
         notifBannerText = findViewById(R.id.notif_banner_text)
-        dpadIconUp = findViewById(R.id.dpad_icon_up)
-        dpadIconDown = findViewById(R.id.dpad_icon_down)
-        dpadIconLeft = findViewById(R.id.dpad_icon_left)
-        dpadIconRight = findViewById(R.id.dpad_icon_right)
 
         findViewById<TextView>(R.id.softkey_left).setOnClickListener { openLeftKeyApp() }
         findViewById<TextView>(R.id.softkey_right).setOnClickListener { openRightKeyApp() }
@@ -396,29 +379,8 @@ class MainActivity : AppCompatActivity() {
 
     // ----------------------------------------------------------- Data / clock
 
-    /**
-     * Formatters are built on every refresh (about once a minute): a
-     * SimpleDateFormat keeps the time zone and language it was created with,
-     * and Home lives until reboot, so cached ones missed time-zone and
-     * language changes. Follows the system 12/24-hour setting.
-     */
-    private fun updateClock() {
-        val now = Date()
-        val locale = Locale.getDefault()
-        fun format(pattern: String) = SimpleDateFormat(pattern, locale).format(now)
-        fun best(skeleton: String) = android.text.format.DateFormat.getBestDateTimePattern(locale, skeleton)
-        if (android.text.format.DateFormat.is24HourFormat(this)) {
-            ampm.visibility = TextView.GONE
-            clock.text = format(best("Hmm"))
-        } else {
-            ampm.visibility = TextView.VISIBLE
-            ampm.text = format("a")
-            // The locale's 12-hour pattern minus its AM/PM, which has its own view.
-            clock.text = format(best("hmm").replace(Regex("\\s*a\\s*"), "").trim())
-        }
-        weekday.text = format("EEEE")
-        dateLine.text = format(best("MMMd"))
-    }
+    /** See [HomeScreenBinder.bindClock]: formatters are rebuilt each minute, following the system 12/24-hour setting. */
+    private fun updateClock() = HomeScreenBinder.bindClock(this, clock.rootView)
 
     // --------------------------------------------------------------- Actions
 
@@ -525,21 +487,9 @@ class MainActivity : AppCompatActivity() {
         packageName
     }
 
-    private fun refreshRightKeyLabel() {
-        val key = prefs.getRightKeyApp()
-        val label = key?.let { AppRepository.resolveComponent(this, it)?.label }
-            ?: getString(R.string.softkey_messages)
-        findViewById<TextView>(R.id.softkey_right).text = label
-        bindKeyIcon(findViewById(R.id.softkey_right_icon), key)
-    }
+    private fun refreshRightKeyLabel() = HomeScreenBinder.bindRightKey(this, clock.rootView, prefs)
 
-    private fun refreshLeftKeyLabel() {
-        val key = prefs.getLeftKeyApp()
-        val label = key?.let { AppRepository.resolveComponent(this, it)?.label }
-            ?: getString(R.string.softkey_contacts)
-        findViewById<TextView>(R.id.softkey_left).text = label
-        bindKeyIcon(findViewById(R.id.softkey_left_icon), key)
-    }
+    private fun refreshLeftKeyLabel() = HomeScreenBinder.bindLeftKey(this, clock.rootView, prefs)
 
     /**
      * The KaiOS "Recent Calls" action for the Send/Call key. Tries this
@@ -1025,32 +975,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** Refreshes the D-pad shortcut pod's four icons; the pod itself always stays visible (it also houses the OK button). */
-    private fun refreshDirectionalPod() {
-        bindKeyIcon(dpadIconUp, prefs.getDpadUpApp())
-        bindKeyIcon(dpadIconDown, prefs.getDpadDownApp())
-        bindKeyIcon(dpadIconLeft, prefs.getDpadLeftApp())
-        bindKeyIcon(dpadIconRight, prefs.getDpadRightApp())
-    }
+    private fun refreshDirectionalPod() = HomeScreenBinder.bindDpad(this, clock.rootView, prefs)
 
-    /** Binds [key]'s squircle-masked icon into [view] and shows it, or hides [view] when [key] is null. Returns whether it was bound. */
-    private fun bindKeyIcon(view: ImageView, key: String?): Boolean {
-        val icon = key?.let { AppRepository.resolveRawIcon(this, it) }
-        if (icon == null) {
-            view.visibility = View.GONE
-            return false
-        }
-        view.setImageDrawable(
-            IconShapeRenderer.render(
-                context = this,
-                source = icon,
-                shape = LauncherPrefs.IconShape.SQUIRCLE,
-                wrapEnabled = true,
-                legacyBackgroundEnabled = true,
-            ),
-        )
-        view.visibility = View.VISIBLE
-        return true
-    }
+    private fun bindKeyIcon(view: ImageView, key: String?): Boolean = HomeScreenBinder.bindKeyIcon(this, view, key)
 
     private fun callVoicemail() {
         callPermission.run(onDenied = {
