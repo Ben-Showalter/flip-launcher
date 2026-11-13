@@ -5,7 +5,6 @@ import com.flipos.launcher.R
 import android.Manifest
 import android.app.KeyguardManager
 import android.content.BroadcastReceiver
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -52,6 +51,7 @@ import com.flipos.launcher.util.WallpaperContrast
 import com.flipos.launcher.util.accentColorAlpha
 import com.flipos.launcher.util.applyFakeBold
 import com.flipos.launcher.ui.HomeScreenBinder
+import com.flipos.launcher.util.SystemCallLog
 import com.flipos.launcher.util.hideNavigationBar
 import com.flipos.launcher.util.isAccessibilityServiceEnabled
 import com.flipos.launcher.util.isDefaultLauncher
@@ -521,11 +521,11 @@ class MainActivity : AppCompatActivity() {
      * The KaiOS "Recent Calls" action for the Send/Call key. Tries this
      * hardware's own call log screen first - the Kyocera "Kc" dialer
      * activity, whose package path differs by model (see
-     * [SYSTEM_CALL_LOG_COMPONENTS]) - falling back to our own
+     * [SystemCallLog.COMPONENTS]) - falling back to our own
      * [CallLogActivity] if none is present (any other device).
      */
     private fun openCallLog() {
-        for (component in SYSTEM_CALL_LOG_COMPONENTS) {
+        for (component in SystemCallLog.COMPONENTS) {
             try {
                 startActivity(
                     Intent(Intent.ACTION_MAIN)
@@ -1207,16 +1207,6 @@ class MainActivity : AppCompatActivity() {
             KeyEvent.KEYCODE_CAMERA,
             LauncherPrefs.KEYCODE_CAMERA_ALT,
             LauncherPrefs.KEYCODE_CAMERA_ALT2,
-        )
-
-        /**
-         * The Kyocera dialer's own call log, tried in order by [openCallLog]:
-         * `.calllog.CallLogActivityKc` is the E4610's (confirmed via logcat),
-         * `.app.calllog.CallLogActivityKc` the newer models'.
-         */
-        private val SYSTEM_CALL_LOG_COMPONENTS = listOf(
-            ComponentName("com.android.dialer", "com.android.dialer.calllog.CallLogActivityKc"),
-            ComponentName("com.android.dialer", "com.android.dialer.app.calllog.CallLogActivityKc"),
         )
     }
 }

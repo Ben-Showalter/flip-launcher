@@ -22,6 +22,7 @@ import com.flipos.launcher.data.LauncherPrefs
 import com.flipos.launcher.data.NoticeItem
 import com.flipos.launcher.data.NotificationKind
 import com.flipos.launcher.data.NotificationStore
+import com.flipos.launcher.service.MissedCallWatcher
 import java.io.File
 import java.util.ArrayDeque
 import java.util.Locale
@@ -73,6 +74,7 @@ object ReadAloud {
     private fun phrase(context: Context, prefs: LauncherPrefs, item: NoticeItem): String {
         // Mirror the banner: with message text hidden it shows only the app name.
         if (prefs.isNotificationTextHidden()) return appLabel(context, item.packageName)
+        if (item.key.startsWith(MissedCallWatcher.KEY_PREFIX)) return "Missed call from ${item.title}"
         val title = when (item.kind) {
             NotificationKind.MESSAGE -> "Message from ${item.title}"
             NotificationKind.EVENT -> "Reminder: ${item.title}"

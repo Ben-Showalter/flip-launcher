@@ -4,19 +4,23 @@ import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.KeyguardManager
 import android.app.Notification
+import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.PowerManager
 import android.os.SystemClock
 import android.util.Log
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
 import androidx.core.content.ContextCompat
+import com.flipos.launcher.R
 import com.flipos.launcher.data.NotificationCategorizer
+import com.flipos.launcher.data.NotificationKind
 import com.flipos.launcher.data.NoticeItem
 import com.flipos.launcher.data.NotificationStore
 import com.flipos.launcher.data.NotificationText
@@ -24,6 +28,7 @@ import com.flipos.launcher.util.CategoryApps
 import com.flipos.launcher.util.ReadAloud
 import com.flipos.launcher.util.ReadAloudSpeaker
 import com.flipos.launcher.util.SettingsRedirects
+import com.flipos.launcher.util.SystemCallLog
 
 /**
  * Fallback notification source for devices where NotificationListenerService
@@ -72,6 +77,9 @@ class NotificationAccessibilityService : AccessibilityService() {
     }
     private var screenReceiverRegistered = false
 
+    /** Missed calls never arrive as an alerting notification here - see [MissedCallWatcher]. */
+    private var missedCalls: MissedCallWatcher? = null
+
     override fun onServiceConnected() {
         super.onServiceConnected()
         // Mirror accessibility_service_config.xml in code too: some OEM builds
@@ -86,6 +94,9 @@ class NotificationAccessibilityService : AccessibilityService() {
             flags = flags or AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS
         }
         ReadAloud.attach(this)
+        if (missedCalls == null) {
+            missedCalls = MissedCallWatcher(this) { caller -> postMissedCall(caller) }.also { it.start() }
+        }
         if (!screenReceiverRegistered) {
             // Exported on purpose: SCREEN_ON/USER_PRESENT are platform broadcasts,
             // and below Android 13 RECEIVER_NOT_EXPORTED guards the receiver with
@@ -105,6 +116,8 @@ class NotificationAccessibilityService : AccessibilityService() {
     }
 
     override fun onDestroy() {
+        missedCalls?.stop()
+        missedCalls = null
         if (screenReceiverRegistered) {
             unregisterReceiver(screenReceiver)
             screenReceiverRegistered = false
@@ -189,7 +202,10 @@ class NotificationAccessibilityService : AccessibilityService() {
         // This feed has no removals, so an ongoing notification (a ringing or
         // active call, music, a download) would linger here after it ends.
         if (notification.flags and Notification.FLAG_ONGOING_EVENT != 0) {
-            Log.d(TAG, "event $packageName ongoing category=${notification.category}: skipped")
+            val (ongoingTitle, ongoingText) = NotificationText.latest(notification)
+            Log.d(TAG, "event $packageName ongoing category=${notification.category} title=\"$ongoingTitle\" text=\"$ongoingText\": skipped")
+            // The ringing-call notification names the caller, in case the call goes unanswered.
+            if (packageName in CategoryApps.phonePackages(this)) missedCalls?.ringingCaller = ongoingTitle
             return
         }
         // Group summaries count too: once a second message arrives, apps such
@@ -217,16 +233,54 @@ class NotificationAccessibilityService : AccessibilityService() {
             kind = kind,
             contentIntent = notification.contentIntent,
         )
-        // Replace this app's own prior pending entry, but keep every other app's -
-        // a notification from one app shouldn't silently erase another's.
+        post(newItem)
+    }
+
+    /**
+     * Adds [newItem] to the store, replacing its app's own prior pending
+     * entry but keeping every other app's - a notification from one app
+     * shouldn't silently erase another's.
+     */
+    private fun post(newItem: NoticeItem, seenIfInFront: Boolean = true) {
+        val packageName = newItem.packageName
         val merged = (NotificationStore.items.filterNot { it.packageName == packageName } + newItem)
             .sortedByDescending { it.postTime }
             .take(MAX_PENDING)
         NotificationStore.update(merged)
         // Posted while its app is on screen: the user is looking at it already.
-        val seen = packageName == foregroundPackage && isScreenVisible()
+        val seen = seenIfInFront && packageName == foregroundPackage && isScreenVisible()
         if (seen) NotificationStore.markSeenKey(newItem.key)
         Log.d(TAG, "posted $packageName seen=$seen foreground=$foregroundPackage")
+    }
+
+    /** A call rang out unanswered: a "Missed call" banner entry under the phone app, opening the call log. */
+    private fun postMissedCall(caller: String?) {
+        if (NotificationCountService.instance != null) return
+        val dialer = CategoryApps.phonePackages(this).first()
+        val flags = PendingIntent.FLAG_UPDATE_CURRENT or
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0
+        val openCallLog = PendingIntent.getActivity(
+            this,
+            MISSED_CALL_REQUEST,
+            SystemCallLog.intent(this).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            flags,
+        )
+        val now = System.currentTimeMillis()
+        post(
+            NoticeItem(
+                key = "${MissedCallWatcher.KEY_PREFIX}$now",
+                packageName = dialer,
+                title = caller?.takeIf { it.isNotBlank() } ?: getString(R.string.missed_call_unknown_caller),
+                text = getString(R.string.missed_call),
+                postTime = now,
+                icon = null,
+                kind = NotificationKind.CALL,
+                contentIntent = openCallLog,
+            ),
+            // The phone's own ringing screen may still count as "in front"
+            // as the call ends; that isn't the user seeing the missed call.
+            seenIfInFront = false,
+        )
     }
 
     override fun onInterrupt() {}
@@ -252,6 +306,9 @@ class NotificationAccessibilityService : AccessibilityService() {
 
         /** A message's summary and its own notification arriving this close together are one message. */
         private const val DUPLICATE_WINDOW_MS = 5_000L
+
+        /** PendingIntent request code for the missed-call entry's "open the call log". */
+        private const val MISSED_CALL_REQUEST = 4810
 
         /** A screen's window events can repeat; one redirect per this long. */
         private const val REDIRECT_DEBOUNCE_MS = 1500L

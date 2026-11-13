@@ -192,6 +192,8 @@
     <!-- Wallpaper picker -->
     <string name="title_wallpaper_picker">Choose Wallpaper</string>
     <string name="wallpaper_from_gallery">From gallery…</string>
+    <string name="missed_call">Missed call</string>
+    <string name="missed_call_unknown_caller">Unknown caller</string>
     <string name="crop_hint">OK SET  * # ZOOM  1 3 TURN  0 HIDE</string>
     <string name="crop_loading">Opening picture…</string>
     <string name="crop_setting">Setting wallpaper…</string>
