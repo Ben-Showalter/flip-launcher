@@ -186,6 +186,12 @@ class NotificationAccessibilityService : AccessibilityService() {
     private fun handleNotificationPosted(event: AccessibilityEvent) {
         val notification = event.parcelableData as? Notification ?: return
         val packageName = event.packageName?.toString() ?: return
+        // This feed has no removals, so an ongoing notification (a ringing or
+        // active call, music, a download) would linger here after it ends.
+        if (notification.flags and Notification.FLAG_ONGOING_EVENT != 0) {
+            Log.d(TAG, "event $packageName ongoing category=${notification.category}: skipped")
+            return
+        }
         // Group summaries count too: once a second message arrives, apps such
         // as TurboText alert with the summary and update the message itself
         // silently, so skipping summaries lost every message after the first.
@@ -196,7 +202,10 @@ class NotificationAccessibilityService : AccessibilityService() {
         val duplicate = NotificationStore.items.any {
             it.packageName == packageName && it.text == text && now - it.postTime < DUPLICATE_WINDOW_MS
         }
-        Log.d(TAG, "event $packageName summary=${notification.flags and Notification.FLAG_GROUP_SUMMARY != 0} duplicate=$duplicate")
+        val kind = NotificationCategorizer.kindOf(
+            notification.category, packageName, CategoryApps.calendarPackage(this), CategoryApps.phonePackages(this),
+        )
+        Log.d(TAG, "event $packageName category=${notification.category} kind=$kind summary=${notification.flags and Notification.FLAG_GROUP_SUMMARY != 0} duplicate=$duplicate")
         if (duplicate) return
         val newItem = NoticeItem(
             key = "$packageName:${event.eventTime}",
@@ -205,7 +214,7 @@ class NotificationAccessibilityService : AccessibilityService() {
             text = text,
             postTime = now,
             icon = null,
-            kind = NotificationCategorizer.kindOf(notification.category, packageName, CategoryApps.calendarPackage(this)),
+            kind = kind,
             contentIntent = notification.contentIntent,
         )
         // Replace this app's own prior pending entry, but keep every other app's -

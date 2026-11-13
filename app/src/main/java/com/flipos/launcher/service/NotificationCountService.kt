@@ -61,6 +61,7 @@ class NotificationCountService : NotificationListenerService() {
             return
         }
         val calendarPackage = CategoryApps.calendarPackage(this)
+        val phonePackages = CategoryApps.phonePackages(this)
 
         var calls = 0
         var messages = 0
@@ -71,7 +72,7 @@ class NotificationCountService : NotificationListenerService() {
             // Group summaries and our own posted-by-system rows aren't real, user-facing
             // notifications, so they're skipped to avoid inflating the "other" count.
             if (sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0) continue
-            val kind = NotificationCategorizer.kindOf(sbn.notification.category, sbn.packageName, calendarPackage)
+            val kind = NotificationCategorizer.kindOf(sbn.notification.category, sbn.packageName, calendarPackage, phonePackages)
             when (kind) {
                 NotificationKind.CALL -> calls++
                 NotificationKind.MESSAGE -> messages++

@@ -33,6 +33,15 @@ class NotificationCategorizerTest {
     }
 
     @Test
+    fun `phone app notifications without a call category map to CALL`() {
+        val phone = setOf("com.android.dialer", "com.android.server.telecom")
+        assertEquals(NotificationKind.CALL, NotificationCategorizer.kindOf(null, "com.android.dialer", null, phone))
+        assertEquals(NotificationKind.CALL, NotificationCategorizer.kindOf("status", "com.android.server.telecom", null, phone))
+        assertEquals(NotificationKind.MESSAGE, NotificationCategorizer.kindOf("msg", "com.android.dialer", null, phone))
+        assertEquals(NotificationKind.OTHER, NotificationCategorizer.kindOf(null, "com.other", null, phone))
+    }
+
+    @Test
     fun `unknown and null categories map to OTHER`() {
         assertEquals(NotificationKind.OTHER, NotificationCategorizer.kindOf("email"))
         assertEquals(NotificationKind.OTHER, NotificationCategorizer.kindOf(null))

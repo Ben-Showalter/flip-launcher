@@ -30,6 +30,24 @@ object CategoryApps {
         return packageName?.let { launchKeyFor(context, it) }
     }
 
+    /**
+     * Packages whose notifications are about calls (missed calls,
+     * voicemail): the default dialer, plus the AOSP phone/telecom ones that
+     * post them on some builds.
+     */
+    fun phonePackages(context: Context): Set<String> {
+        val dialer = try {
+            if (Build.VERSION.SDK_INT >= 23) {
+                (context.getSystemService(Context.TELECOM_SERVICE) as? TelecomManager)?.defaultDialerPackage
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            null
+        }
+        return setOfNotNull(dialer, "com.android.dialer", "com.android.server.telecom", "com.android.phone")
+    }
+
     /** The default SMS app's main launch component, or null. */
     fun smsKey(context: Context): String? =
         Telephony.Sms.getDefaultSmsPackage(context)?.let { launchKeyFor(context, it) }

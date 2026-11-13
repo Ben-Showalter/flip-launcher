@@ -29,11 +29,22 @@ object NotificationCategorizer {
 
     /**
      * Like [kindOf], but an uncategorized notification from the phone's
-     * calendar app ([calendarPackage]) counts as an event - the stock calendar
-     * on these phones doesn't always set a category.
+     * calendar app ([calendarPackage]) counts as an event, and one from the
+     * phone/dialer apps ([phonePackages]) - a missed call or voicemail - as a
+     * call: the stock apps on these phones don't always set a category.
      */
-    fun kindOf(category: String?, packageName: String, calendarPackage: String?): NotificationKind {
+    fun kindOf(
+        category: String?,
+        packageName: String,
+        calendarPackage: String?,
+        phonePackages: Set<String> = emptySet(),
+    ): NotificationKind {
         val kind = kindOf(category)
-        return if (kind == NotificationKind.OTHER && packageName == calendarPackage) NotificationKind.EVENT else kind
+        return when {
+            kind != NotificationKind.OTHER -> kind
+            packageName == calendarPackage -> NotificationKind.EVENT
+            packageName in phonePackages -> NotificationKind.CALL
+            else -> kind
+        }
     }
 }

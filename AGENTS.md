@@ -90,7 +90,13 @@ person's laptop.
   flip closed stay until their app has been opened and left. Calendar
   event/reminder notifications (category `event`/`reminder`, or anything
   from the default calendar app) are their own `NotificationKind.EVENT`,
-  shown on the banner by default. Home asks to turn it on at startup if it's
+  shown on the banner by default. Missed calls and voicemail are `CALL`
+  (category `call`/`missed_call`/`voicemail`, or anything uncategorized from
+  the default dialer, `com.android.dialer`, `com.android.server.telecom` or
+  `com.android.phone`: `CategoryApps.phonePackages`). Ongoing notifications
+  (a ringing call, music) are skipped in the accessibility feed: with no
+  removals they'd linger after they end. Each `event` log line shows the
+  category and kind. Home asks to turn it on at startup if it's
   off. Its store appends new items (the listener's is newest-first), so the Home banner
   and read-aloud pick the newest by `postTime` (`NotificationStore.newest`),
   never list order. Group summaries are read too (once a second message
