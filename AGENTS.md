@@ -92,14 +92,16 @@ person's laptop.
   from the default calendar app) are their own `NotificationKind.EVENT`,
   shown on the banner by default. Missed calls and voicemail are `CALL`
   (category `call`/`missed_call`/`voicemail`, or anything uncategorized from
-  the default dialer, `com.android.dialer`, `com.android.server.telecom` or
-  `com.android.phone`: `CategoryApps.phonePackages`). On the E4810/E4811 the
+  the default dialer or `com.android.dialer`: `CategoryApps.phonePackages`;
+  not `com.android.phone`, whose "No mobile data service" notice isn't a call). On the E4810/E4811 the
   dialer's missed-call notification is silent, so it never arrives here; only
   the ongoing ringing one does. `service/MissedCallWatcher.kt` watches the
   call state instead: ringing then idle with no off-hook is a missed call,
   confirmed and named from the newest call-log entry when Call Log access is
   granted (`REJECTED`/blocked = declined, no banner), else named from the
-  ringing notification's title. The entry ("Missed call", under the dialer's
+  ringing notification's title. Without Call Log access the phone gives no
+  name or number at all, so Home asks for it once per start (after the
+  default-launcher and Accessibility prompts) while the Calls banner is on. The entry ("Missed call", under the dialer's
   package) opens the call log and is never marked seen as it's posted.
   Ongoing notifications (a ringing call, music) are skipped in the
   accessibility feed: with no removals they'd linger after they end. Each `event` log line shows the

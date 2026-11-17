@@ -173,6 +173,7 @@ class MainActivity : AppCompatActivity() {
 
     private val callPermission = PermissionGate(this, Manifest.permission.CALL_PHONE)
     private val contactsPermission = PermissionGate(this, Manifest.permission.READ_CONTACTS)
+    private val callLogPermission = PermissionGate(this, Manifest.permission.READ_CALL_LOG)
 
     /** App picker for MENU/BACK/soft-key/D-pad/Camera assignment, writing back based on [pendingAssignAppKey]. */
     private val assignAppLauncher = registerForActivityResult(StartActivityForResult()) { result ->
@@ -1075,7 +1076,8 @@ class MainActivity : AppCompatActivity() {
      * the default Home app if it isn't, then to turn on Accessibility if
      * it's off (it feeds the Home banner, icon dots and read-aloud on these
      * phones). Both hand off to the phone's own settings screen with a toast
-     * naming the D-pad path.
+     * naming the D-pad path. Last, Android's own Call Log permission prompt,
+     * so a missed call on the banner can say who called.
      */
     private fun maybeShowStartupPrompts() {
         if (isFinishing || startupPrompt?.isShowing == true) return
@@ -1093,6 +1095,13 @@ class MainActivity : AppCompatActivity() {
                 R.string.prompt_accessibility_title,
                 R.string.prompt_accessibility_message,
             ) { openSettingsWithPath(Settings.ACTION_ACCESSIBILITY_SETTINGS, R.string.path_accessibility) }
+            return
+        }
+        // Missed calls on the banner name the caller from the call log; without
+        // it the phone gives the launcher no name or number at all.
+        if (!callLogPromptShown && prefs.isCallBadgeEnabled() && !callLogPermission.isGranted()) {
+            callLogPromptShown = true
+            callLogPermission.run {}
         }
     }
 
@@ -1164,6 +1173,7 @@ class MainActivity : AppCompatActivity() {
         // Shown at most once per process so we don't nag on every resume.
         private var defaultPromptShown = false
         private var accessibilityPromptShown = false
+        private var callLogPromptShown = false
 
         /** How long an assignable key must be held to open its assign menu. */
         private const val ASSIGN_HOLD_MS = 5000L

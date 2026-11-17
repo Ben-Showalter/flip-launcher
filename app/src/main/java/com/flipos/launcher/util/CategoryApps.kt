@@ -31,9 +31,10 @@ object CategoryApps {
     }
 
     /**
-     * Packages whose notifications are about calls (missed calls,
-     * voicemail): the default dialer, plus the AOSP phone/telecom ones that
-     * post them on some builds.
+     * The phone/dialer app packages: the default dialer and the AOSP
+     * `com.android.dialer`. Their uncategorized notifications count as calls,
+     * and their ringing notification names the caller. Not `com.android.phone`:
+     * it posts network notices ("No mobile data service") that aren't calls.
      */
     fun phonePackages(context: Context): Set<String> {
         val dialer = try {
@@ -45,7 +46,7 @@ object CategoryApps {
         } catch (e: Exception) {
             null
         }
-        return setOfNotNull(dialer, "com.android.dialer", "com.android.server.telecom", "com.android.phone")
+        return setOfNotNull(dialer, "com.android.dialer")
     }
 
     /** The default SMS app's main launch component, or null. */
