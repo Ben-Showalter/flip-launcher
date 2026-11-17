@@ -294,6 +294,24 @@ class LauncherPrefs(context: Context) {
     fun getRingerModeBeforeVibrate(): Int = prefs.getInt(KEY_RINGER_BEFORE_VIBRATE, -1)
     fun setRingerModeBeforeVibrate(mode: Int) = prefs.edit().putInt(KEY_RINGER_BEFORE_VIBRATE, mode).apply()
 
+    // ------------------------------------------------------- Daily wallpaper
+
+    /** Whether Home's wallpaper changes to the next built-in one each day (see DailyWallpaper). */
+    fun isDailyWallpaperEnabled(): Boolean = prefs.getBoolean(KEY_DAILY_WALLPAPER, false)
+    fun setDailyWallpaperEnabled(enabled: Boolean) = prefs.edit().putBoolean(KEY_DAILY_WALLPAPER, enabled).apply()
+
+    /** The day (yyyyMMdd) the daily wallpaper last changed, or 0. */
+    fun getDailyWallpaperDay(): Int = prefs.getInt(KEY_DAILY_WALLPAPER_DAY, 0)
+    fun setDailyWallpaperDay(day: Int) = prefs.edit().putInt(KEY_DAILY_WALLPAPER_DAY, day).apply()
+
+    /** Index into BuiltInWallpapers.names() of the last daily wallpaper, or -1. */
+    fun getDailyWallpaperIndex(): Int = prefs.getInt(KEY_DAILY_WALLPAPER_INDEX, -1)
+    fun setDailyWallpaperIndex(index: Int) = prefs.edit().putInt(KEY_DAILY_WALLPAPER_INDEX, index).apply()
+
+    /** WallpaperManager's id for the wallpaper the daily change last set, to notice one set elsewhere (-1 = unknown). */
+    fun getDailyWallpaperId(): Int = prefs.getInt(KEY_DAILY_WALLPAPER_ID, -1)
+    fun setDailyWallpaperId(id: Int) = prefs.edit().putInt(KEY_DAILY_WALLPAPER_ID, id).apply()
+
     fun getReadAloudRate(): Float = prefs.getFloat(KEY_READ_ALOUD_RATE, 1.0f)
     fun setReadAloudRate(rate: Float) = prefs.edit().putFloat(KEY_READ_ALOUD_RATE, rate).apply()
 
@@ -497,6 +515,10 @@ class LauncherPrefs(context: Context) {
         private const val KEY_READ_ALOUD_RATE = "read_aloud_rate"
         private const val KEY_DEFAULT_KEYS_SEEDED = "default_keys_seeded"
         private const val KEY_RINGER_BEFORE_VIBRATE = "ringer_mode_before_vibrate"
+        private const val KEY_DAILY_WALLPAPER = "daily_wallpaper"
+        private const val KEY_DAILY_WALLPAPER_DAY = "daily_wallpaper_day"
+        private const val KEY_DAILY_WALLPAPER_INDEX = "daily_wallpaper_index"
+        private const val KEY_DAILY_WALLPAPER_ID = "daily_wallpaper_id"
         private const val KEY_DRAWER_LIST_VIEW = "drawer_list_view"
         private const val KEY_ICON_OVERRIDE_PREFIX = "icon_override_"
         private const val KEY_ACCENT_COLOR = "accent_color"

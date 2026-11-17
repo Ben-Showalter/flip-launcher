@@ -193,6 +193,11 @@
     <string name="title_wallpaper_picker">Choose Wallpaper</string>
     <string name="wallpaper_from_gallery">From gallery…</string>
     <string name="missed_call">Missed call</string>
+    <string name="settings_daily_wallpaper">Change wallpaper daily</string>
+    <string name="settings_daily_wallpaper_sub">A new built-in wallpaper each day; picking one turns this off</string>
+    <string name="daily_wallpaper_on">Wallpaper will change every day</string>
+    <string name="daily_wallpaper_off">Daily wallpaper off</string>
+    <string name="wallpaper_set_daily_off_toast">Wallpaper set. Daily change turned off</string>
     <string name="missed_call_unknown_caller">Unknown caller</string>
     <string name="crop_hint">OK SET  * # ZOOM  1 3 TURN  0 HIDE</string>
     <string name="crop_loading">Opening picture…</string>

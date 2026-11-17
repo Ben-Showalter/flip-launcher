@@ -322,6 +322,13 @@ Icon.
   auto-discovered, so the registry step is required.
   Wallpapers are 240x320 (3:4) JPGs; the picker shows each one at that shape
   with Home drawn over it (`ui/HomePreview.kt`).
+- **Change wallpaper daily** (Appearance, off by default): `util/DailyWallpaper.kt`
+  sets the next built-in wallpaper in order once a day, checked when Home
+  resumes and on `SCREEN_ON` (the accessibility service's receiver), so no
+  scheduler is needed. Picking a wallpaper in the picker or crop screen turns
+  it off, and so does one set anywhere else (Android 7+: the system wallpaper
+  id no longer matches the one it set). Logs under `FlipWallpaper`. Setting a
+  built-in wallpaper is `BuiltInWallpapers.apply` (off the main thread).
 - **Gallery wallpapers** (picker → Options → From gallery…): the picked photo
   opens `WallpaperCropActivity`, a D-pad crop with Home drawn on top - D-pad
   moves, `#`/`*` zoom in/out, 1/3 turn left/right, 5 resets, 0 hides Home,

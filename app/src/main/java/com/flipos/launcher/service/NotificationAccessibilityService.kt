@@ -25,6 +25,7 @@ import com.flipos.launcher.data.NoticeItem
 import com.flipos.launcher.data.NotificationStore
 import com.flipos.launcher.data.NotificationText
 import com.flipos.launcher.util.CategoryApps
+import com.flipos.launcher.util.DailyWallpaper
 import com.flipos.launcher.util.ReadAloud
 import com.flipos.launcher.util.ReadAloudSpeaker
 import com.flipos.launcher.util.SettingsRedirects
@@ -69,6 +70,8 @@ class NotificationAccessibilityService : AccessibilityService() {
     /** The screen came back on or was unlocked with an app still in front: its entries are now seen. */
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
+            // A new day's wallpaper is in place before Home is even looked at.
+            if (intent?.action == Intent.ACTION_SCREEN_ON) DailyWallpaper.maybeSwitch(this@NotificationAccessibilityService)
             if (NotificationCountService.instance != null) return
             val visible = isScreenVisible()
             Log.d(TAG, "${intent?.action}: visible=$visible foreground=$foregroundPackage")

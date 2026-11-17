@@ -52,6 +52,7 @@ import com.flipos.launcher.util.accentColorAlpha
 import com.flipos.launcher.util.applyFakeBold
 import com.flipos.launcher.ui.HomeScreenBinder
 import com.flipos.launcher.util.SystemCallLog
+import com.flipos.launcher.util.DailyWallpaper
 import com.flipos.launcher.util.hideNavigationBar
 import com.flipos.launcher.util.isAccessibilityServiceEnabled
 import com.flipos.launcher.util.isDefaultLauncher
@@ -285,6 +286,8 @@ class MainActivity : AppCompatActivity() {
             if (removed > 0) Log.d(NotificationAccessibilityService.TAG, "Home resumed: dismissed $removed")
         }
         applyWallpaperScrim()
+        // Appearance → Change wallpaper daily: today's one, if not set yet.
+        DailyWallpaper.maybeSwitch(this) { if (!isDestroyed) applyWallpaperScrim() }
         // Exported on purpose: these are platform broadcasts, and below Android
         // 13 RECEIVER_NOT_EXPORTED blocks any sender that isn't the core system -
         // the Settings app's 12/24-hour change (ACTION_TIME_CHANGED) among them.

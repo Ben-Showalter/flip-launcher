@@ -10,6 +10,7 @@ import com.flipos.launcher.data.BuiltInIcons
 import com.flipos.launcher.data.LauncherPrefs
 import com.flipos.launcher.ui.ListRowAdapter
 import com.flipos.launcher.ui.Row
+import com.flipos.launcher.util.DailyWallpaper
 
 /** Appearance settings: wallpaper, accent color, and icon look. */
 class AppearanceSettingsActivity : BaseListActivity() {
@@ -24,6 +25,7 @@ class AppearanceSettingsActivity : BaseListActivity() {
         titleView.text = getString(R.string.cat_appearance)
 
         actions[ID_WALLPAPER] = { startActivity(Intent(this, WallpaperPickerActivity::class.java)) }
+        actions[ID_DAILY_WALLPAPER] = { toggleDailyWallpaper() }
         actions[ID_ACCENT] = { chooseAccentColor() }
         actions[ID_THEME] = { chooseTheme() }
         actions[ID_REPLACE_ICONS] = { chooseAppIcons() }
@@ -65,6 +67,12 @@ class AppearanceSettingsActivity : BaseListActivity() {
                     chevron = true,
                 ),
                 Row(
+                    id = ID_DAILY_WALLPAPER,
+                    title = getString(R.string.settings_daily_wallpaper),
+                    subtitle = getString(R.string.settings_daily_wallpaper_sub),
+                    toggle = prefs.isDailyWallpaperEnabled(),
+                ),
+                Row(
                     id = ID_ACCENT,
                     title = getString(R.string.settings_accent_color),
                     trailing = getString(prefs.getAccentColor().labelRes),
@@ -89,6 +97,18 @@ class AppearanceSettingsActivity : BaseListActivity() {
                 ),
             ),
         )
+    }
+
+    /** On: today's wallpaper is set right away, then a new one each day. Off: the current one stays. */
+    private fun toggleDailyWallpaper() {
+        if (prefs.isDailyWallpaperEnabled()) {
+            DailyWallpaper.disable(this)
+            Toast.makeText(this, R.string.daily_wallpaper_off, Toast.LENGTH_SHORT).show()
+        } else {
+            DailyWallpaper.enable(this)
+            Toast.makeText(this, R.string.daily_wallpaper_on, Toast.LENGTH_SHORT).show()
+        }
+        refreshRows()
     }
 
     private fun dispatch(position: Int) {
@@ -196,6 +216,7 @@ class AppearanceSettingsActivity : BaseListActivity() {
 
     companion object {
         private const val ID_WALLPAPER = "wallpaper"
+        private const val ID_DAILY_WALLPAPER = "daily_wallpaper"
         private const val ID_ACCENT = "accent"
         private const val ID_THEME = "theme"
         private const val ID_REPLACE_ICONS = "replace_icons"

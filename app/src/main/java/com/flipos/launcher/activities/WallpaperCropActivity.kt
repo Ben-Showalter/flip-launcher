@@ -23,6 +23,7 @@ import com.flipos.launcher.data.LauncherPrefs
 import com.flipos.launcher.ui.CropView
 import com.flipos.launcher.ui.HomePreview
 import com.flipos.launcher.util.BackgroundLoader
+import com.flipos.launcher.util.DailyWallpaper
 import com.flipos.launcher.util.SoftKeyRouter
 import com.flipos.launcher.util.WallpaperContrast
 import com.flipos.launcher.util.applyFakeBold
@@ -229,6 +230,8 @@ class WallpaperCropActivity : AppCompatActivity() {
                     cropped = scaled
                 }
                 WallpaperManager.getInstance(appContext).setBitmap(cropped)
+                // Picking one by hand ends the daily change.
+                DailyWallpaper.turnOffForManualPick(appContext)
                 true
             } catch (e: Exception) {
                 false
