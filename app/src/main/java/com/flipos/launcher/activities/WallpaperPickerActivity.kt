@@ -9,13 +9,18 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.recyclerview.widget.GridLayoutManager
-import com.flipos.launcher.data.BuiltInWallpapers
+import com.flipos.launcher.data.WallpaperLibrary
 import com.flipos.launcher.ui.HomePreview
 import com.flipos.launcher.ui.WallpaperGridAdapter
 import com.flipos.launcher.util.DailyWallpaper
 
-/** Lets the user set the device wallpaper from the launcher's bundled set, pulled
- * straight from [BuiltInWallpapers] — no need to leave the launcher for Photos. */
+/**
+ * The daily wallpaper rotation: every built-in and gallery wallpaper
+ * ([WallpaperLibrary]), each shown with Home over it. OK puts the
+ * highlighted one in or out of the daily change ([DailyWallpaper]) - leave
+ * just one in and it stays. Left soft key sets it now; Options adds a
+ * picture from the gallery (cropped first) or removes a gallery one.
+ */
 class WallpaperPickerActivity : BaseListActivity() {
 
     private lateinit var adapter: WallpaperGridAdapter
@@ -32,52 +37,54 @@ class WallpaperPickerActivity : BaseListActivity() {
         }
     }
 
-    /** The crop screen set the wallpaper: done here too. */
+    /** The crop screen added (and set) a wallpaper: show it in the grid. */
     private val cropScreen = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK) finish()
+        if (result.resultCode == RESULT_OK) adapter.submit(WallpaperLibrary.all(this))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         titleView.text = getString(R.string.title_wallpaper_picker)
 
-        adapter = WallpaperGridAdapter(onClick = { name -> applyWallpaper(name) })
+        adapter = WallpaperGridAdapter(
+            isOff = { !WallpaperLibrary.isInRotation(this, it) },
+            onClick = { id -> toggleRotation(id) },
+        )
         listView.layoutManager = GridLayoutManager(this, COLUMNS)
         listView.adapter = adapter
         // Each tile shows Home over it: the real clock, soft keys and D-pad pod.
         adapter.overlay = HomePreview.renderOverlay(this)
-        adapter.submit(BuiltInWallpapers.names())
+        adapter.submit(WallpaperLibrary.all(this))
 
-        softKeys.setLabels(null, null, getString(R.string.softkey_options))
+        softKeys.setLabels(getString(R.string.softkey_set_now), getString(R.string.softkey_on_off), getString(R.string.softkey_options))
         focusFirst()
     }
 
-    private fun applyWallpaper(name: String) {
-        if (BuiltInWallpapers.resId(this, name) == 0) return
-        // Picking one by hand ends the daily change (Appearance → Change wallpaper daily).
-        val dailyWasOn = DailyWallpaper.turnOffForManualPick(this)
-        val appContext = applicationContext
-        Thread {
-            val ok = try {
-                BuiltInWallpapers.apply(appContext, name)
-                true
-            } catch (e: Exception) {
-                false
+    /** OK: puts [id] in or out of the daily change. */
+    private fun toggleRotation(id: String) {
+        val nowIn = !WallpaperLibrary.isInRotation(this, id)
+        WallpaperLibrary.setInRotation(this, id, nowIn)
+        adapter.refresh(id)
+        val left = WallpaperLibrary.rotation(this).size
+        val message = when {
+            left == 0 -> R.string.wallpaper_rotation_none
+            left == 1 -> R.string.wallpaper_rotation_one
+            nowIn -> R.string.wallpaper_rotation_in
+            else -> R.string.wallpaper_rotation_out
+        }
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+        // Left out the one showing (or left just one in): change now.
+        DailyWallpaper.onRotationChanged(this)
+    }
+
+    /** Left soft key: set the highlighted wallpaper now; the rotation carries on from it tomorrow. */
+    override fun onPrimaryKey() {
+        val id = focusedPosition().takeIf { it >= 0 }?.let { adapter.idAt(it) } ?: return
+        DailyWallpaper.setNow(this, id) { ok ->
+            if (!isDestroyed) {
+                Toast.makeText(this, if (ok) R.string.wallpaper_set_toast else R.string.wallpaper_set_failed, Toast.LENGTH_SHORT).show()
             }
-            runOnUiThread {
-                if (isDestroyed) return@runOnUiThread
-                if (ok) {
-                    Toast.makeText(
-                        this,
-                        if (dailyWasOn) R.string.wallpaper_set_daily_off_toast else R.string.wallpaper_set_toast,
-                        Toast.LENGTH_SHORT,
-                    ).show()
-                    finish()
-                } else {
-                    Toast.makeText(this, R.string.wallpaper_set_failed, Toast.LENGTH_SHORT).show()
-                }
-            }
-        }.start()
+        }
     }
 
     /**
@@ -102,10 +109,33 @@ class WallpaperPickerActivity : BaseListActivity() {
     }
 
     override fun onOptionsKey() {
+        val focusedId = focusedPosition().takeIf { it >= 0 }?.let { adapter.idAt(it) }
+        val removable = focusedId != null && WallpaperLibrary.isUser(focusedId)
+        val items = listOfNotNull(
+            getString(R.string.wallpaper_from_gallery),
+            if (removable) getString(R.string.wallpaper_remove) else null,
+        )
         AlertDialog.Builder(this)
-            .setItems(arrayOf(getString(R.string.wallpaper_from_gallery))) { _, which ->
-                if (which == 0) openGallery()
+            .setItems(items.toTypedArray()) { _, which ->
+                when (which) {
+                    0 -> openGallery()
+                    1 -> focusedId?.let { confirmRemove(it) }
+                }
             }
+            .show()
+    }
+
+    /** Deletes a gallery wallpaper from the list. */
+    private fun confirmRemove(id: String) {
+        AlertDialog.Builder(this)
+            .setMessage(R.string.wallpaper_remove_confirm)
+            .setPositiveButton(R.string.wallpaper_remove) { _, _ ->
+                WallpaperLibrary.remove(this, id)
+                adapter.submit(WallpaperLibrary.all(this))
+                DailyWallpaper.onRotationChanged(this)
+                focusFirst()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
             .show()
     }
 

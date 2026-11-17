@@ -20,6 +20,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.flipos.launcher.R
 import com.flipos.launcher.data.LauncherPrefs
+import com.flipos.launcher.data.WallpaperLibrary
 import com.flipos.launcher.ui.CropView
 import com.flipos.launcher.ui.HomePreview
 import com.flipos.launcher.util.BackgroundLoader
@@ -229,9 +230,10 @@ class WallpaperCropActivity : AppCompatActivity() {
                     if (scaled != cropped && cropped != source) cropped.recycle()
                     cropped = scaled
                 }
+                // Added to the wallpaper list (and the daily change), and set now.
+                val id = WallpaperLibrary.addFromGallery(appContext, cropped)
                 WallpaperManager.getInstance(appContext).setBitmap(cropped)
-                // Picking one by hand ends the daily change.
-                DailyWallpaper.turnOffForManualPick(appContext)
+                DailyWallpaper.markSet(appContext, id)
                 true
             } catch (e: Exception) {
                 false
@@ -239,7 +241,7 @@ class WallpaperCropActivity : AppCompatActivity() {
             runOnUiThread {
                 if (isDestroyed) return@runOnUiThread
                 if (ok) {
-                    Toast.makeText(this, R.string.wallpaper_set_toast, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, R.string.wallpaper_added_toast, Toast.LENGTH_SHORT).show()
                     setResult(RESULT_OK)
                     finish()
                 } else {

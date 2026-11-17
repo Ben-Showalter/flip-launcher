@@ -134,7 +134,7 @@
     <!-- Animations -->
 
     <!-- Settings row subtitles -->
-    <string name="settings_wallpaper_sub">Choose a background image</string>
+    <string name="settings_wallpaper_sub">Changes daily; OK turns each one on or off</string>
     <string name="settings_notif_access_sub">Let Flip Launcher read notifications</string>
 
     <!-- Launcher Settings -->
@@ -190,14 +190,19 @@
     <string name="icon_shape_none">None</string>
 
     <!-- Wallpaper picker -->
-    <string name="title_wallpaper_picker">Choose Wallpaper</string>
+    <string name="title_wallpaper_picker">Daily Wallpapers</string>
     <string name="wallpaper_from_gallery">From gallery…</string>
     <string name="missed_call">Missed call</string>
-    <string name="settings_daily_wallpaper">Change wallpaper daily</string>
-    <string name="settings_daily_wallpaper_sub">A new built-in wallpaper each day; picking one turns this off</string>
-    <string name="daily_wallpaper_on">Wallpaper will change every day</string>
-    <string name="daily_wallpaper_off">Daily wallpaper off</string>
-    <string name="wallpaper_set_daily_off_toast">Wallpaper set. Daily change turned off</string>
+    <string name="wallpaper_off_badge">OFF</string>
+    <string name="softkey_set_now">Set now</string>
+    <string name="softkey_on_off">On/Off</string>
+    <string name="wallpaper_rotation_in">In the daily change</string>
+    <string name="wallpaper_rotation_out">Left out of the daily change</string>
+    <string name="wallpaper_rotation_one">Only one left on: it stays as your wallpaper</string>
+    <string name="wallpaper_rotation_none">None on: the wallpaper won\'t change</string>
+    <string name="wallpaper_remove">Remove this picture</string>
+    <string name="wallpaper_remove_confirm">Remove this picture from your wallpapers?</string>
+    <string name="wallpaper_added_toast">Added to your wallpapers and set</string>
     <string name="missed_call_unknown_caller">Unknown caller</string>
     <string name="crop_hint">OK SET  * # ZOOM  1 3 TURN  0 HIDE</string>
     <string name="crop_loading">Opening picture…</string>
