@@ -56,8 +56,9 @@ class WallpaperPickerActivity : BaseListActivity() {
         adapter.overlay = HomePreview.renderOverlay(this)
         adapter.submit(WallpaperLibrary.all(this))
 
-        softKeys.setLabels(getString(R.string.softkey_set_now), getString(R.string.softkey_on_off), getString(R.string.softkey_options))
+        softKeys.setLabels(getString(R.string.softkey_set_now), getString(R.string.softkey_on_off), getString(R.string.softkey_add_from_gallery))
         focusFirst()
+        Toast.makeText(this, R.string.wallpaper_daily_hint, Toast.LENGTH_LONG).show()
     }
 
     /** OK: puts [id] in or out of the daily change. */
@@ -108,9 +109,17 @@ class WallpaperPickerActivity : BaseListActivity() {
         Toast.makeText(this, R.string.toast_not_available, Toast.LENGTH_SHORT).show()
     }
 
+    /**
+     * Right soft key: add a picture from the gallery. On a gallery picture
+     * it asks first, since that's also where Remove lives.
+     */
     override fun onOptionsKey() {
         val focusedId = focusedPosition().takeIf { it >= 0 }?.let { adapter.idAt(it) }
         val removable = focusedId != null && WallpaperLibrary.isUser(focusedId)
+        if (!removable) {
+            openGallery()
+            return
+        }
         val items = listOfNotNull(
             getString(R.string.wallpaper_from_gallery),
             if (removable) getString(R.string.wallpaper_remove) else null,

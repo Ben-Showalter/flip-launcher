@@ -196,6 +196,8 @@
     <string name="wallpaper_off_badge">OFF</string>
     <string name="softkey_set_now">Set now</string>
     <string name="softkey_on_off">On/Off</string>
+    <string name="softkey_add_from_gallery">Add from gallery</string>
+    <string name="wallpaper_daily_hint">These wallpapers switch out every day</string>
     <string name="wallpaper_rotation_in">In the daily change</string>
     <string name="wallpaper_rotation_out">Left out of the daily change</string>
     <string name="wallpaper_rotation_one">Only one left on: it stays as your wallpaper</string>

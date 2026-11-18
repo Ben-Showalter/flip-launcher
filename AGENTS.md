@@ -328,7 +328,8 @@ Icon.
   gallery (`user/<file>`, saved cropped under filesDir/wallpapers). OK puts
   the highlighted one in or out of the rotation (`wallpapers_out_of_rotation`
   pref; left-out tiles are dimmed with OFF), Left soft key sets it now,
-  Options adds from the gallery or removes a gallery one. `util/DailyWallpaper.kt`
+  the right soft key ("Add from gallery") opens the gallery (on a gallery
+  picture it offers Remove too). A toast on opening says they switch daily. `util/DailyWallpaper.kt`
   moves to the next one in the rotation once a day, checked when Home resumes
   and on `SCREEN_ON` (the accessibility service's receiver), so no scheduler
   is needed. One left on = it stays; none on = the wallpaper is left alone.
