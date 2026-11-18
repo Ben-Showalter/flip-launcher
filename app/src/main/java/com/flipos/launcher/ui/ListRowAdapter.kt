@@ -193,7 +193,14 @@ class ListRowAdapter(
                 if (pos != RecyclerView.NO_POSITION) onLongClick?.invoke(pos)
                 onLongClick != null
             }
+            // Only the highlighted row's text scrolls when it doesn't fit.
+            title.useMarquee(always = false)
+            subtitle.useMarquee(always = false)
+            title.setMarqueeRunning(itemView.hasFocus())
+            subtitle.setMarqueeRunning(itemView.hasFocus())
             itemView.setOnFocusChangeListener { _, hasFocus ->
+                title.setMarqueeRunning(hasFocus)
+                subtitle.setMarqueeRunning(hasFocus)
                 if (hasFocus) {
                     val pos = bindingAdapterPosition
                     if (pos != RecyclerView.NO_POSITION) onFocusChanged?.invoke(pos)

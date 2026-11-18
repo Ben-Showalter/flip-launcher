@@ -37,6 +37,8 @@ class SoftKeyBar @JvmOverloads constructor(
         left = findViewById(R.id.softkey_left)
         center = findViewById(R.id.softkey_center)
         right = findViewById(R.id.softkey_right)
+        // A label too long for its slot ("Add from gallery") scrolls instead of being cut off.
+        listOf(left, center, right).forEach { it.useMarquee(always = true) }
     }
 
     fun setLabels(left: String?, center: String?, right: String?) {

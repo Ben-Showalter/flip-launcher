@@ -24,6 +24,7 @@ import com.flipos.launcher.ui.ListRowAdapter
 import com.flipos.launcher.ui.PageIndicatorView
 import com.flipos.launcher.ui.Row
 import com.flipos.launcher.ui.SoftKeyBar
+import com.flipos.launcher.ui.useMarquee
 import com.flipos.launcher.util.BackgroundLoader
 import com.flipos.launcher.util.ReadAloudSpeaker
 import com.flipos.launcher.util.SoftKeyRouter
@@ -100,6 +101,7 @@ class AppDrawerActivity : AppCompatActivity() {
 
         grid = findViewById(R.id.apps_grid)
         titleView = findViewById(R.id.title)
+        titleView.useMarquee(always = true) // a long app name scrolls
         softKeys = findViewById(R.id.soft_keys)
         pageIndicator = findViewById(R.id.page_indicator)
         pageIndicator.animateChanges = false

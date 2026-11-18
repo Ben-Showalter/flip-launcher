@@ -51,6 +51,7 @@ import com.flipos.launcher.util.WallpaperContrast
 import com.flipos.launcher.util.accentColorAlpha
 import com.flipos.launcher.util.applyFakeBold
 import com.flipos.launcher.ui.HomeScreenBinder
+import com.flipos.launcher.ui.useMarquee
 import com.flipos.launcher.util.SystemCallLog
 import com.flipos.launcher.util.DailyWallpaper
 import com.flipos.launcher.util.hideNavigationBar
@@ -255,6 +256,9 @@ class MainActivity : AppCompatActivity() {
         notifBannerIcon = findViewById(R.id.notif_banner_icon)
         notifBannerApp = findViewById(R.id.notif_banner_app)
         notifBannerText = findViewById(R.id.notif_banner_text)
+        // A long sender or message scrolls instead of being cut off.
+        notifBannerApp.useMarquee(always = true)
+        notifBannerText.useMarquee(always = true)
 
         findViewById<TextView>(R.id.softkey_left).setOnClickListener { openLeftKeyApp() }
         findViewById<TextView>(R.id.softkey_right).setOnClickListener { openRightKeyApp() }

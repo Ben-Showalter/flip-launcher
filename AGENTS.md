@@ -159,6 +159,11 @@ person's laptop.
   list instead of the phone's screen. The `FlipNotif` window log prints each screen's title. The
   Mic/Assistant key reports keycode 287 (scan 171) on the E4610, even with the launcher focused; other builds
   send `KEYCODE_F4`, so both are handled.
+- **Text too long for one line scrolls** (`ui/Marquee.kt`): soft-key
+  labels, the Home banner, the drawer's app-name title and the crop hint
+  always scroll when they don't fit; list and notice rows scroll only on the
+  highlighted row (`setMarqueeRunning` from the row's focus listener).
+  Android only runs a marquee on a *selected* `TextView`.
 - **App grid start focus**: every time the drawer resumes (Home's OK, or Back
   from an app opened there) it starts on page 1's center cell
   (`resetFocusOnNextBind` in `AppDrawerActivity.onResume`); list view starts

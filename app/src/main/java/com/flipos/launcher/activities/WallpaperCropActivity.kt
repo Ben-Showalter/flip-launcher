@@ -23,6 +23,7 @@ import com.flipos.launcher.data.LauncherPrefs
 import com.flipos.launcher.data.WallpaperLibrary
 import com.flipos.launcher.ui.CropView
 import com.flipos.launcher.ui.HomePreview
+import com.flipos.launcher.ui.useMarquee
 import com.flipos.launcher.util.BackgroundLoader
 import com.flipos.launcher.util.DailyWallpaper
 import com.flipos.launcher.util.SoftKeyRouter
@@ -74,6 +75,7 @@ class WallpaperCropActivity : AppCompatActivity() {
         scrim = findViewById(R.id.crop_scrim)
         home = findViewById(R.id.crop_home)
         status = findViewById(R.id.crop_status)
+        findViewById<TextView>(R.id.crop_hint).useMarquee(always = true)
         root.applyFakeBold()
 
         // Full screen, like Home's wallpaper: it runs under the status bar.
