@@ -10,18 +10,35 @@ import java.io.File
 
 /**
  * Every wallpaper the picker lists: the built-in ones ([BuiltInWallpapers],
- * ids are their resource names) followed by the ones added from the gallery
- * (ids `user/<file>`, saved under filesDir/wallpapers, already cropped to
- * the screen). Each is in the daily change unless the user left it out
+ * ids are their resource names) with the ones added from the gallery (ids
+ * `user/<file>`, saved under filesDir/wallpapers, already cropped to the
+ * screen) spread evenly among them. Each is in the daily change unless the user left it out
  * ([LauncherPrefs.getWallpapersOutOfRotation]).
  */
 object WallpaperLibrary {
 
     private const val USER_PREFIX = "user/"
 
-    /** Everything, in picker (and rotation) order. */
-    fun all(context: Context): List<String> =
-        BuiltInWallpapers.names() + userFiles(context).map { USER_PREFIX + it.name }
+    /**
+     * Everything, in picker (and rotation) order: gallery picture k of u goes
+     * after built-in number (k+1)*n/(u+1) of n, so the user's own pictures
+     * come round every so often instead of all at the end.
+     */
+    fun all(context: Context): List<String> {
+        val builtIn = BuiltInWallpapers.names()
+        val user = userFiles(context).map { USER_PREFIX + it.name }
+        if (user.isEmpty()) return builtIn
+        val result = ArrayList<String>(builtIn.size + user.size)
+        var next = 0
+        builtIn.forEachIndexed { i, name ->
+            result.add(name)
+            while (next < user.size && (next + 1) * builtIn.size / (user.size + 1) == i + 1) {
+                result.add(user[next++])
+            }
+        }
+        while (next < user.size) result.add(user[next++])
+        return result
+    }
 
     /** The ones in the daily change, in order. */
     fun rotation(context: Context): List<String> {

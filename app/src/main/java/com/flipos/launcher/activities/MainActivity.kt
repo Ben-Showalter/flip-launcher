@@ -1079,8 +1079,8 @@ class MainActivity : AppCompatActivity() {
      * the default Home app if it isn't, then to turn on Accessibility if
      * it's off (it feeds the Home banner, icon dots and read-aloud on these
      * phones). Both hand off to the phone's own settings screen with a toast
-     * naming the D-pad path. Last, Android's own Call Log permission prompt,
-     * so a missed call on the banner can say who called.
+     * naming the D-pad path. Last, Android's own Call Log and then Contacts
+     * permission prompts, so a missed call on the banner can say who called.
      */
     private fun maybeShowStartupPrompts() {
         if (isFinishing || startupPrompt?.isShowing == true) return
@@ -1105,6 +1105,12 @@ class MainActivity : AppCompatActivity() {
         if (!callLogPromptShown && prefs.isCallBadgeEnabled() && !callLogPermission.isGranted()) {
             callLogPromptShown = true
             callLogPermission.run {}
+            return
+        }
+        // ...and the name from Contacts (the call log's cached name is often empty).
+        if (!contactsPromptShown && prefs.isCallBadgeEnabled() && !contactsPermission.isGranted()) {
+            contactsPromptShown = true
+            contactsPermission.run {}
         }
     }
 
@@ -1177,6 +1183,7 @@ class MainActivity : AppCompatActivity() {
         private var defaultPromptShown = false
         private var accessibilityPromptShown = false
         private var callLogPromptShown = false
+        private var contactsPromptShown = false
 
         /** How long an assignable key must be held to open its assign menu. */
         private const val ASSIGN_HOLD_MS = 5000L

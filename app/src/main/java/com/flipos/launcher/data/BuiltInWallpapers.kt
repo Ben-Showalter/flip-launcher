@@ -60,7 +60,6 @@ object BuiltInWallpapers {
         "wallpaper_home_43",
         "wallpaper_home_44",
         "wallpaper_home_45",
-        "wallpaper_home_46",
         "wallpaper_home_47",
         "wallpaper_home_48",
         "wallpaper_home_49",

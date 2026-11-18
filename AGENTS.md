@@ -97,11 +97,14 @@ person's laptop.
   dialer's missed-call notification is silent, so it never arrives here; only
   the ongoing ringing one does. `service/MissedCallWatcher.kt` watches the
   call state instead: ringing then idle with no off-hook is a missed call,
-  confirmed and named from the newest call-log entry when Call Log access is
-  granted (`REJECTED`/blocked = declined, no banner), else named from the
-  ringing notification's title. Without Call Log access the phone gives no
-  name or number at all, so Home asks for it once per start (after the
-  default-launcher and Accessibility prompts) while the Calls banner is on. The entry ("Missed call", under the dialer's
+  confirmed from the newest call-log entry when Call Log access is granted
+  (`REJECTED`/blocked = declined, no banner). The caller is named from
+  Contacts (`PhoneLookup` on the number; the call log's cached name is often
+  empty), then the call log's name, the ringing notification's title, or the
+  number. Without Call Log access the phone gives no
+  name or number at all, so Home asks for it, then Contacts, once per start
+  (after the default-launcher and Accessibility prompts) while the Calls
+  banner is on. The entry ("Missed call", under the dialer's
   package) opens the call log and is never marked seen as it's posted.
   Ongoing notifications (a ringing call, music) are skipped in the
   accessibility feed: with no removals they'd linger after they end. Each `event` log line shows the
@@ -156,6 +159,10 @@ person's laptop.
   list instead of the phone's screen. The `FlipNotif` window log prints each screen's title. The
   Mic/Assistant key reports keycode 287 (scan 171) on the E4610, even with the launcher focused; other builds
   send `KEYCODE_F4`, so both are handled.
+- **App grid start focus**: every time the drawer resumes (Home's OK, or Back
+  from an app opened there) it starts on page 1's center cell
+  (`resetFocusOnNextBind` in `AppDrawerActivity.onResume`); list view starts
+  on the top row. Refreshes while it's on screen keep their place.
 - **Typing a number on Home**: digits go into `dialBuffer` (cleared in
   `onResume`), and each one reopens `ACTION_DIAL` with the whole number, since
   keys typed while the dialer is opening still reach Home. `onPause` sends any
@@ -324,8 +331,9 @@ Icon.
   with Home drawn over it (`ui/HomePreview.kt`).
 - **Daily wallpaper rotation** (no on/off switch): the picker
   (Appearance → Set Wallpaper, "Daily Wallpapers") lists every wallpaper in
-  `data/WallpaperLibrary.kt` - the built-ins, then the ones added from the
-  gallery (`user/<file>`, saved cropped under filesDir/wallpapers). OK puts
+  `data/WallpaperLibrary.kt` - the built-ins with the ones added from the
+  gallery (`user/<file>`, saved cropped under filesDir/wallpapers) spread
+  evenly among them. OK puts
   the highlighted one in or out of the rotation (`wallpapers_out_of_rotation`
   pref; left-out tiles are dimmed with OFF), Left soft key sets it now,
   the right soft key ("Add from gallery") opens the gallery (on a gallery

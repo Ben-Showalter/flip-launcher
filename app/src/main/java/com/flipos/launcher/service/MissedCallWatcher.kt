@@ -3,9 +3,11 @@ package com.flipos.launcher.service
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.provider.CallLog
+import android.provider.ContactsContract
 import android.telephony.PhoneStateListener
 import android.telephony.TelephonyManager
 import android.util.Log
@@ -74,9 +76,10 @@ class MissedCallWatcher(
             TelephonyManager.CALL_STATE_OFFHOOK -> if (ringing) answered = true
             TelephonyManager.CALL_STATE_IDLE -> {
                 if (ringing && !answered) {
-                    val fallback = ringingCaller?.takeIf { it.isNotBlank() } ?: ringNumber
+                    val shownName = ringingCaller?.takeIf { it.isNotBlank() }
+                    val number = ringNumber
                     // Give the dialer a moment to write the call-log entry.
-                    handler.postDelayed({ resolve(fallback) }, CALL_LOG_DELAY_MS)
+                    handler.postDelayed({ resolve(shownName, number) }, CALL_LOG_DELAY_MS)
                 }
                 ringing = false
                 answered = false
@@ -86,31 +89,53 @@ class MissedCallWatcher(
         }
     }
 
-    /** Checks the call log (if allowed) off the main thread, then reports on it. */
-    private fun resolve(fallback: String?) {
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) {
-            Log.d(TAG, "missed call from $fallback (no call log access)")
-            onMissedCall(fallback)
-            return
-        }
+    /**
+     * Works out who called, off the main thread, then reports on it: the
+     * number from the call log (if allowed) or the phone state, named from
+     * Contacts first - the call log's cached name is often still empty on
+     * these phones - then the call log's name, the ringing notification's
+     * [shownName], or the number itself. A declined or blocked call isn't
+     * reported.
+     */
+    private fun resolve(shownName: String?, ringNumber: String?) {
         Thread {
-            val entry = newestCall()
-            handler.post {
-                when {
-                    entry == null -> {
-                        Log.d(TAG, "missed call from $fallback (no recent call log entry)")
-                        onMissedCall(fallback)
-                    }
-                    entry.type == CallLog.Calls.MISSED_TYPE -> {
-                        val caller = entry.name?.takeIf { it.isNotBlank() } ?: entry.number?.takeIf { it.isNotBlank() } ?: fallback
-                        Log.d(TAG, "missed call from $caller")
-                        onMissedCall(caller)
-                    }
-                    else -> Log.d(TAG, "call ended unanswered as type ${entry.type} (declined/blocked): no banner")
-                }
+            val entry = if (isGranted(Manifest.permission.READ_CALL_LOG)) newestCall() else null
+            if (entry != null && entry.type != CallLog.Calls.MISSED_TYPE) {
+                Log.d(TAG, "call ended unanswered as type ${entry.type} (declined/blocked): no banner")
+                return@Thread
             }
+            val number = entry?.number?.takeIf { it.isNotBlank() } ?: ringNumber?.takeIf { it.isNotBlank() }
+            val contact = number?.let { contactName(it) }
+            val logName = entry?.name?.takeIf { it.isNotBlank() }
+            val caller = contact ?: logName ?: shownName ?: number
+            val source = when {
+                contact != null -> "contacts"
+                logName != null -> "call log"
+                shownName != null -> "ringing notification"
+                number != null -> "number"
+                else -> "nothing (no Call Log access?)"
+            }
+            Log.d(TAG, "missed call from $caller (named from $source; call log entry=${entry != null})")
+            handler.post { onMissedCall(caller) }
         }.start()
     }
+
+    /** [number]'s name in Contacts, or null (not saved, or no Contacts access). Worker thread. */
+    private fun contactName(number: String): String? {
+        if (!isGranted(Manifest.permission.READ_CONTACTS)) return null
+        return try {
+            val uri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(number))
+            context.contentResolver.query(uri, arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME), null, null, null)?.use {
+                if (it.moveToFirst()) it.getString(0)?.takeIf { name -> name.isNotBlank() } else null
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "missed calls: contact lookup failed", e)
+            null
+        }
+    }
+
+    private fun isGranted(permission: String): Boolean =
+        ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
 
     private class Call(val type: Int, val name: String?, val number: String?)
 

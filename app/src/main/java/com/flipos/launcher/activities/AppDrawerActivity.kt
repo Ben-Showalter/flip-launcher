@@ -157,6 +157,9 @@ class AppDrawerActivity : AppCompatActivity() {
         gridAdapter.setIconSizePercent(prefs.getIconSizePercent())
         applyViewMode()
         updatePageSize()
+        // Every arrival - Home's OK, or Back from an app opened here - starts on
+        // the first page's center app, like the stock Kyocera menu.
+        resetFocusOnNextBind = true
         refresh()
         window.hideNavigationBar()
         applyWallpaperScrim()
@@ -241,16 +244,20 @@ class AppDrawerActivity : AppCompatActivity() {
         gridAdapter.setGridMetrics(contentWidth, contentHeight, gridColumns, rows)
     }
 
+    /** Set on resume: the next bind starts over on page 1's center app instead of keeping its place. */
+    private var resetFocusOnNextBind = false
+
     private fun refresh() {
         loader.load(
             produce = { AppRepository.getVisibleApps(this, prefs) },
             consume = { apps ->
                 if (isDestroyed) return@load
-                val firstBind = allApps.isEmpty()
+                val startOver = allApps.isEmpty() || resetFocusOnNextBind
+                resetFocusOnNextBind = false
                 allApps = apps
                 if (listMode) {
-                    bindList()
-                } else if (firstBind) {
+                    if (startOver) bindList(focusPosition = 0) else bindList()
+                } else if (startOver) {
                     // Opening the grid lands on the center cell of the first
                     // page (Media Center in the default order), mirroring the
                     // stock Kyocera menu, rather than the top-left corner.
