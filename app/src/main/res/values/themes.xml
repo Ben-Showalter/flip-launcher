@@ -75,6 +75,15 @@
         <item name="android:statusBarColor">@android:color/transparent</item>
     </style>
 
+    <!-- Invisible host for a dialog shown over another app's screen
+         (SettingsRedirectChooserActivity). -->
+    <style name="Theme.FlipLauncher.Transparent" parent="Theme.FlipLauncher">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
+
     <!-- App drawer: wallpaper behind a translucent black scrim, edge to edge,
          matching the rest of the KaiOS chrome instead of a solid bar. -->
     <style name="Theme.FlipLauncher.Drawer" parent="Theme.FlipLauncher.Home">

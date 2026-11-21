@@ -12,6 +12,8 @@ import com.flipos.launcher.data.NotificationCategorizer
 import com.flipos.launcher.data.NotificationCounts
 import com.flipos.launcher.data.NotificationKind
 import com.flipos.launcher.data.NotificationStore
+import com.flipos.launcher.data.NotificationText
+import com.flipos.launcher.util.CategoryApps
 import com.flipos.launcher.util.ReadAloud
 
 /**
@@ -58,6 +60,8 @@ class NotificationCountService : NotificationListenerService() {
         } catch (e: SecurityException) {
             return
         }
+        val calendarPackage = CategoryApps.calendarPackage(this)
+        val phonePackages = CategoryApps.phonePackages(this)
 
         var calls = 0
         var messages = 0
@@ -68,11 +72,12 @@ class NotificationCountService : NotificationListenerService() {
             // Group summaries and our own posted-by-system rows aren't real, user-facing
             // notifications, so they're skipped to avoid inflating the "other" count.
             if (sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0) continue
-            val kind = NotificationCategorizer.kindOf(sbn.notification.category)
+            val kind = NotificationCategorizer.kindOf(sbn.notification.category, sbn.packageName, calendarPackage, phonePackages)
             when (kind) {
                 NotificationKind.CALL -> calls++
                 NotificationKind.MESSAGE -> messages++
-                NotificationKind.OTHER -> other++
+                // Events share the "other" badge count; the banner shows them separately.
+                NotificationKind.EVENT, NotificationKind.OTHER -> other++
             }
             packages.add(sbn.packageName)
             notices.add(toNoticeItem(sbn, kind))
@@ -82,13 +87,13 @@ class NotificationCountService : NotificationListenerService() {
     }
 
     private fun toNoticeItem(sbn: StatusBarNotification, kind: NotificationKind): NoticeItem {
-        val extras = sbn.notification.extras
-        val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
+        // The newest message of a conversation, not its first line.
+        val (title, text) = NotificationText.latest(sbn.notification)
         return NoticeItem(
             key = sbn.key,
             packageName = sbn.packageName,
             title = title.ifEmpty { appLabel(sbn.packageName) },
-            text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty(),
+            text = text,
             postTime = sbn.postTime,
             icon = loadSmallIcon(sbn),
             kind = kind,

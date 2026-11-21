@@ -57,7 +57,16 @@ class NoticeRowAdapter(
                 .joinToString(". ")
 
             itemView.setOnClickListener { onClick(item) }
-            itemView.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) onFocusChanged(item) }
+            // Only the highlighted notice's text scrolls when it doesn't fit.
+            title.useMarquee(always = false)
+            text.useMarquee(always = false)
+            title.setMarqueeRunning(itemView.hasFocus())
+            text.setMarqueeRunning(itemView.hasFocus())
+            itemView.setOnFocusChangeListener { _, hasFocus ->
+                title.setMarqueeRunning(hasFocus)
+                text.setMarqueeRunning(hasFocus)
+                if (hasFocus) onFocusChanged(item)
+            }
         }
     }
 }

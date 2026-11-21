@@ -71,27 +71,72 @@ person's laptop.
   dots (`AppDrawerActivity.hasNotification` reads both sources), not
   Notices, since accessibility has no "list active notifications" or
   removal event. Every notification is posted, even from the app in front;
-  an app's entries are dismissed when the user leaves it. Only the app's own
-  Activity windows count as it being open (outer-screen popups such as
-  TurboText's fire window events just before the notification, which used to
-  mark the app "in front" and drop the message), and with the screen off the
-  app left open counts as closed. Home asks to turn it on at startup if it's
+  an entry is dismissed once the user has seen its app and then left it.
+  Only the app's own Activity windows count as it being open (outer-screen
+  popups such as TurboText's fire window events just before the
+  notification, which used to mark the app "in front" and drop the
+  message). An entry counts as seen when posted while its app is on screen
+  (screen on, keyguard down) or when its app comes on screen - a window
+  change, or `SCREEN_ON`/`USER_PRESENT` with it still in front, since opening
+  the flip onto an app fires no window event. That receiver must be
+  registered `RECEIVER_EXPORTED`: below Android 13, `RECEIVER_NOT_EXPORTED`
+  adds an app-private permission that blocks `USER_PRESENT` (SystemUI sends
+  it from an app uid). The seen state lives in `NotificationStore`
+  (`markSeen`/`dismissSeen`/`dismissAllSeen`) so the launcher backs the
+  service up: `launchAppDirect` and the OK hold mark the app they open as
+  seen, and Home's `onResume` dismisses every seen entry (accessibility feed
+  only). The service and Home log each step under the `FlipNotif` tag.
+  Messages that arrive with the
+  flip closed stay until their app has been opened and left. Calendar
+  event/reminder notifications (category `event`/`reminder`, or anything
+  from the default calendar app) are their own `NotificationKind.EVENT`,
+  shown on the banner by default. Missed calls and voicemail are `CALL`
+  (category `call`/`missed_call`/`voicemail`, or anything uncategorized from
+  the default dialer or `com.android.dialer`: `CategoryApps.phonePackages`;
+  not `com.android.phone`, whose "No mobile data service" notice isn't a call). On the E4810/E4811 the
+  dialer's missed-call notification is silent, so it never arrives here; only
+  the ongoing ringing one does. `service/MissedCallWatcher.kt` watches the
+  call state instead: ringing then idle with no off-hook is a missed call,
+  confirmed from the newest call-log entry when Call Log access is granted
+  (`REJECTED`/blocked = declined, no banner). The caller is named from
+  Contacts (`PhoneLookup` on the number; the call log's cached name is often
+  empty), then the call log's name, the ringing notification's title, or the
+  number. Without Call Log access the phone gives no
+  name or number at all, so Home asks for it, then Contacts, once per start
+  (after the default-launcher and Accessibility prompts) while the Calls
+  banner is on. The entry ("Missed call", under the dialer's
+  package) opens the call log and is never marked seen as it's posted.
+  Ongoing notifications (a ringing call, music) are skipped in the
+  accessibility feed: with no removals they'd linger after they end. Each `event` log line shows the
+  category and kind. Home asks to turn it on at startup if it's
   off. Its store appends new items (the listener's is newest-first), so the Home banner
   and read-aloud pick the newest by `postTime` (`NotificationStore.newest`),
-  never list order. The same service filters key events
+  never list order. Group summaries are read too (once a second message
+  arrives, apps like TurboText alert with the summary and update the
+  message silently), the text is the newest message from MessagingStyle /
+  InboxStyle data (`data/NotificationText.kt`), and a summary and its
+  message arriving within 5s with the same text count as one. The same
+  service filters key events
   (`flagRequestFilterKeyEvents`, set in XML and code) so any button press
-  stops a readout in progress and is swallowed (DOWN and UP), volume keys
-  excepted (`ReadAloudSpeaker.interceptKey`, also called from the
-  launcher's own `dispatchKeyEvent`s for when Accessibility is off). The
-  read-aloud MediaSession needs `FLAG_HANDLES_MEDIA_BUTTONS` on Android 7 and
-  an `onMediaButtonEvent` override, since headsets send PLAY_PAUSE /
-  HEADSETHOOK rather than PAUSE.
+  stops a readout in progress and still does its normal job (never
+  consumed), volume keys excepted (`ReadAloudSpeaker.interceptKey`, also
+  called from the launcher's own `dispatchKeyEvent`s for when Accessibility
+  is off). Read-aloud renders each message with `synthesizeToFile` and plays
+  it from this process (`MediaPlayer`, `USAGE_MEDIA`): on Android 8+ media
+  buttons go to the session of the app actually playing audio, and spoken by
+  the TTS engine directly the audio was the engine's, so a Bluetooth
+  headset's button never reached our `MediaSession`. The session needs
+  `FLAG_HANDLES_MEDIA_BUTTONS` on Android 7 and an `onMediaButtonEvent`
+  override, since headsets send PLAY_PAUSE / HEADSETHOOK rather than PAUSE.
 
 - **Kyocera component names** (captured from logcat on the E4610; not yet
   verified on the E4810/E4811 - every launch falls back or toasts, never
-  crashes): the dialer's call log is `com.android.dialer/.calllog.CallLogActivityKc`
-  on the E4610 and `.app.calllog.CallLogActivityKc` on newer models (both are
-  tried, see `MainActivity.openCallLog`). Kyocera's Home menus are
+  crashes): the Send key's call log is asked for the standard way first -
+  `ACTION_VIEW` of type `vnd.android.cursor.dir/calls`, aimed at the default
+  dialer (`util/SystemCallLog.kt`), so a replacement dialer opens its own call
+  log. Only if nothing answers that: the Kyocera dialer's
+  `com.android.dialer/.calllog.CallLogActivityKc` (E4610) or
+  `.app.calllog.CallLogActivityKc` (newer models), then the launcher's own. Kyocera's Home menus are
   `jp.kyocera.kyocerahome/.MediaCenterMenuActivity`, `.ToolsMenuActivity` and
   `.QuickSettingsActivity`, exposed as drawer shortcuts via `<activity-alias>`
   entries of `KyoceraShortcutActivity` (see `util/KyoceraShortcuts.kt`; add a
@@ -101,15 +146,52 @@ person's laptop.
   launcher, so there the alias opens Kyocera Settings' own copy first,
   `jp.kyocera.settings.nfp/.core.Settings$QuickSettingsActivity` (action
   `jp.kyocera.settings.programmablekey.action.SHORTCUTS`, what the phone's
-  programmable-key shortcut sends), which works under any launcher. The
+  programmable-key shortcut sends), which works under any launcher.
+  **Settings redirects** (`util/SettingsRedirects.kt`, driven by the
+  accessibility service's window events, on every model): the phone's
+  shortcut-key screen (`jp.kyocera.customizekey/.settings.ProgrammableKeysSettingsActivity`)
+  opens Home Screen & Keys on top; Kyocera Settings' `core.SubSettings` titled
+  "Wallpaper" opens the Wallpaper picker; its notification-sound picker
+  (`sound.PresetRingtonePickerActivity`, shown as an `android.app.Dialog`
+  window titled "...Notification...") asks first. On the E4610 (Android 7) the
+  same redirects come from `com.android.settings/.afp.WallpaperSettings`
+  (Wallpaper), `.afp.NavigationKeysSettings` and `.afp.PttSettings` (Home
+  Screen & Keys), and `com.android.providers.media/.RingtonePickerActivity`
+  titled "...Notification..." (shared with ringtone/alarm, so the title
+  decides). Unmatched settings screens log `settings screen …: no redirect`.
+  The notification one asks first
+  (`SettingsRedirectChooserActivity`). The phone's screen stays underneath,
+  and nothing redirects when the previous window was the launcher's own, so
+  Back reaches it. Redirected screens open in a task of their own
+  (`NEW_TASK|MULTIPLE_TASK|EXCLUDE_FROM_RECENTS`; the chooser has
+  `taskAffinity=""`): in the launcher's task, closing them showed the app
+  list instead of the phone's screen. The `FlipNotif` window log prints each screen's title. The
   Mic/Assistant key reports keycode 287 (scan 171) on the E4610, even with the launcher focused; other builds
   send `KEYCODE_F4`, so both are handled.
+- **Text too long for one line scrolls** (`ui/Marquee.kt`): soft-key
+  labels, the Home banner, the drawer's app-name title and the crop hint
+  always scroll when they don't fit; list and notice rows scroll only on the
+  highlighted row (`setMarqueeRunning` from the row's focus listener).
+  Android only runs a marquee on a *selected* `TextView`.
+- **App grid start focus**: every time the drawer resumes (Home's OK, or Back
+  from an app opened there) it starts on page 1's center cell
+  (`resetFocusOnNextBind` in `AppDrawerActivity.onResume`); list view starts
+  on the top row. Refreshes while it's on screen keep their place.
+- **Typing a number on Home**: digits go into `dialBuffer` (cleared in
+  `onResume`), and each one reopens `ACTION_DIAL` with the whole number, since
+  keys typed while the dialer is opening still reach Home. `onPause` sends any
+  digit still waiting out its 200ms tap debounce instead of dropping it. A
+  same-digit re-press within `SPLIT_HOLD_GAP_MS` (60ms) of its release is the
+  keypad splitting one hold; later is a real second press. `FlipKeys` logs it.
 - **E4610 speed dial and outer keys** (Android 7): `content://speed_dial`
   holds nothing the dialer's own Speed Dial screen
   (`com.android.dialer/.speeddial.SpeedDialActivity` there, `.app.speeddial.`
   on newer models) saves, so `util/SystemSpeedDial.kt` reports it
   `Unsupported` and Home falls back to the launcher's own slots
-  (`SpeedDialSettingsActivity`). The outer buttons' system assignment
+  (`SpeedDialSettingsActivity`). On Android 9+ the phone's data is read
+  (an empty table means nothing set yet), and Settings → Home Screen & Keys
+  → Speed Dial opens the phone's own Speed Dial screen
+  (`isSystemSpeedDialReadable`). The outer buttons' system assignment
   (`com.android.settings/.afp.PttSettings`, action
   `kyocera.intent.action.PTT_SETTINGS`) is a Kyocera Home feature that never
   fires under another launcher, so Home assigns them itself (scan codes →
@@ -148,9 +230,19 @@ key handling, focus, or layout. Decisions taken here:
   `onOptionsKey()`, never `onKeyDown` for soft keys. Home (`MainActivity`) is
   the one exception: its soft keys and D-pad are user-assignable app slots.
   On Home, OK taps open the app drawer and an OK hold (timed by hand) opens
-  the newest banner notification (its `contentIntent`, else its app); a
+  the newest banner notification (its `contentIntent`, else its app), or
+  Notices when the banner is empty; a
   Clr/Back hold opens the assigned app, launcher settings when none is set.
-  The banner shows the posting app's own icon.
+  Unassigned keys get default apps once (`util/DefaultKeys.kt`): Up
+  Calculator, Left Calendar, Right Quick Settings, Down Notepad, SOS
+  Weather, PTT Flashlight, outer END Timer, outer Speaker Alarm clock;
+  a `#` hold (timed by hand; a tap still dials "#") toggles vibrate like
+  the stock Kyocera Home ("Phone set to Vibrate only" in its logcat;
+  `util/VibrateMode.kt`): it remembers the earlier ringer mode and the next
+  hold puts it back. Normal <-> vibrate needs no permission.
+  The banner shows the posting app's own icon on a 70% dark gray background
+  (not the accent), with white text; the D-pad shortcut pod uses the same
+  gray.
 - **Act on key UP, consume both halves.** Anything that finishes the screen or
   launches another app/screen fires on UP, and only for a press whose DOWN
   this window saw - otherwise the stray UP lands in the next window (e.g. Home
@@ -201,6 +293,12 @@ Key pieces:
 - `LauncherPrefs` is the single SharedPreferences wrapper — all settings
   (icon size, accent color, drawer view mode, badges, shortcuts,
   hidden apps, per-app icon overrides) live there.
+- **Home clock** (`MainActivity.updateClock`): builds its `SimpleDateFormat`s
+  on every refresh - one keeps the time zone and language it was created
+  with, and Home lives until reboot - and follows `DateFormat.is24HourFormat`.
+  Its time receiver is `RECEIVER_EXPORTED`, like every platform-broadcast
+  receiver here (below Android 13 `RECEIVER_NOT_EXPORTED` blocks senders that
+  aren't the core system, such as Settings' 12/24-hour change).
 - `util/WallpaperContrast.kt` measures the wallpaper's brightness (cached
   per wallpaper, off the main thread) and scales Home's and the App
   Drawer's window scrim to it, so text and icons keep their contrast over
@@ -243,3 +341,28 @@ Icon.
   (no extension) to `BuiltInIcons.LEGACY_NAMES` in `data/BuiltInIcons.kt` or
   `BuiltInWallpapers.NAMES` in `data/BuiltInWallpapers.kt`. Resources aren't
   auto-discovered, so the registry step is required.
+  Wallpapers are 240x320 (3:4) JPGs; the picker shows each one at that shape
+  with Home drawn over it (`ui/HomePreview.kt`).
+- **Daily wallpaper rotation** (no on/off switch): the picker
+  (Appearance → Set Wallpaper, "Daily Wallpapers") lists every wallpaper in
+  `data/WallpaperLibrary.kt` - the built-ins with the ones added from the
+  gallery (`user/<file>`, saved cropped under filesDir/wallpapers) spread
+  evenly among them. OK puts
+  the highlighted one in or out of the rotation (`wallpapers_out_of_rotation`
+  pref; left-out tiles are dimmed with OFF), Left soft key sets it now,
+  the right soft key ("Add from gallery") opens the gallery (on a gallery
+  picture it offers Remove too). A toast on opening says they switch daily. `util/DailyWallpaper.kt`
+  moves to the next one in the rotation once a day, checked when Home resumes
+  and on `SCREEN_ON` (the accessibility service's receiver), so no scheduler
+  is needed. One left on = it stays; none on = the wallpaper is left alone.
+  Leaving out the one showing changes it at once. Logs under `FlipWallpaper`.
+- **Gallery wallpapers** (picker → Options → From gallery…, which adds it to
+  the rotation list and sets it): the picked photo
+  opens `WallpaperCropActivity`, a D-pad crop with Home drawn on top - D-pad
+  moves, `#`/`*` zoom in/out, 1/3 turn left/right, 5 resets, 0 hides Home,
+  OK sets, Back cancels.
+  The visible area is what gets set. There's no link to the phone's own
+  wallpaper setter (it has no Home preview).
+- **Home's clock, soft keys and D-pad pod** are filled by `ui/HomeScreenBinder.kt`,
+  shared by Home and the wallpaper picker's preview. Change Home's look there,
+  not in `MainActivity`, so the preview keeps matching.

@@ -2,100 +2,149 @@ package com.flipos.launcher.activities
 
 import com.flipos.launcher.R
 
-import android.app.WallpaperManager
 import android.content.Intent
-import android.content.res.Resources
-import android.graphics.BitmapFactory
 import android.os.Bundle
+import android.provider.MediaStore
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.recyclerview.widget.GridLayoutManager
-import com.flipos.launcher.data.BuiltInWallpapers
+import com.flipos.launcher.data.WallpaperLibrary
+import com.flipos.launcher.ui.HomePreview
 import com.flipos.launcher.ui.WallpaperGridAdapter
+import com.flipos.launcher.util.DailyWallpaper
 
-/** Lets the user set the device wallpaper from the launcher's bundled set, pulled
- * straight from [BuiltInWallpapers] — no need to leave the launcher for Photos. */
+/**
+ * The daily wallpaper rotation: every built-in and gallery wallpaper
+ * ([WallpaperLibrary]), each shown with Home over it. OK puts the
+ * highlighted one in or out of the daily change ([DailyWallpaper]) - leave
+ * just one in and it stays. Left soft key sets it now; Options adds a
+ * picture from the gallery (cropped first) or removes a gallery one.
+ */
 class WallpaperPickerActivity : BaseListActivity() {
 
     private lateinit var adapter: WallpaperGridAdapter
+
+    /** A photo picked from the gallery goes to the crop screen. */
+    private val galleryPicker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val uri = result.data?.data
+        if (result.resultCode == RESULT_OK && uri != null) {
+            cropScreen.launch(
+                Intent(this, WallpaperCropActivity::class.java)
+                    .setData(uri)
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
+            )
+        }
+    }
+
+    /** The crop screen added (and set) a wallpaper: show it in the grid. */
+    private val cropScreen = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) adapter.submit(WallpaperLibrary.all(this))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         titleView.text = getString(R.string.title_wallpaper_picker)
 
-        adapter = WallpaperGridAdapter(onClick = { name -> applyWallpaper(name) })
+        adapter = WallpaperGridAdapter(
+            isOff = { !WallpaperLibrary.isInRotation(this, it) },
+            onClick = { id -> toggleRotation(id) },
+        )
         listView.layoutManager = GridLayoutManager(this, COLUMNS)
         listView.adapter = adapter
-        adapter.submit(BuiltInWallpapers.names())
+        // Each tile shows Home over it: the real clock, soft keys and D-pad pod.
+        adapter.overlay = HomePreview.renderOverlay(this)
+        adapter.submit(WallpaperLibrary.all(this))
 
-        softKeys.setLabels(null, null, getString(R.string.softkey_options))
+        softKeys.setLabels(getString(R.string.softkey_set_now), getString(R.string.softkey_on_off), getString(R.string.softkey_add_from_gallery))
         focusFirst()
+        Toast.makeText(this, R.string.wallpaper_daily_hint, Toast.LENGTH_LONG).show()
     }
 
-    private fun applyWallpaper(name: String) {
-        val resId = BuiltInWallpapers.resId(this, name)
-        if (resId == 0) return
-        // Use the application context off the UI thread and hold no reference to
-        // the Activity's resources beyond decode.
-        val appContext = applicationContext
-        Thread {
-            try {
-                val wm = WallpaperManager.getInstance(appContext)
-                val bitmap = decodeSampled(
-                    appContext.resources,
-                    resId,
-                    wm.desiredMinimumWidth.coerceAtLeast(1),
-                    wm.desiredMinimumHeight.coerceAtLeast(1),
-                )
-                wm.setBitmap(bitmap)
-                bitmap.recycle()
-                runOnUiThread {
-                    if (!isDestroyed) {
-                        Toast.makeText(this, R.string.wallpaper_set_toast, Toast.LENGTH_SHORT).show()
-                        finish()
-                    }
-                }
-            } catch (e: Exception) {
-                runOnUiThread {
-                    if (!isDestroyed) Toast.makeText(this, R.string.wallpaper_set_failed, Toast.LENGTH_SHORT).show()
-                }
+    /** OK: puts [id] in or out of the daily change. */
+    private fun toggleRotation(id: String) {
+        val nowIn = !WallpaperLibrary.isInRotation(this, id)
+        WallpaperLibrary.setInRotation(this, id, nowIn)
+        adapter.refresh(id)
+        val left = WallpaperLibrary.rotation(this).size
+        val message = when {
+            left == 0 -> R.string.wallpaper_rotation_none
+            left == 1 -> R.string.wallpaper_rotation_one
+            nowIn -> R.string.wallpaper_rotation_in
+            else -> R.string.wallpaper_rotation_out
+        }
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+        // Left out the one showing (or left just one in): change now.
+        DailyWallpaper.onRotationChanged(this)
+    }
+
+    /** Left soft key: set the highlighted wallpaper now; the rotation carries on from it tomorrow. */
+    override fun onPrimaryKey() {
+        val id = focusedPosition().takeIf { it >= 0 }?.let { adapter.idAt(it) } ?: return
+        DailyWallpaper.setNow(this, id) { ok ->
+            if (!isDestroyed) {
+                Toast.makeText(this, if (ok) R.string.wallpaper_set_toast else R.string.wallpaper_set_failed, Toast.LENGTH_SHORT).show()
             }
-        }.start()
+        }
     }
 
     /**
-     * Decodes [resId] downsampled to roughly [reqWidth]x[reqHeight], so setting a
-     * large bundled wallpaper doesn't allocate a full-resolution bitmap (which can
-     * OOM on low-end devices).
+     * The Gallery's photo picker, or the general image picker where there's
+     * none. The picked photo comes with read access, so no storage
+     * permission is needed.
      */
-    private fun decodeSampled(res: Resources, resId: Int, reqWidth: Int, reqHeight: Int): android.graphics.Bitmap {
-        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        BitmapFactory.decodeResource(res, resId, bounds)
-        var sample = 1
-        var halfW = bounds.outWidth / 2
-        var halfH = bounds.outHeight / 2
-        while (halfW >= reqWidth && halfH >= reqHeight) {
-            sample *= 2
-            halfW /= 2
-            halfH /= 2
-        }
-        val opts = BitmapFactory.Options().apply { inSampleSize = sample }
-        return BitmapFactory.decodeResource(res, resId, opts)
-    }
-
-    private fun openSystemChooser() {
-        try {
-            startActivity(Intent.createChooser(Intent(Intent.ACTION_SET_WALLPAPER), getString(R.string.opt_set_wallpaper)))
-        } catch (e: Exception) {
-            Toast.makeText(this, R.string.toast_not_available, Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    override fun onOptionsKey() {
-        AlertDialog.Builder(this)
-            .setItems(arrayOf(getString(R.string.wallpaper_picker_more))) { _, which ->
-                if (which == 0) openSystemChooser()
+    private fun openGallery() {
+        val attempts = listOf(
+            Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI),
+            Intent(Intent.ACTION_GET_CONTENT).setType("image/*").addCategory(Intent.CATEGORY_OPENABLE),
+        )
+        for (intent in attempts) {
+            try {
+                galleryPicker.launch(intent)
+                return
+            } catch (e: Exception) {
+                // Nothing handles this one; try the next.
             }
+        }
+        Toast.makeText(this, R.string.toast_not_available, Toast.LENGTH_SHORT).show()
+    }
+
+    /**
+     * Right soft key: add a picture from the gallery. On a gallery picture
+     * it asks first, since that's also where Remove lives.
+     */
+    override fun onOptionsKey() {
+        val focusedId = focusedPosition().takeIf { it >= 0 }?.let { adapter.idAt(it) }
+        val removable = focusedId != null && WallpaperLibrary.isUser(focusedId)
+        if (!removable) {
+            openGallery()
+            return
+        }
+        val items = listOfNotNull(
+            getString(R.string.wallpaper_from_gallery),
+            if (removable) getString(R.string.wallpaper_remove) else null,
+        )
+        AlertDialog.Builder(this)
+            .setItems(items.toTypedArray()) { _, which ->
+                when (which) {
+                    0 -> openGallery()
+                    1 -> focusedId?.let { confirmRemove(it) }
+                }
+            }
+            .show()
+    }
+
+    /** Deletes a gallery wallpaper from the list. */
+    private fun confirmRemove(id: String) {
+        AlertDialog.Builder(this)
+            .setMessage(R.string.wallpaper_remove_confirm)
+            .setPositiveButton(R.string.wallpaper_remove) { _, _ ->
+                WallpaperLibrary.remove(this, id)
+                adapter.submit(WallpaperLibrary.all(this))
+                DailyWallpaper.onRotationChanged(this)
+                focusFirst()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
             .show()
     }
 

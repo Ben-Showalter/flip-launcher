@@ -30,6 +30,25 @@ object CategoryApps {
         return packageName?.let { launchKeyFor(context, it) }
     }
 
+    /**
+     * The phone/dialer app packages: the default dialer and the AOSP
+     * `com.android.dialer`. Their uncategorized notifications count as calls,
+     * and their ringing notification names the caller. Not `com.android.phone`:
+     * it posts network notices ("No mobile data service") that aren't calls.
+     */
+    fun phonePackages(context: Context): Set<String> {
+        val dialer = try {
+            if (Build.VERSION.SDK_INT >= 23) {
+                (context.getSystemService(Context.TELECOM_SERVICE) as? TelecomManager)?.defaultDialerPackage
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            null
+        }
+        return setOfNotNull(dialer, "com.android.dialer")
+    }
+
     /** The default SMS app's main launch component, or null. */
     fun smsKey(context: Context): String? =
         Telephony.Sms.getDefaultSmsPackage(context)?.let { launchKeyFor(context, it) }
@@ -37,6 +56,13 @@ object CategoryApps {
     fun contactsKey(context: Context): String? = categoryKey(context, Intent.CATEGORY_APP_CONTACTS)
     fun galleryKey(context: Context): String? = categoryKey(context, Intent.CATEGORY_APP_GALLERY)
     fun calendarKey(context: Context): String? = categoryKey(context, Intent.CATEGORY_APP_CALENDAR)
+
+    /** The default calendar app's package, or null - its notifications count as events. */
+    fun calendarPackage(context: Context): String? = try {
+        calendarKey(context)?.let { ComponentName.unflattenFromString(it)?.packageName }
+    } catch (e: Exception) {
+        null
+    }
     fun emailKey(context: Context): String? = categoryKey(context, Intent.CATEGORY_APP_EMAIL)
     fun musicKey(context: Context): String? = categoryKey(context, Intent.CATEGORY_APP_MUSIC)
 

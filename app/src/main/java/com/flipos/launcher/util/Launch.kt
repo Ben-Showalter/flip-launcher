@@ -13,6 +13,7 @@ import com.flipos.launcher.R
 import com.flipos.launcher.activities.SettingsActivity
 import com.flipos.launcher.data.AppRepository
 import com.flipos.launcher.data.LauncherPrefs
+import com.flipos.launcher.data.NotificationStore
 
 /**
  * Launches an app by its stored [key], surfacing a toast if it can't be
@@ -65,6 +66,9 @@ private fun Context.launchAppDirect(key: String) {
     }
     try {
         startActivity(intent)
+        // The user is opening this app: its Home banner entries count as seen,
+        // and go when they come back to Home (see NotificationStore).
+        ComponentName.unflattenFromString(key)?.packageName?.let { NotificationStore.markSeen(it) }
     } catch (e: ActivityNotFoundException) {
         Toast.makeText(this, R.string.toast_launch_unavailable, Toast.LENGTH_SHORT).show()
     } catch (e: SecurityException) {

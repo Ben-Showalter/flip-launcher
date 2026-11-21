@@ -26,6 +26,7 @@
          separate copy. Requested at runtime the first time it's needed. -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />
 
+
     <!-- Self-update from GitHub Releases (data/UpdateChecker.kt): fetch the
          latest release + APK, check for Wi-Fi to note it's preferred, and hand
          the APK to the system installer. -->
@@ -214,6 +215,16 @@
             android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize|screenLayout|smallestScreenSize" />
 
         <activity
+            android:name=".activities.SettingsRedirectChooserActivity"
+            android:exported="false"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@style/Theme.FlipLauncher.Transparent"
+            android:screenOrientation="portrait"
+            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize|screenLayout|smallestScreenSize" />
+
+        <activity
             android:name=".activities.IconPickerActivity"
             android:exported="false"
             android:screenOrientation="portrait"
@@ -221,6 +232,12 @@
 
         <activity
             android:name=".activities.WallpaperPickerActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize|screenLayout|smallestScreenSize" />
+
+        <activity
+            android:name=".activities.WallpaperCropActivity"
             android:exported="false"
             android:screenOrientation="portrait"
             android:configChanges="keyboardHidden|keyboard|navigation|orientation|screenSize|screenLayout|smallestScreenSize" />

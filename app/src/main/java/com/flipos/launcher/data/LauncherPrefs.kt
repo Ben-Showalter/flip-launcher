@@ -54,6 +54,10 @@ class LauncherPrefs(context: Context) {
     // --------------------------------------------- D-pad / Camera shortcuts
 
     /** App key launched by pressing D-pad Up on Home, or null if unconfigured. */
+    /** Whether DefaultKeys has given the unassigned D-pad/outer keys their default apps (once). */
+    fun isDefaultKeysSeeded(): Boolean = prefs.getBoolean(KEY_DEFAULT_KEYS_SEEDED, false)
+    fun setDefaultKeysSeeded() = prefs.edit().putBoolean(KEY_DEFAULT_KEYS_SEEDED, true).apply()
+
     fun getDpadUpApp(): String? = prefs.getString(KEY_DPAD_UP_APP, null)
     fun setDpadUpApp(key: String?) = prefs.edit().putString(KEY_DPAD_UP_APP, key).apply()
 
@@ -254,6 +258,9 @@ class LauncherPrefs(context: Context) {
     fun isMessageBadgeEnabled(): Boolean = prefs.getBoolean(KEY_BADGE_MESSAGES, true)
     fun setMessageBadgeEnabled(enabled: Boolean) = prefs.edit().putBoolean(KEY_BADGE_MESSAGES, enabled).apply()
 
+    fun isEventBadgeEnabled(): Boolean = prefs.getBoolean(KEY_BADGE_EVENTS, true)
+    fun setEventBadgeEnabled(enabled: Boolean) = prefs.edit().putBoolean(KEY_BADGE_EVENTS, enabled).apply()
+
     fun isOtherBadgeEnabled(): Boolean = prefs.getBoolean(KEY_BADGE_OTHER, false)
     fun setOtherBadgeEnabled(enabled: Boolean) = prefs.edit().putBoolean(KEY_BADGE_OTHER, enabled).apply()
 
@@ -269,6 +276,7 @@ class LauncherPrefs(context: Context) {
     fun isShownOnHome(kind: NotificationKind): Boolean = when (kind) {
         NotificationKind.CALL -> isCallBadgeEnabled()
         NotificationKind.MESSAGE -> isMessageBadgeEnabled()
+        NotificationKind.EVENT -> isEventBadgeEnabled()
         NotificationKind.OTHER -> isOtherBadgeEnabled()
     }
 
@@ -281,6 +289,24 @@ class LauncherPrefs(context: Context) {
     /** The TTS engine voice name to read with, or null for the engine's default. */
     fun getReadAloudVoice(): String? = prefs.getString(KEY_READ_ALOUD_VOICE, null)
     fun setReadAloudVoice(name: String?) = prefs.edit().putString(KEY_READ_ALOUD_VOICE, name).apply()
+
+    /** The ringer mode before Home's `#` hold switched to vibrate, restored by the next hold (-1 = none). */
+    fun getRingerModeBeforeVibrate(): Int = prefs.getInt(KEY_RINGER_BEFORE_VIBRATE, -1)
+    fun setRingerModeBeforeVibrate(mode: Int) = prefs.edit().putInt(KEY_RINGER_BEFORE_VIBRATE, mode).apply()
+
+    // ------------------------------------------------------- Daily wallpaper
+
+    /** Wallpapers (WallpaperLibrary ids) left out of the daily change; everything else is in it. */
+    fun getWallpapersOutOfRotation(): Set<String> = prefs.getStringSet(KEY_WALLPAPERS_OUT, null)?.toSet() ?: emptySet()
+    fun setWallpapersOutOfRotation(ids: Set<String>) = prefs.edit().putStringSet(KEY_WALLPAPERS_OUT, HashSet(ids)).apply()
+
+    /** The day (yyyyMMdd) the wallpaper was last set by the daily change or by hand, or 0. */
+    fun getDailyWallpaperDay(): Int = prefs.getInt(KEY_DAILY_WALLPAPER_DAY, 0)
+    fun setDailyWallpaperDay(day: Int) = prefs.edit().putInt(KEY_DAILY_WALLPAPER_DAY, day).apply()
+
+    /** The WallpaperLibrary id of the wallpaper the launcher last set, or null. */
+    fun getCurrentWallpaper(): String? = prefs.getString(KEY_CURRENT_WALLPAPER, null)
+    fun setCurrentWallpaper(id: String) = prefs.edit().putString(KEY_CURRENT_WALLPAPER, id).apply()
 
     fun getReadAloudRate(): Float = prefs.getFloat(KEY_READ_ALOUD_RATE, 1.0f)
     fun setReadAloudRate(rate: Float) = prefs.edit().putFloat(KEY_READ_ALOUD_RATE, rate).apply()
@@ -477,11 +503,17 @@ class LauncherPrefs(context: Context) {
         private const val KEY_BADGE_CALLS = "badge_calls"
         private const val KEY_BADGE_MESSAGES = "badge_messages"
         private const val KEY_BADGE_OTHER = "badge_other"
+        private const val KEY_BADGE_EVENTS = "badge_events"
         private const val KEY_BADGE_ICON_DOT = "badge_icon_dot"
         private const val KEY_NOTIF_TEXT_HIDDEN = "notif_text_hidden"
         private const val KEY_READ_ALOUD_MODE = "read_aloud_mode"
         private const val KEY_READ_ALOUD_VOICE = "read_aloud_voice"
         private const val KEY_READ_ALOUD_RATE = "read_aloud_rate"
+        private const val KEY_DEFAULT_KEYS_SEEDED = "default_keys_seeded"
+        private const val KEY_RINGER_BEFORE_VIBRATE = "ringer_mode_before_vibrate"
+        private const val KEY_WALLPAPERS_OUT = "wallpapers_out_of_rotation"
+        private const val KEY_DAILY_WALLPAPER_DAY = "daily_wallpaper_day"
+        private const val KEY_CURRENT_WALLPAPER = "current_wallpaper"
         private const val KEY_DRAWER_LIST_VIEW = "drawer_list_view"
         private const val KEY_ICON_OVERRIDE_PREFIX = "icon_override_"
         private const val KEY_ACCENT_COLOR = "accent_color"

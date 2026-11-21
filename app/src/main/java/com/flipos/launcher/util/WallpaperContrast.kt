@@ -61,7 +61,8 @@ object WallpaperContrast {
         null
     }
 
-    private fun averageLuminance(drawable: Drawable): Float {
+    /** [drawable]'s average brightness, 0 (black) to 1 (white) - e.g. a bundled wallpaper not yet applied. */
+    fun averageLuminance(drawable: Drawable): Float {
         val sample = Bitmap.createBitmap(SAMPLE_SIZE, SAMPLE_SIZE, Bitmap.Config.ARGB_8888)
         drawable.setBounds(0, 0, SAMPLE_SIZE, SAMPLE_SIZE)
         drawable.draw(Canvas(sample))

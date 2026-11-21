@@ -5,7 +5,6 @@ import com.flipos.launcher.R
 import android.Manifest
 import android.app.KeyguardManager
 import android.content.BroadcastReceiver
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -18,6 +17,7 @@ import android.os.Looper
 import android.os.PowerManager
 import android.provider.MediaStore
 import android.provider.Settings
+import android.util.Log
 import android.speech.RecognizerIntent
 import android.view.KeyEvent
 import android.view.View
@@ -32,21 +32,28 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import com.flipos.launcher.data.AppRepository
-import com.flipos.launcher.data.IconShapeRenderer
 import com.flipos.launcher.data.LauncherPrefs
 import com.flipos.launcher.data.NotificationKind
 import com.flipos.launcher.data.NotificationStore
 import com.flipos.launcher.data.UpdateChecker
+import com.flipos.launcher.service.NotificationAccessibilityService
+import com.flipos.launcher.service.NotificationCountService
 import com.flipos.launcher.util.BackgroundLoader
 import com.flipos.launcher.util.CategoryApps
+import com.flipos.launcher.util.DefaultKeys
 import com.flipos.launcher.util.KEYCODE_ASSISTANT_RAW
 import com.flipos.launcher.util.KyoceraShortcuts
 import com.flipos.launcher.util.PermissionGate
 import com.flipos.launcher.util.ReadAloud
 import com.flipos.launcher.util.ReadAloudSpeaker
+import com.flipos.launcher.util.VibrateMode
 import com.flipos.launcher.util.WallpaperContrast
 import com.flipos.launcher.util.accentColorAlpha
 import com.flipos.launcher.util.applyFakeBold
+import com.flipos.launcher.ui.HomeScreenBinder
+import com.flipos.launcher.ui.useMarquee
+import com.flipos.launcher.util.SystemCallLog
+import com.flipos.launcher.util.DailyWallpaper
 import com.flipos.launcher.util.hideNavigationBar
 import com.flipos.launcher.util.isAccessibilityServiceEnabled
 import com.flipos.launcher.util.isDefaultLauncher
@@ -60,9 +67,6 @@ import com.flipos.launcher.util.openSettingsWithPath
 import com.flipos.launcher.util.showUpdatePrompt
 import com.flipos.launcher.util.systemSpeedDial
 import com.flipos.launcher.util.toastIfUnknownKey
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 /**
  * The KaiOS-style home screen:
@@ -90,23 +94,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var prefs: LauncherPrefs
     private lateinit var appMenuButton: ImageView
     private lateinit var clock: TextView
-    private lateinit var ampm: TextView
-    private lateinit var weekday: TextView
-    private lateinit var dateLine: TextView
     private lateinit var notifBanner: View
     private lateinit var notifBannerIcon: ImageView
     private lateinit var notifBannerApp: TextView
     private lateinit var notifBannerText: TextView
-    private lateinit var dpadIconUp: ImageView
-    private lateinit var dpadIconDown: ImageView
-    private lateinit var dpadIconLeft: ImageView
-    private lateinit var dpadIconRight: ImageView
 
-    private val ampmFmt = SimpleDateFormat("a", Locale.getDefault())
-    private val time12 = SimpleDateFormat("h:mm", Locale.getDefault())
-    private val time24 = SimpleDateFormat("HH:mm", Locale.getDefault())
-    private val weekdayFmt = SimpleDateFormat("EEEE", Locale.getDefault())
-    private val dateFmt = SimpleDateFormat("MMM d", Locale.getDefault())
 
     /** Physical key awaiting an app from [assignAppLauncher] (0 = none). */
     private var pendingAssignAppKey = 0
@@ -138,8 +130,18 @@ class MainActivity : AppCompatActivity() {
     /** [KeyEvent.getDownTime] of the outer-button press that last launched, keyed by synthetic keycode. */
     private val extraKeyFiredDownTime = HashMap<Int, Long>()
 
-    /** Scheduled digit short-tap dial runnables (debounced against a same-key re-press), keyed by keyCode. */
-    private val digitTapRunnables = HashMap<Int, Runnable>()
+    /** A released digit (or `*`/`#`) waiting out [DIGIT_TAP_DEBOUNCE_MS] before it goes to the dialer. */
+    private class PendingTap(val digit: String, val upTime: Long, val runnable: Runnable)
+
+    /** Pending digit taps in the order they were released, keyed by keyCode. */
+    private val digitTaps = LinkedHashMap<Int, PendingTap>()
+
+    /**
+     * Everything typed on Home since it was last shown. Each new digit
+     * reopens the dialer with the whole number, so digits typed while the
+     * dialer is still opening (which land here, not there) aren't lost.
+     */
+    private val dialBuffer = StringBuilder()
 
     /**
      * [KeyEvent.getDownTime] of the digit press session already resolved
@@ -164,8 +166,16 @@ class MainActivity : AppCompatActivity() {
      */
     private val pressedTapKeys = HashSet<Int>()
 
+    /** Whether the current `#` press's hold already toggled vibrate mode (so its UP doesn't dial "#"). */
+    private var poundHoldFired = false
+    private val poundHoldRunnable = Runnable {
+        poundHoldFired = true
+        VibrateMode.toggle(this)
+    }
+
     private val callPermission = PermissionGate(this, Manifest.permission.CALL_PHONE)
     private val contactsPermission = PermissionGate(this, Manifest.permission.READ_CONTACTS)
+    private val callLogPermission = PermissionGate(this, Manifest.permission.READ_CALL_LOG)
 
     /** App picker for MENU/BACK/soft-key/D-pad/Camera assignment, writing back based on [pendingAssignAppKey]. */
     private val assignAppLauncher = registerForActivityResult(StartActivityForResult()) { result ->
@@ -231,6 +241,7 @@ class MainActivity : AppCompatActivity() {
         prefs = LauncherPrefs(this)
         ReadAloud.attach(this)
         KyoceraShortcuts.syncEnabled(this)
+        DefaultKeys.seedOnce(this)
         val accent = prefs.getAccentColor()
         appliedAccentColor = accent
         if (accent.themeOverlayRes != 0) theme.applyStyle(accent.themeOverlayRes, true)
@@ -240,19 +251,14 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(android.R.id.content).applyFakeBold()
 
         clock = findViewById(R.id.clock)
-        ampm = findViewById(R.id.ampm)
-        weekday = findViewById(R.id.weekday)
-        dateLine = findViewById(R.id.date_line)
-        notifBanner = findViewById<View>(R.id.notif_banner).apply {
-            backgroundTintList = ColorStateList.valueOf(accentColorAlpha(0xE6))
-        }
+        // Dark, semi-transparent background from bg_notif_banner - not the accent.
+        notifBanner = findViewById(R.id.notif_banner)
         notifBannerIcon = findViewById(R.id.notif_banner_icon)
         notifBannerApp = findViewById(R.id.notif_banner_app)
         notifBannerText = findViewById(R.id.notif_banner_text)
-        dpadIconUp = findViewById(R.id.dpad_icon_up)
-        dpadIconDown = findViewById(R.id.dpad_icon_down)
-        dpadIconLeft = findViewById(R.id.dpad_icon_left)
-        dpadIconRight = findViewById(R.id.dpad_icon_right)
+        // A long sender or message scrolls instead of being cut off.
+        notifBannerApp.useMarquee(always = true)
+        notifBannerText.useMarquee(always = true)
 
         findViewById<TextView>(R.id.softkey_left).setOnClickListener { openLeftKeyApp() }
         findViewById<TextView>(R.id.softkey_right).setOnClickListener { openRightKeyApp() }
@@ -275,7 +281,20 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         window.hideNavigationBar()
+        // Back on Home: a new number starts from scratch.
+        dialBuffer.setLength(0)
+        // Back on Home: the user has left whatever app they opened, so its seen
+        // banner entries go (accessibility feed only - the listener has real removals).
+        if (NotificationCountService.instance == null) {
+            val removed = NotificationStore.dismissAllSeen()
+            if (removed > 0) Log.d(NotificationAccessibilityService.TAG, "Home resumed: dismissed $removed")
+        }
         applyWallpaperScrim()
+        // Appearance → Change wallpaper daily: today's one, if not set yet.
+        DailyWallpaper.maybeSwitch(this) { if (!isDestroyed) applyWallpaperScrim() }
+        // Exported on purpose: these are platform broadcasts, and below Android
+        // 13 RECEIVER_NOT_EXPORTED blocks any sender that isn't the core system -
+        // the Settings app's 12/24-hour change (ACTION_TIME_CHANGED) among them.
         ContextCompat.registerReceiver(
             this,
             timeReceiver,
@@ -283,8 +302,9 @@ class MainActivity : AppCompatActivity() {
                 addAction(Intent.ACTION_TIME_TICK)
                 addAction(Intent.ACTION_TIME_CHANGED)
                 addAction(Intent.ACTION_TIMEZONE_CHANGED)
+                addAction(Intent.ACTION_LOCALE_CHANGED)
             },
-            ContextCompat.RECEIVER_NOT_EXPORTED,
+            ContextCompat.RECEIVER_EXPORTED,
         )
         ContextCompat.registerReceiver(
             this,
@@ -319,13 +339,17 @@ class MainActivity : AppCompatActivity() {
         unregisterReceiver(packageReceiver)
         NotificationStore.removeListener(notifListener)
         notifBannerHandler.removeCallbacksAndMessages(null)
+        // The dialer opening pauses Home while later digits may still be
+        // waiting out their tap debounce: send them on now rather than drop them.
+        flushDigitTaps()
         // A key hold that's interrupted mid-press (screen off, app switch) may
         // never deliver a matching key-up; drop any scheduled assign timers so
         // they don't fire into the background.
         assignHandler.removeCallbacksAndMessages(null)
         assignRunnables.clear()
         digitHoldRunnables.clear()
-        digitTapRunnables.clear()
+        poundHoldFired = false
+        digitTaps.clear()
         pressedTapKeys.clear()
         centerDownSeen = false
         centerHoldFired = false
@@ -378,26 +402,26 @@ class MainActivity : AppCompatActivity() {
 
     // ----------------------------------------------------------- Data / clock
 
-    private fun updateClock() {
-        val now = Date()
-        if (android.text.format.DateFormat.is24HourFormat(this)) {
-            ampm.visibility = TextView.GONE
-            clock.text = time24.format(now)
-        } else {
-            ampm.visibility = TextView.VISIBLE
-            ampm.text = ampmFmt.format(now)
-            clock.text = time12.format(now)
-        }
-        weekday.text = weekdayFmt.format(now)
-        dateLine.text = dateFmt.format(now)
-    }
+    /** See [HomeScreenBinder.bindClock]: formatters are rebuilt each minute, following the system 12/24-hour setting. */
+    private fun updateClock() = HomeScreenBinder.bindClock(this, clock.rootView)
 
     // --------------------------------------------------------------- Actions
 
-    /** Open the phone dialer, prefilled with the pressed digit (or * / #). */
-    private fun startDial(digit: String) {
+    /**
+     * Adds [digit] (a digit, `*` or `#`) to the number typed on Home and
+     * opens the dialer with all of it. The dialer takes a few hundred ms to
+     * come up, and keys pressed meanwhile still come here; reopening it with
+     * the whole number each time means a fast typist loses nothing.
+     */
+    private fun typeDialDigit(digit: String) {
+        dialBuffer.append(digit)
+        startDial(dialBuffer.toString())
+    }
+
+    /** Open the phone dialer, prefilled with [number]. */
+    private fun startDial(number: String) {
         try {
-            startActivity(Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", digit, null)))
+            startActivity(Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", number, null)))
         } catch (e: Exception) {
             Toast.makeText(this, R.string.toast_no_dialer, Toast.LENGTH_SHORT).show()
         }
@@ -457,6 +481,7 @@ class MainActivity : AppCompatActivity() {
         val (iconRes, cdRes) = when (item.kind) {
             NotificationKind.CALL -> R.drawable.ic_call to R.string.cd_notif_calls
             NotificationKind.MESSAGE -> R.drawable.ic_message to R.string.cd_notif_messages
+            NotificationKind.EVENT -> R.drawable.ic_event to R.string.cd_notif_events
             NotificationKind.OTHER -> R.drawable.ic_notification to R.string.cd_notif_other
         }
         val hideText = prefs.isNotificationTextHidden()
@@ -496,43 +521,22 @@ class MainActivity : AppCompatActivity() {
         packageName
     }
 
-    private fun refreshRightKeyLabel() {
-        val key = prefs.getRightKeyApp()
-        val label = key?.let { AppRepository.resolveComponent(this, it)?.label }
-            ?: getString(R.string.softkey_messages)
-        findViewById<TextView>(R.id.softkey_right).text = label
-        bindKeyIcon(findViewById(R.id.softkey_right_icon), key)
-    }
+    private fun refreshRightKeyLabel() = HomeScreenBinder.bindRightKey(this, clock.rootView, prefs)
 
-    private fun refreshLeftKeyLabel() {
-        val key = prefs.getLeftKeyApp()
-        val label = key?.let { AppRepository.resolveComponent(this, it)?.label }
-            ?: getString(R.string.softkey_contacts)
-        findViewById<TextView>(R.id.softkey_left).text = label
-        bindKeyIcon(findViewById(R.id.softkey_left_icon), key)
-    }
+    private fun refreshLeftKeyLabel() = HomeScreenBinder.bindLeftKey(this, clock.rootView, prefs)
 
     /**
-     * The KaiOS "Recent Calls" action for the Send/Call key. Tries this
-     * hardware's own call log screen first - the Kyocera "Kc" dialer
-     * activity, whose package path differs by model (see
-     * [SYSTEM_CALL_LOG_COMPONENTS]) - falling back to our own
-     * [CallLogActivity] if none is present (any other device).
+     * The KaiOS "Recent Calls" action for the Send/Call key: the default
+     * dialer's call log, asked for the standard way so any dialer works
+     * (see [SystemCallLog]), else the Kyocera one, else our own
+     * [CallLogActivity].
      */
     private fun openCallLog() {
-        for (component in SYSTEM_CALL_LOG_COMPONENTS) {
-            try {
-                startActivity(
-                    Intent(Intent.ACTION_MAIN)
-                        .setComponent(component)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                )
-                return
-            } catch (e: Exception) {
-                // Not on this model (or not exported); try the next one.
-            }
+        try {
+            startActivity(SystemCallLog.intent(this).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        } catch (e: Exception) {
+            startActivity(Intent(this, CallLogActivity::class.java))
         }
-        startActivity(Intent(this, CallLogActivity::class.java))
     }
 
     // ----------------------------------------------------------- Key handling
@@ -571,7 +575,7 @@ class MainActivity : AppCompatActivity() {
     // launcher, hence assigning them here.
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        // A press while a message is being read only stops the readout.
+        // A press while a message is being read stops the readout and still does its job.
         if (ReadAloudSpeaker.interceptKey(event)) return true
         val outerKey = outerKeyFor(event.scanCode)
         if (outerKey != null) {
@@ -597,7 +601,17 @@ class MainActivity : AppCompatActivity() {
         when (keyCode) {
             in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> {
                 if (event.repeatCount == 0) {
-                    cancelDigitTap(keyCode)
+                    // Same key again while its last tap is still pending: a
+                    // real second press (fast typing, "55") keeps that digit;
+                    // only the near-instant re-press this keypad sends in the
+                    // middle of one long hold cancels it (see [scheduleDigitTap]).
+                    val pending = digitTaps[keyCode]
+                    if (pending != null && event.eventTime - pending.upTime >= SPLIT_HOLD_GAP_MS) {
+                        flushDigitTap(keyCode)
+                    } else {
+                        if (pending != null) Log.d(KEY_TAG, "digit $keyCode re-pressed ${event.eventTime - pending.upTime}ms after release: treated as one hold")
+                        cancelDigitTap(keyCode)
+                    }
                     longPressFired.remove(keyCode)
                     digitHandledDownTime.remove(keyCode)
                     scheduleDigitHold(keyCode)
@@ -607,7 +621,15 @@ class MainActivity : AppCompatActivity() {
             // Resolved on UP: launching the dialer / Recent Calls on DOWN would
             // hand it our UP (a second "*", or a CALL that dials).
             KeyEvent.KEYCODE_STAR, KeyEvent.KEYCODE_NUMPAD_MULTIPLY, KeyEvent.KEYCODE_POUND, KeyEvent.KEYCODE_CALL -> {
-                if (event.repeatCount == 0) pressedTapKeys.add(keyCode)
+                if (event.repeatCount == 0) {
+                    pressedTapKeys.add(keyCode)
+                    // Hold # toggles vibrate mode, like the stock Kyocera Home.
+                    if (keyCode == KeyEvent.KEYCODE_POUND) {
+                        poundHoldFired = false
+                        assignHandler.removeCallbacks(poundHoldRunnable)
+                        assignHandler.postDelayed(poundHoldRunnable, DIGIT_HOLD_MS)
+                    }
+                }
                 return true
             }
             KeyEvent.KEYCODE_SOFT_LEFT, KeyEvent.KEYCODE_SOFT_RIGHT,
@@ -652,15 +674,24 @@ class MainActivity : AppCompatActivity() {
                 // already resolved is that spurious event, not a real new release.
                 if (digitHandledDownTime[keyCode] == event.downTime) return true
                 digitHandledDownTime[keyCode] = event.downTime
-                scheduleDigitTap(keyCode)
+                scheduleDigitTap(keyCode, event.eventTime)
                 return true
             }
             KeyEvent.KEYCODE_STAR, KeyEvent.KEYCODE_NUMPAD_MULTIPLY, KeyEvent.KEYCODE_POUND, KeyEvent.KEYCODE_CALL -> {
+                if (keyCode == KeyEvent.KEYCODE_POUND) {
+                    assignHandler.removeCallbacks(poundHoldRunnable)
+                    if (poundHoldFired) {
+                        // The hold already toggled vibrate mode; this UP is only consumed.
+                        poundHoldFired = false
+                        pressedTapKeys.remove(keyCode)
+                        return true
+                    }
+                }
                 if (pressedTapKeys.remove(keyCode) && !event.isCanceled) {
                     when {
                         keyCode == KeyEvent.KEYCODE_CALL -> openCallLog()
-                        isStarKey(keyCode) -> startDial("*")
-                        else -> startDial("#")
+                        isStarKey(keyCode) -> typeDialDigit("*")
+                        else -> typeDialDigit("#")
                     }
                 }
                 return true
@@ -738,13 +769,18 @@ class MainActivity : AppCompatActivity() {
         openNewestNotification()
     }
 
-    /** Opens what the Home banner shows, as tapping it in the shade would; else its app. */
+    /**
+     * Opens what the Home banner shows, as tapping it in the shade would;
+     * else its app. With nothing on the banner, opens the Notices screen.
+     */
     private fun openNewestNotification() {
         val item = NotificationStore.newest { prefs.isShownOnHome(it.kind) }
         if (item == null) {
-            Toast.makeText(this, R.string.toast_no_notifications, Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this, NoticesActivity::class.java))
             return
         }
+        // Opening it counts as seeing it; it goes when Home comes back.
+        NotificationStore.markSeen(item.packageName)
         try {
             item.contentIntent?.let { it.send(); return }
         } catch (e: Exception) {
@@ -854,17 +890,37 @@ class MainActivity : AppCompatActivity() {
      * separate press/release cycles, so an immediate release-fires-dial
      * would double-dial (tap action + the real long-press action both firing).
      */
-    private fun scheduleDigitTap(keyCode: Int) {
+    private fun scheduleDigitTap(keyCode: Int, upTime: Long) {
         cancelDigitTap(keyCode)
+        val digit = (keyCode - KeyEvent.KEYCODE_0).toString()
         val runnable = Runnable {
-            startDial((keyCode - KeyEvent.KEYCODE_0).toString())
+            digitTaps.remove(keyCode)
+            typeDialDigit(digit)
         }
-        digitTapRunnables[keyCode] = runnable
+        digitTaps[keyCode] = PendingTap(digit, upTime, runnable)
         assignHandler.postDelayed(runnable, DIGIT_TAP_DEBOUNCE_MS)
     }
 
     private fun cancelDigitTap(keyCode: Int) {
-        digitTapRunnables.remove(keyCode)?.let { assignHandler.removeCallbacks(it) }
+        digitTaps.remove(keyCode)?.let { assignHandler.removeCallbacks(it.runnable) }
+    }
+
+    /** Sends [keyCode]'s pending tap to the dialer now instead of after its debounce. */
+    private fun flushDigitTap(keyCode: Int) {
+        val pending = digitTaps.remove(keyCode) ?: return
+        assignHandler.removeCallbacks(pending.runnable)
+        typeDialDigit(pending.digit)
+    }
+
+    /** Sends every pending tap, in the order typed, to the dialer in one go. */
+    private fun flushDigitTaps() {
+        if (digitTaps.isEmpty()) return
+        for (pending in digitTaps.values) {
+            assignHandler.removeCallbacks(pending.runnable)
+            dialBuffer.append(pending.digit)
+        }
+        digitTaps.clear()
+        startDial(dialBuffer.toString())
     }
 
     /** Opens the app picker to assign [keyCode] (MENU/BACK/soft-key/D-pad/Camera - digits are handled by the phone's own Speed Dial settings, see [dialSpeedDial]). */
@@ -974,32 +1030,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** Refreshes the D-pad shortcut pod's four icons; the pod itself always stays visible (it also houses the OK button). */
-    private fun refreshDirectionalPod() {
-        bindKeyIcon(dpadIconUp, prefs.getDpadUpApp())
-        bindKeyIcon(dpadIconDown, prefs.getDpadDownApp())
-        bindKeyIcon(dpadIconLeft, prefs.getDpadLeftApp())
-        bindKeyIcon(dpadIconRight, prefs.getDpadRightApp())
-    }
+    private fun refreshDirectionalPod() = HomeScreenBinder.bindDpad(this, clock.rootView, prefs)
 
-    /** Binds [key]'s squircle-masked icon into [view] and shows it, or hides [view] when [key] is null. Returns whether it was bound. */
-    private fun bindKeyIcon(view: ImageView, key: String?): Boolean {
-        val icon = key?.let { AppRepository.resolveRawIcon(this, it) }
-        if (icon == null) {
-            view.visibility = View.GONE
-            return false
-        }
-        view.setImageDrawable(
-            IconShapeRenderer.render(
-                context = this,
-                source = icon,
-                shape = LauncherPrefs.IconShape.SQUIRCLE,
-                wrapEnabled = true,
-                legacyBackgroundEnabled = true,
-            ),
-        )
-        view.visibility = View.VISIBLE
-        return true
-    }
+    private fun bindKeyIcon(view: ImageView, key: String?): Boolean = HomeScreenBinder.bindKeyIcon(this, view, key)
 
     private fun callVoicemail() {
         callPermission.run(onDenied = {
@@ -1041,7 +1074,8 @@ class MainActivity : AppCompatActivity() {
      * the default Home app if it isn't, then to turn on Accessibility if
      * it's off (it feeds the Home banner, icon dots and read-aloud on these
      * phones). Both hand off to the phone's own settings screen with a toast
-     * naming the D-pad path.
+     * naming the D-pad path. Last, Android's own Call Log and then Contacts
+     * permission prompts, so a missed call on the banner can say who called.
      */
     private fun maybeShowStartupPrompts() {
         if (isFinishing || startupPrompt?.isShowing == true) return
@@ -1059,6 +1093,19 @@ class MainActivity : AppCompatActivity() {
                 R.string.prompt_accessibility_title,
                 R.string.prompt_accessibility_message,
             ) { openSettingsWithPath(Settings.ACTION_ACCESSIBILITY_SETTINGS, R.string.path_accessibility) }
+            return
+        }
+        // Missed calls on the banner name the caller from the call log; without
+        // it the phone gives the launcher no name or number at all.
+        if (!callLogPromptShown && prefs.isCallBadgeEnabled() && !callLogPermission.isGranted()) {
+            callLogPromptShown = true
+            callLogPermission.run {}
+            return
+        }
+        // ...and the name from Contacts (the call log's cached name is often empty).
+        if (!contactsPromptShown && prefs.isCallBadgeEnabled() && !contactsPermission.isGranted()) {
+            contactsPromptShown = true
+            contactsPermission.run {}
         }
     }
 
@@ -1130,6 +1177,8 @@ class MainActivity : AppCompatActivity() {
         // Shown at most once per process so we don't nag on every resume.
         private var defaultPromptShown = false
         private var accessibilityPromptShown = false
+        private var callLogPromptShown = false
+        private var contactsPromptShown = false
 
         /** How long an assignable key must be held to open its assign menu. */
         private const val ASSIGN_HOLD_MS = 5000L
@@ -1153,6 +1202,17 @@ class MainActivity : AppCompatActivity() {
          */
         private const val DIGIT_TAP_DEBOUNCE_MS = 200L
 
+        /**
+         * A same-digit re-press sooner than this after its release is this
+         * keypad splitting one long hold in two; any later is the user
+         * pressing it again (fast typing). Fingers can't release and re-press
+         * this quickly.
+         */
+        private const val SPLIT_HOLD_GAP_MS = 60L
+
+        /** Logcat tag for digit-typing decisions (filter `tag:FlipKeys`). */
+        private const val KEY_TAG = "FlipKeys"
+
         /** Captured in [dispatchKeyEvent], before default focus-search can consume them. */
         private val DIRECTIONAL_KEYS = setOf(
             KeyEvent.KEYCODE_DPAD_UP,
@@ -1162,16 +1222,6 @@ class MainActivity : AppCompatActivity() {
             KeyEvent.KEYCODE_CAMERA,
             LauncherPrefs.KEYCODE_CAMERA_ALT,
             LauncherPrefs.KEYCODE_CAMERA_ALT2,
-        )
-
-        /**
-         * The Kyocera dialer's own call log, tried in order by [openCallLog]:
-         * `.calllog.CallLogActivityKc` is the E4610's (confirmed via logcat),
-         * `.app.calllog.CallLogActivityKc` the newer models'.
-         */
-        private val SYSTEM_CALL_LOG_COMPONENTS = listOf(
-            ComponentName("com.android.dialer", "com.android.dialer.calllog.CallLogActivityKc"),
-            ComponentName("com.android.dialer", "com.android.dialer.app.calllog.CallLogActivityKc"),
         )
     }
 }
