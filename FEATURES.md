@@ -251,6 +251,3 @@ App enumeration uses a `<queries>` declaration rather than
 Screenshots are 240x320 captures from the phone (`adb exec-out screencap -p > file.png`)
 in `reference/`: `home.png`, `apps.png`, `options.png`, `wallpapers.png` and
 `settings.png`.
-
-<!-- TODO: still to take - `crop.png` (cropping a gallery photo with Home on
-top, then add it to the Wallpapers section) and, optionally, `missed-call.png`. -->
