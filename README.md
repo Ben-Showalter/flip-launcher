@@ -6,7 +6,6 @@ A fast, keypad-first Home screen for the Kyocera DuraXV Extreme **E4810 / E4811*
 and **E4610**. Clean, quick and made for buttons, not a touchscreen. It does
 everything Kyocera's own Home does, and a lot it never did.
 
-<!-- TODO screenshots: retake on the phone (240x320) - see FEATURES.md → Screenshots. -->
 <p>
   <img src="reference/home.png" alt="Home screen" width="240">
   <img src="reference/apps.png" alt="App list" width="240">

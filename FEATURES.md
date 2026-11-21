@@ -90,7 +90,6 @@ them back:
 
 <p>
   <img src="reference/wallpapers.png" alt="Daily Wallpapers" width="240">
-  <img src="reference/crop.png" alt="Cropping a gallery photo" width="240">
 </p>
 
 - **56 built-in wallpapers**, sized for the screen.
@@ -249,16 +248,9 @@ App enumeration uses a `<queries>` declaration rather than
 
 ## Screenshots
 
-<!-- TODO: remove this section once the screenshots are retaken. -->
 Screenshots are 240x320 captures from the phone (`adb exec-out screencap -p > file.png`)
-in `reference/`:
+in `reference/`: `home.png`, `apps.png`, `options.png`, `wallpapers.png` and
+`settings.png`.
 
-| File | Shows |
-|---|---|
-| `home.png` | Home with a new wallpaper and a message on the banner |
-| `apps.png` | App list grid, launcher icons |
-| `options.png` | App list → Options menu |
-| `wallpapers.png` | Daily Wallpapers grid, one tile OFF |
-| `crop.png` | Cropping a gallery photo with Home on top |
-| `settings.png` | Home Screen Settings list |
-| `missed-call.png` (optional) | Home banner with a missed call |
+<!-- TODO: still to take - `crop.png` (cropping a gallery photo with Home on
+top, then add it to the Wallpapers section) and, optionally, `missed-call.png`. -->
