@@ -13,11 +13,20 @@ import com.flipos.launcher.activities.WallpaperPickerActivity
  * comes to the front (seen by NotificationAccessibilityService's window
  * events), the launcher's own screen opens on top of it. The phone's screen
  * stays underneath, so Back from ours lands there. Component names captured
- * from logcat on the E4810/E4811.
+ * from logcat on the E4810/E4811 (Kyocera's `jp.kyocera.*` settings) and the
+ * E4610 (Android 7: `com.android.settings/.afp.*` pages and the media
+ * provider's ringtone picker).
  */
 object SettingsRedirects {
 
     private const val KYOCERA_SETTINGS = "jp.kyocera.settings.nfp"
+
+    /** The E4610's settings package and its Kyocera ("afp") pages. */
+    private const val AOSP_SETTINGS = "com.android.settings"
+    private const val AFP = "$AOSP_SETTINGS.afp"
+
+    /** The E4610's sound picker, shared by ringtone, alarm and notification sound. */
+    private const val MEDIA_PROVIDER = "com.android.providers.media"
 
     enum class Target { SHORTCUT_KEYS, WALLPAPER, NOTIFICATIONS }
 
@@ -36,6 +45,12 @@ object SettingsRedirects {
                 "wallpaper" in lowerTitle -> Target.WALLPAPER
             packageName == KYOCERA_SETTINGS &&
                 (className == "$KYOCERA_SETTINGS.sound.PresetRingtonePickerActivity" || className == "android.app.Dialog") &&
+                "notification" in lowerTitle -> Target.NOTIFICATIONS
+            // E4610
+            packageName == AOSP_SETTINGS && className == "$AFP.WallpaperSettings" -> Target.WALLPAPER
+            packageName == AOSP_SETTINGS &&
+                (className == "$AFP.NavigationKeysSettings" || className == "$AFP.PttSettings") -> Target.SHORTCUT_KEYS
+            packageName == MEDIA_PROVIDER && className == "$MEDIA_PROVIDER.RingtonePickerActivity" &&
                 "notification" in lowerTitle -> Target.NOTIFICATIONS
             else -> null
         }

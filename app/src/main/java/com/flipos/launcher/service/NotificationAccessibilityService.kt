@@ -158,7 +158,12 @@ class NotificationAccessibilityService : AccessibilityService() {
         val title = event.text.joinToString(" ")
         val previous = lastWindowPackage
         lastWindowPackage = packageName
-        val target = SettingsRedirects.match(packageName, className, title) ?: return
+        val target = SettingsRedirects.match(packageName, className, title)
+        if (target == null) {
+            // Settings screens that didn't match, so a new phone's names show in the log.
+            if (packageName in SETTINGS_PACKAGES) Log.d(TAG, "settings screen $packageName/$className \"$title\": no redirect")
+            return
+        }
         val now = SystemClock.elapsedRealtime()
         Log.d(TAG, "settings screen $className \"$title\" -> $target, previous=$previous")
         if (previous == this.packageName || now - lastRedirectAt < REDIRECT_DEBOUNCE_MS) return
@@ -312,6 +317,14 @@ class NotificationAccessibilityService : AccessibilityService() {
 
         /** PendingIntent request code for the missed-call entry's "open the call log". */
         private const val MISSED_CALL_REQUEST = 4810
+
+        /** Packages whose unmatched screens are logged by [handleSettingsRedirect]. */
+        private val SETTINGS_PACKAGES = setOf(
+            "com.android.settings",
+            "com.android.providers.media",
+            "jp.kyocera.settings.nfp",
+            "jp.kyocera.customizekey",
+        )
 
         /** A screen's window events can repeat; one redirect per this long. */
         private const val REDIRECT_DEBOUNCE_MS = 1500L

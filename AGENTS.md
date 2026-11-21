@@ -153,7 +153,13 @@ person's laptop.
   opens Home Screen & Keys on top; Kyocera Settings' `core.SubSettings` titled
   "Wallpaper" opens the Wallpaper picker; its notification-sound picker
   (`sound.PresetRingtonePickerActivity`, shown as an `android.app.Dialog`
-  window titled "...Notification...") asks first
+  window titled "...Notification...") asks first. On the E4610 (Android 7) the
+  same redirects come from `com.android.settings/.afp.WallpaperSettings`
+  (Wallpaper), `.afp.NavigationKeysSettings` and `.afp.PttSettings` (Home
+  Screen & Keys), and `com.android.providers.media/.RingtonePickerActivity`
+  titled "...Notification..." (shared with ringtone/alarm, so the title
+  decides). Unmatched settings screens log `settings screen …: no redirect`.
+  The notification one asks first
   (`SettingsRedirectChooserActivity`). The phone's screen stays underneath,
   and nothing redirects when the previous window was the launcher's own, so
   Back reaches it. Redirected screens open in a task of their own
