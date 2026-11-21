@@ -60,11 +60,11 @@
     <string name="unrecognized_key_toast">Unrecognized key: code=%1$d scan=%2$d</string>
 
     <!-- D-pad / Camera Home shortcuts -->
-    <string name="sec_dpad_keys">D-pad &amp; Side Buttons</string>
-    <string name="opt_dpad_up">D-pad Up</string>
-    <string name="opt_dpad_down">D-pad Down</string>
-    <string name="opt_dpad_left">D-pad Left</string>
-    <string name="opt_dpad_right">D-pad Right</string>
+    <string name="sec_dpad_keys">Navigation Keys &amp; Side Buttons</string>
+    <string name="opt_dpad_up">Navigation Key Up</string>
+    <string name="opt_dpad_down">Navigation Key Down</string>
+    <string name="opt_dpad_left">Navigation Key Left</string>
+    <string name="opt_dpad_right">Navigation Key Right</string>
     <string name="opt_camera_key">Camera Button</string>
     <string name="opt_camera_key_default">Camera app (default)</string>
     <string name="opt_assistant_key">Mic / Assistant Button</string>
@@ -300,7 +300,7 @@
     <string name="cat_advanced">Advanced</string>
     <string name="cat_advanced_sub">Default launcher, access, phone settings</string>
     <string name="keys_group_navigation">Navigation &amp; Soft Keys</string>
-    <string name="keys_group_navigation_sub">Soft keys, D-pad, Back and Menu</string>
+    <string name="keys_group_navigation_sub">Soft keys, navigation keys, Back and Menu</string>
     <string name="keys_group_other">Other Buttons</string>
     <string name="keys_group_other_sub">Camera, Mic, SOS, outer buttons</string>
     <string name="notif_group_banner">Home Banner</string>
