@@ -18,8 +18,7 @@ them back:
 - **Hold `#` for vibrate**, like Kyocera Home: it switches the phone to
   Vibrate only, and holding it again puts back the ring mode you had before.
 - **Call key** opens the call log of your default phone app - the stock
-  dialer, or a replacement such as
-  [BusyCall](https://github.com/Ben-Showalter/BusyCall).
+  dialer or a replacement.
 - **Mic / Assistant key** works (it sends a different keycode depending on the
   model and what has focus) and opens the voice assistant by default.
 - **Outer buttons** - SOS, outer END, outer Speaker and PTT. Their system

@@ -15,8 +15,8 @@ import com.flipos.launcher.activities.CallLogActivity
  *
  * Asked for the standard way first: `ACTION_VIEW` of the call-log type
  * (`vnd.android.cursor.dir/calls`), aimed at the default dialer. Any
- * dialer that declares that filter answers it (BusyCall does, and opens
- * its Calls screen), so a new dialer needs no package name here.
+ * dialer that declares that filter answers it, so a new dialer needs no
+ * package name here.
  */
 object SystemCallLog {
 

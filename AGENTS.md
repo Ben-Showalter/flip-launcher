@@ -133,8 +133,8 @@ person's laptop.
   verified on the E4810/E4811 - every launch falls back or toasts, never
   crashes): the Send key's call log is asked for the standard way first -
   `ACTION_VIEW` of type `vnd.android.cursor.dir/calls`, aimed at the default
-  dialer (`util/SystemCallLog.kt`), so a replacement dialer such as BusyCall
-  opens its own Calls screen. Only if nothing answers that: the Kyocera dialer's
+  dialer (`util/SystemCallLog.kt`), so a replacement dialer opens its own call
+  log. Only if nothing answers that: the Kyocera dialer's
   `com.android.dialer/.calllog.CallLogActivityKc` (E4610) or
   `.app.calllog.CallLogActivityKc` (newer models), then the launcher's own. Kyocera's Home menus are
   `jp.kyocera.kyocerahome/.MediaCenterMenuActivity`, `.ToolsMenuActivity` and

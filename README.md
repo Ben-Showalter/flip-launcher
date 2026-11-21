@@ -40,8 +40,7 @@ off.
 **Works with your phone, not against it.** Kyocera's Quick Settings, Media
 Center and Tools menus are right there in the app list. Open the phone's
 wallpaper or shortcut-key settings and the launcher's own version pops up.
-The Call key opens the call log of whatever phone app you use, including
-[BusyCall](https://github.com/Ben-Showalter/BusyCall).
+The Call key opens the call log of whatever phone app you use.
 
 **Your apps, your way.** Arrange the app grid, hide what you never use, and
 give every app a matching icon from the launcher's own set in one step. Or keep
