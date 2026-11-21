@@ -526,26 +526,17 @@ class MainActivity : AppCompatActivity() {
     private fun refreshLeftKeyLabel() = HomeScreenBinder.bindLeftKey(this, clock.rootView, prefs)
 
     /**
-     * The KaiOS "Recent Calls" action for the Send/Call key. Tries this
-     * hardware's own call log screen first - the Kyocera "Kc" dialer
-     * activity, whose package path differs by model (see
-     * [SystemCallLog.COMPONENTS]) - falling back to our own
-     * [CallLogActivity] if none is present (any other device).
+     * The KaiOS "Recent Calls" action for the Send/Call key: the default
+     * dialer's call log, asked for the standard way so any dialer works
+     * (see [SystemCallLog]), else the Kyocera one, else our own
+     * [CallLogActivity].
      */
     private fun openCallLog() {
-        for (component in SystemCallLog.COMPONENTS) {
-            try {
-                startActivity(
-                    Intent(Intent.ACTION_MAIN)
-                        .setComponent(component)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                )
-                return
-            } catch (e: Exception) {
-                // Not on this model (or not exported); try the next one.
-            }
+        try {
+            startActivity(SystemCallLog.intent(this).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        } catch (e: Exception) {
+            startActivity(Intent(this, CallLogActivity::class.java))
         }
-        startActivity(Intent(this, CallLogActivity::class.java))
     }
 
     // ----------------------------------------------------------- Key handling
