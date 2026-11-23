@@ -177,6 +177,12 @@ person's laptop.
   from an app opened there) it starts on page 1's center cell
   (`resetFocusOnNextBind` in `AppDrawerActivity.onResume`); list view starts
   on the top row. Refreshes while it's on screen keep their place.
+- **Calls go to the default phone app**: every `ACTION_CALL` / `ACTION_DIAL`
+  the launcher starts (speed dial, Recent Calls, typed numbers, voicemail)
+  and the Send key's call log go through `Intent.forDefaultDialer`
+  (`util/DefaultDialer.kt`), which sets the package to
+  `TelecomManager.defaultDialerPackage` when that app handles it. With a second
+  phone app installed, a plain intent made Android show a "which app" chooser.
 - **Typing a number on Home**: digits go into `dialBuffer` (cleared in
   `onResume`), and each one reopens `ACTION_DIAL` with the whole number, since
   keys typed while the dialer is opening still reach Home. `onPause` sends any

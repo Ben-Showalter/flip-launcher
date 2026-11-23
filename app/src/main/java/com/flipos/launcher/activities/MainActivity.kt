@@ -53,6 +53,7 @@ import com.flipos.launcher.util.applyFakeBold
 import com.flipos.launcher.ui.HomeScreenBinder
 import com.flipos.launcher.ui.useMarquee
 import com.flipos.launcher.util.SystemCallLog
+import com.flipos.launcher.util.forDefaultDialer
 import com.flipos.launcher.util.DailyWallpaper
 import com.flipos.launcher.util.hideNavigationBar
 import com.flipos.launcher.util.isAccessibilityServiceEnabled
@@ -421,7 +422,7 @@ class MainActivity : AppCompatActivity() {
     /** Open the phone dialer, prefilled with [number]. */
     private fun startDial(number: String) {
         try {
-            startActivity(Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", number, null)))
+            startActivity(Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", number, null)).forDefaultDialer(this))
         } catch (e: Exception) {
             Toast.makeText(this, R.string.toast_no_dialer, Toast.LENGTH_SHORT).show()
         }
@@ -1039,7 +1040,7 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, R.string.toast_no_dialer, Toast.LENGTH_SHORT).show()
         }) {
             try {
-                startActivity(Intent(Intent.ACTION_CALL, Uri.parse("voicemail:")))
+                startActivity(Intent(Intent.ACTION_CALL, Uri.parse("voicemail:")).forDefaultDialer(this))
             } catch (e: Exception) {
                 Toast.makeText(this, R.string.toast_no_dialer, Toast.LENGTH_SHORT).show()
             }
