@@ -173,10 +173,11 @@ person's laptop.
   always scroll when they don't fit; list and notice rows scroll only on the
   highlighted row (`setMarqueeRunning` from the row's focus listener).
   Android only runs a marquee on a *selected* `TextView`.
-- **App grid start focus**: every time the drawer resumes (Home's OK, or Back
-  from an app opened there) it starts on page 1's center cell
-  (`resetFocusOnNextBind` in `AppDrawerActivity.onResume`); list view starts
-  on the top row. Refreshes while it's on screen keep their place.
+- **App grid start focus**: Back from an app launched from the drawer
+  (`launchFromGrid` records it in `returnToKey`) highlights that app again, on
+  its page; any other arrival (Home's OK) starts on page 1's center cell (list
+  view: the top row). Decided in `AppDrawerActivity.onResume`; refreshes while
+  it's on screen keep their place.
 - **Calls go to the default phone app**: every `ACTION_CALL` / `ACTION_DIAL`
   the launcher starts (speed dial, Recent Calls, typed numbers, voicemail)
   and the Send key's call log go through `Intent.forDefaultDialer`

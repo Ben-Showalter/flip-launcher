@@ -121,7 +121,7 @@ class AppDrawerActivity : AppCompatActivity() {
         grid.isFocusable = false
 
         gridAdapter = AppGridAdapter(
-            onClick = { launchAppByKey(it.key) },
+            onClick = { launchFromGrid(it.key) },
             onLongClick = { showContextMenu(it) },
             // Labels are gone from the grid; mirror the focused app's name
             // where "All Apps" normally sits so it's still identifiable.
@@ -131,7 +131,7 @@ class AppDrawerActivity : AppCompatActivity() {
             isMoving = { it.key == movingKey },
         )
         listAdapter = ListRowAdapter(
-            onClick = { pos -> currentPageItems.getOrNull(pos)?.let { launchAppByKey(it.key) } },
+            onClick = { pos -> currentPageItems.getOrNull(pos)?.let { launchFromGrid(it.key) } },
             onLongClick = { pos -> currentPageItems.getOrNull(pos)?.let { showContextMenu(it) } },
             onFocusChanged = { pos -> currentPageItems.getOrNull(pos)?.let { titleView.text = it.label } },
         )
@@ -159,9 +159,12 @@ class AppDrawerActivity : AppCompatActivity() {
         gridAdapter.setIconSizePercent(prefs.getIconSizePercent())
         applyViewMode()
         updatePageSize()
-        // Every arrival - Home's OK, or Back from an app opened here - starts on
-        // the first page's center app, like the stock Kyocera menu.
+        // Back from an app opened here lands on that app again; any other
+        // arrival (Home's OK) starts on the first page's center app, like the
+        // stock Kyocera menu.
         resetFocusOnNextBind = true
+        focusKeyOnNextBind = returnToKey
+        returnToKey = null
         refresh()
         window.hideNavigationBar()
         applyWallpaperScrim()
@@ -246,8 +249,20 @@ class AppDrawerActivity : AppCompatActivity() {
         gridAdapter.setGridMetrics(contentWidth, contentHeight, gridColumns, rows)
     }
 
-    /** Set on resume: the next bind starts over on page 1's center app instead of keeping its place. */
+    /** Set on resume: the next bind starts over (on [focusKeyOnNextBind], or page 1's center app) instead of keeping its place. */
     private var resetFocusOnNextBind = false
+
+    /** The app launched from here, so Back from it lands on it again (see [launchFromGrid]). */
+    private var returnToKey: String? = null
+
+    /** The app the next start-over bind highlights, or null for the center. */
+    private var focusKeyOnNextBind: String? = null
+
+    /** Launches [key], remembering it so Back from that app highlights it again. */
+    private fun launchFromGrid(key: String) {
+        returnToKey = key
+        launchAppByKey(key)
+    }
 
     private fun refresh() {
         loader.load(
@@ -257,8 +272,13 @@ class AppDrawerActivity : AppCompatActivity() {
                 val startOver = allApps.isEmpty() || resetFocusOnNextBind
                 resetFocusOnNextBind = false
                 allApps = apps
+                // Back from an app launched here: that app's place (if it's still listed).
+                val returnIndex = focusKeyOnNextBind?.let { key -> apps.indexOfFirst { it.key == key } }?.takeIf { it >= 0 }
+                focusKeyOnNextBind = null
                 if (listMode) {
-                    if (startOver) bindList(focusPosition = 0) else bindList()
+                    if (startOver) bindList(focusPosition = returnIndex ?: 0) else bindList()
+                } else if (startOver && returnIndex != null && pageSize > 0) {
+                    bindPage(returnIndex / pageSize, focusPosition = returnIndex % pageSize)
                 } else if (startOver) {
                     // Opening the grid lands on the center cell of the first
                     // page (Media Center in the default order), mirroring the
@@ -467,7 +487,7 @@ class AppDrawerActivity : AppCompatActivity() {
     }
 
     private fun openFocused() {
-        currentPageItems.getOrNull(focusedPosition())?.let { launchAppByKey(it.key) }
+        currentPageItems.getOrNull(focusedPosition())?.let { launchFromGrid(it.key) }
     }
 
     private fun optionsForFocused() {
@@ -713,7 +733,7 @@ class AppDrawerActivity : AppCompatActivity() {
             // Only the grid has a fixed nine-per-page shape for this
             // feature-phone shortcut to map onto; the list just scrolls.
             if (pressedDigits.remove(keyCode) && !event.isCanceled && movingKey == null && !listMode) {
-                currentPageItems.getOrNull(keyCode - KeyEvent.KEYCODE_1)?.let { launchAppByKey(it.key) }
+                currentPageItems.getOrNull(keyCode - KeyEvent.KEYCODE_1)?.let { launchFromGrid(it.key) }
             }
             return true
         }
