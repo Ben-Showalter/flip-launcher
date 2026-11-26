@@ -183,6 +183,13 @@ person's laptop.
   (`util/DefaultDialer.kt`), which sets the package to
   `TelecomManager.defaultDialerPackage` when that app handles it. With a second
   phone app installed, a plain intent made Android show a "which app" chooser.
+- **Notices list sources**: with the listener connected (the E4610) it lists
+  every active notification, skipping a group summary only when its children
+  are listed too (some apps post a lone summary). Granted but not connected
+  (e.g. after an update) it falls back to the accessibility feed - alerting
+  notifications only, one per app - so the title says "(new alerts only)",
+  a toast says it's reconnecting, and `requestRebind` is called. `FlipNotif`
+  logs listener connect/disconnect, each `recompute` and the Notices source.
 - **Typing a number on Home**: digits go into `dialBuffer` (cleared in
   `onResume`), and each one reopens `ACTION_DIAL` with the whole number, since
   keys typed while the dialer is opening still reach Home. `onPause` sends any
