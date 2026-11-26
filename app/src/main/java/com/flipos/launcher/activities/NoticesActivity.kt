@@ -6,6 +6,7 @@ import android.content.ComponentName
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.provider.Settings
 import android.service.notification.NotificationListenerService
 import android.widget.TextView
@@ -14,6 +15,7 @@ import androidx.appcompat.app.AlertDialog
 import com.flipos.launcher.data.NoticeItem
 import com.flipos.launcher.data.NotificationStore
 import com.flipos.launcher.service.NotificationCountService
+import com.flipos.launcher.service.NotificationAccessibilityService
 import com.flipos.launcher.ui.NoticeRowAdapter
 import com.flipos.launcher.util.openSettingsWithPath
 
@@ -60,7 +62,8 @@ class NoticesActivity : BaseListActivity() {
         NotificationStore.addListener(storeListener)
         if (!isNotificationAccessGranted()) {
             Toast.makeText(this, R.string.notices_access_required, Toast.LENGTH_LONG).show()
-        } else {
+        } else if (NotificationCountService.instance == null) {
+            Toast.makeText(this, R.string.notices_reconnecting, Toast.LENGTH_LONG).show()
             requestRebindIfStale()
         }
         refresh()
@@ -73,7 +76,12 @@ class NoticesActivity : BaseListActivity() {
 
     private fun refresh() {
         val items = NotificationStore.items
-        titleView.text = getString(R.string.title_notices, items.size)
+        // Access granted but the listener isn't connected: the list is the
+        // accessibility feed - only notifications that rang or vibrated, one per
+        // app - so say so instead of looking complete.
+        val partial = isNotificationAccessGranted() && NotificationCountService.instance == null
+        Log.d(NotificationAccessibilityService.TAG, "Notices: ${items.size} from ${if (partial) "accessibility fallback" else "listener"}")
+        titleView.text = getString(if (partial) R.string.title_notices_partial else R.string.title_notices, items.size)
         adapter.submit(items)
         if (items.isEmpty()) {
             emptyView.text = getString(

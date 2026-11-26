@@ -4,9 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build
 import android.provider.CallLog
-import android.telecom.TelecomManager
 import com.flipos.launcher.activities.CallLogActivity
 
 /**
@@ -34,7 +32,7 @@ object SystemCallLog {
     fun intent(context: Context): Intent {
         val pm = context.packageManager
         val standard = Intent(Intent.ACTION_VIEW).setType(CallLog.Calls.CONTENT_TYPE)
-        defaultDialer(context)?.let { dialer ->
+        defaultDialerPackage(context)?.let { dialer ->
             val toDialer = Intent(standard).setPackage(dialer)
             if (resolves(pm, toDialer)) return toDialer
         }
@@ -46,16 +44,6 @@ object SystemCallLog {
             if (resolves(pm, intent)) return intent
         }
         return Intent(context, CallLogActivity::class.java)
-    }
-
-    private fun defaultDialer(context: Context): String? = try {
-        if (Build.VERSION.SDK_INT >= 23) {
-            (context.getSystemService(Context.TELECOM_SERVICE) as? TelecomManager)?.defaultDialerPackage
-        } else {
-            null
-        }
-    } catch (e: Exception) {
-        null
     }
 
     @Suppress("DEPRECATION")

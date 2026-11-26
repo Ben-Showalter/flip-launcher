@@ -72,7 +72,8 @@ fun AppCompatActivity.openAppPermissionSettings() {
 fun AppCompatActivity.placeCall(gate: PermissionGate, number: String) {
     gate.run(onDenied = { dialPrefill(number) }) {
         try {
-            startActivity(Intent(Intent.ACTION_CALL, Uri.fromParts("tel", number, null)))
+            // Straight to the default phone app: no "which app" chooser.
+            startActivity(Intent(Intent.ACTION_CALL, Uri.fromParts("tel", number, null)).forDefaultDialer(this))
         } catch (e: Exception) {
             dialPrefill(number)
         }
@@ -81,7 +82,7 @@ fun AppCompatActivity.placeCall(gate: PermissionGate, number: String) {
 
 private fun AppCompatActivity.dialPrefill(number: String) {
     try {
-        startActivity(Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", number, null)))
+        startActivity(Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", number, null)).forDefaultDialer(this))
     } catch (e: Exception) {
         Toast.makeText(this, R.string.toast_no_dialer, Toast.LENGTH_SHORT).show()
     }

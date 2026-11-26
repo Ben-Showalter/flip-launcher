@@ -7,6 +7,7 @@ import android.graphics.drawable.Drawable
 import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import android.util.Log
 import com.flipos.launcher.data.NoticeItem
 import com.flipos.launcher.data.NotificationCategorizer
 import com.flipos.launcher.data.NotificationCounts
@@ -29,12 +30,14 @@ class NotificationCountService : NotificationListenerService() {
 
     override fun onListenerConnected() {
         instance = this
+        Log.d(TAG, "listener connected")
         ReadAloud.attach(this)
         recompute()
     }
 
     override fun onListenerDisconnected() {
         if (instance === this) instance = null
+        Log.d(TAG, "listener disconnected")
         // The listener can drop out from under us (access revoked, low-memory
         // kill, framework restart). Clear the cached counts/list so Home badges
         // and Notices don't keep showing data we can no longer refresh, then ask
@@ -68,10 +71,17 @@ class NotificationCountService : NotificationListenerService() {
         var other = 0
         val packages = HashSet<String>()
         val notices = ArrayList<NoticeItem>()
+        // A group summary only repeats its children, so it's skipped when they're
+        // here too - but some apps post a lone summary with no children, and
+        // skipping every summary hid those entirely.
+        val groupsWithChildren = active
+            .filter { it.notification.flags and Notification.FLAG_GROUP_SUMMARY == 0 }
+            .mapTo(HashSet()) { it.groupKey }
         for (sbn in active) {
-            // Group summaries and our own posted-by-system rows aren't real, user-facing
-            // notifications, so they're skipped to avoid inflating the "other" count.
-            if (sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0) continue
+            if (sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0 && sbn.groupKey in groupsWithChildren) {
+                Log.d(TAG, "recompute: skipped ${sbn.packageName} (summary of a group already listed)")
+                continue
+            }
             val kind = NotificationCategorizer.kindOf(sbn.notification.category, sbn.packageName, calendarPackage, phonePackages)
             when (kind) {
                 NotificationKind.CALL -> calls++
@@ -82,6 +92,7 @@ class NotificationCountService : NotificationListenerService() {
             packages.add(sbn.packageName)
             notices.add(toNoticeItem(sbn, kind))
         }
+        Log.d(TAG, "recompute: ${active.size} active, ${notices.size} listed")
         NotificationCounts.update(calls, messages, other, packages)
         NotificationStore.update(notices.sortedByDescending { it.postTime })
     }
@@ -147,6 +158,8 @@ class NotificationCountService : NotificationListenerService() {
     fun dismissAll() = cancelAllNotifications()
 
     companion object {
+        private const val TAG = NotificationAccessibilityService.TAG
+
         /**
          * The system only ever runs one instance of a given listener service, so
          * a static reference is a simple way for [com.flipos.launcher.activities.NoticesActivity]

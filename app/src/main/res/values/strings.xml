@@ -193,6 +193,8 @@
     <string name="title_wallpaper_picker">Daily Wallpapers</string>
     <string name="wallpaper_from_gallery">From gallery…</string>
     <string name="missed_call">Missed call</string>
+    <string name="title_notices_partial">%1$d Notices (new alerts only)</string>
+    <string name="notices_reconnecting">Notification list not connected: showing new alerts only. Reconnecting…</string>
     <string name="wallpaper_off_badge">OFF</string>
     <string name="softkey_set_now">Set now</string>
     <string name="softkey_on_off">On/Off</string>
